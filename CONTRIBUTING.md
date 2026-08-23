@@ -136,10 +136,8 @@ has to land on exact text, permanently — a branch name cannot promise that.
   pointer operations are the flat word-functions `ptr` / `deref`; built-ins are prelude
   identifiers — `@` is for attributes only, never intrinsics.
 - **Do not add implementation code, a build, or tests to this repository.** The
-  reference toolchain lives in the sibling
-  [`compiler`](https://github.com/alatyr-programming-language/compiler) repository and
-  the standard library in
-  [`stdlib`](https://github.com/alatyr-programming-language/stdlib); both are built
+  reference toolchain — and the standard library with it — lives in the sibling
+  [`compiler`](https://github.com/alatyr-programming-language/compiler) repository, built
   *against* this text.
 - **The toolchain conforms to the specification, never the reverse.** A patch here is not
   justified by "the compiler already does it" — that an implementation shipped a behavior

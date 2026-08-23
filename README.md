@@ -9,7 +9,7 @@ with abstractions that stay transparent in code generation.**
 
 This repository is the **specification** of Alatyr. It is not a compiler, and it contains
 no implementation code: the reference toolchain and the standard library are developed in
-[sibling repositories](#the-alatyr-repositories) and are built *against* this text. What
+a [sibling repository](#the-alatyr-repositories) and are built *against* this text. What
 is maintained here is a living, versioned, normative document, held to one bar:
 
 > **Two independent toolchains built strictly to this specification produce compatible
@@ -41,9 +41,8 @@ What that means in practice:
   tables and the per-architecture data; "additive growth" governs the *future*, and was
   never a licence to leave v1 vague.
 - **The reference implementation is in development**, in the sibling
-  [`compiler`](https://github.com/alatyr-programming-language/compiler) repository, with
-  the standard library in
-  [`stdlib`](https://github.com/alatyr-programming-language/stdlib). It has not yet been
+  [`compiler`](https://github.com/alatyr-programming-language/compiler) repository, which
+  carries the standard library with it. It has not yet been
   run against the whole of this text, so nothing here is implementation-validated: the
   code fragments in the chapters illustrate the rules, they are not tested programs.
   Implementation experience is exactly what the review phase is waiting for — it flows
@@ -259,8 +258,7 @@ shifted, or repurposed; a decision that changes is superseded by a new entry.
 | Repository | What it holds | Status |
 |---|---|---|
 | [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.0.0` — complete first draft, under review |
-| [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain: front end, lowering, GAS / WAT emission, the CLI | In development |
-| [`stdlib`](https://github.com/alatyr-programming-language/stdlib) | The prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
+| [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain — front end, lowering, GAS / WAT emission, the CLI — together with the prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
 
 The direction of authority runs one way and does not reverse: **the toolchain conforms to
 the specification, never the other way round.** When the implementation disagrees with

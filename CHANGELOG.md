@@ -76,5 +76,5 @@ under stable theme-prefixed IDs (`MEM-`, `TYP-`, `FN-`, …), indexed by
 design phase is closed.
 
 **Implementation** — none of this text has been validated against a toolchain. The
-reference compiler and the standard library are in development in the sibling
-`compiler` and `stdlib` repositories; their feedback will arrive as refinements here.
+reference compiler, which carries the standard library with it, is in development in the
+sibling `compiler` repository; its feedback will arrive as refinements here.

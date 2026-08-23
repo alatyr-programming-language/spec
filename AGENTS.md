@@ -22,11 +22,11 @@ the language's life. It contains **no implementation code, build, or tests**, an
 should appear. The repository's artifacts are **design text and a normative
 specification**.
 
-The implementation is developed alongside, in sibling repositories:
-**`alatyr-programming-language/compiler`** (the reference toolchain, in development) and
-**`alatyr-programming-language/stdlib`** (the prelude and standard library specified by
-chapter `100` / appendix `160`). Both are built *against* this spec, and their feedback
-flows back here as refinements.
+The implementation is developed alongside, in the sibling repository
+**`alatyr-programming-language/compiler`** — the reference toolchain, in development,
+carrying the prelude and standard library (chapter `100` / appendix `160`) with it rather
+than in a repository of their own. It is built *against* this spec, and its feedback flows
+back here as refinements.
 
 **The direction of authority does not reverse.** The toolchain conforms to the
 specification, never the other way round. If the compiler does X and the spec says Y, the
