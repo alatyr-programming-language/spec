@@ -49,7 +49,15 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
-Nothing yet.
+**Normative — conformance cites a revision, not the language version.** Overview §6 now
+states that `v1` (the language) and `1.0.0`, `1.1.0`, … (revisions of this document) are
+separate axes: program validity holds across the whole major (I10), conformance does not,
+because a MINOR revision may pin behavior an earlier one left unstated. "Conforms to `v1`"
+is therefore not a well-formed claim.
+
+`v1` was load-bearing throughout the text — including inside the conformance rules — and
+defined nowhere. It now has a glossary entry, alongside **revision**, and a decision entry
+(FND-13).
 
 ## 1.0.0
 

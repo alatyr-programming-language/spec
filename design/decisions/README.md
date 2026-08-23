@@ -33,7 +33,7 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | File | Theme | IDs |
 |------|-------|-----|
 | `principles.md` | Principles & priorities (cross-cutting) | PRIN-1..7 |
-| `foundations.md` | Methodology, conformance, limits, niche | FND-1..12 |
+| `foundations.md` | Methodology, conformance, limits, niche | FND-1..13 |
 | `memory.md` | Memory, lifetime, ownership, allocation | MEM-1..8 |
 | `types.md` | Types, layout, branding, construction | TYP-1..13 |
 | `functions-abi.md` | Functions, declarations, ABI | FN-1..12 |

@@ -227,3 +227,33 @@ cross-unit join is an **explicit interface/ABI** — the same way `freestanding`
 never by intermixing inside one another. This keeps each unit's contract checkable on its
 own and makes the boundary between, say, a `no_alloc` unit and an allocating one a visible,
 specified ABI surface rather than a silent blend.
+
+### FND-13. The language version and the document revision are separate axes
+*provenance: refines FND-3 (the specification bar) and FND-6 (additive growth) · spec:
+Overview §6; design/glossary.md*
+
+**Why.** `v1` names an **epoch of the language** — the feature set, the six architectures,
+the closed supported-target set, the enumerated prelude and ABIs. The document specifying
+it carries its own **revision** number, whose MAJOR digit *is* that language version. So
+every `1.*.*` revision specifies `v1`, and the two numbers never disagree about *which
+language* is meant.
+
+They do disagree about *what is guaranteed*, and conflating them silently breaks
+conformance. A MINOR revision closes a gap — it pins behavior the previous revision left
+unstated. That cannot invalidate a **program** (I10), but it can invalidate an
+**implementation**, which was free to choose while the text was silent. So program
+validity is stable across the whole major, while conformance is stable only within one
+revision, and a conformance claim must cite a revision rather than the language.
+
+The term was load-bearing before it was defined: `v1` appears throughout the specification
+and the decisions, including in the conformance rules themselves, with no definition
+anywhere — an FND-3 gap of the "guarantee resting on an undefined term" shape. It is now
+defined in the glossary, alongside **revision**.
+
+**Rejected.** Making `v1` the unit of conformance, with revisions permitted only to
+"clarify without changing required behavior" — the distinction is not decidable, because
+closing an FND-3 gap always changes what *some* implementation must do; that is the point
+of closing it. It would also force every gap-closure to be a MAJOR bump, contradicting the
+pinning of MAJOR to the language version. Reading `v1` as the SemVer range `1.*.*` — it
+lets an implementation claim conformance against the loosest revision it ever passed, which
+is the opposite of what a citable revision is for.

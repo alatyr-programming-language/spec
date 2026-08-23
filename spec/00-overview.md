@@ -255,6 +255,20 @@ chapter.)
   respective chapters and appendices. "Additive growth" means a future version MAY
   add such content without invalidating a conforming v1 program; it does **not**
   mean v1 leaves the content unspecified. v1 is fully specified.
+- **The language version and the document revision are different things.** `v1` is the
+  **language**: the feature set enumerated here. `1.0.0`, `1.1.0`, … are **revisions of
+  this document**, every one of which specifies `v1` — the MAJOR digit *is* the language
+  version. The guarantees they carry differ:
+  - **Program validity holds across the whole major.** A program well-formed under one
+    `1.*.*` revision is well-formed under every later one (I10).
+  - **Conformance does not.** A later revision MAY pin behavior an earlier one left
+    unstated — closing such a gap is precisely what a MINOR revision is for. An
+    implementation conforming to `1.0.0` therefore does not automatically conform to
+    `1.1.0`.
+
+  A conformance claim MUST cite the **revision** it was made against ("conforms to the
+  Alatyr specification 1.1.0"). "Conforms to `v1`" is not a well-formed claim: it names
+  the language, which does not by itself fix what an implementation must do.
 - Where behavior is **implementation-defined**, it is explicitly marked as such.
   There is **no undefined behavior** (I11).
 

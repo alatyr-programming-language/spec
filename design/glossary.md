@@ -478,3 +478,17 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Memory ordering** — the `Ordering` comptime prelude enum (`relaxed`/`acquire`/`release`/…) that
   parameterizes an atomic operation (Concurrency §3): atomicity is a property of the **operation**,
   not the type. (The atomic surface beyond the v1 primitives is additive, CC-2.)
+
+- **`v1` (the language version)** — the **first version of the language**: the feature set this
+  document defines — the six architectures, the closed supported-target set, the enumerated
+  prelude/stdlib and per-target ABIs. It is an **epoch of the language**, not a range of document
+  revisions and not a SemVer constraint. Every `1.*.*` revision of this document specifies `v1`
+  (the MAJOR digit *is* the language version); a later language version would be `v2`, which
+  `I10`/`PRIN-2` make unlikely, since growth within `v1` is additive. Program validity is
+  guaranteed across the whole of `1.*.*`; **conformance is not** — a conformance claim cites a
+  revision, never `v1` (Overview §6, FND-13).
+
+- **Revision** — a published version of *this document*, `MAJOR.MINOR.PATCH` (e.g. `1.1.0`). MAJOR
+  is the language version above; MINOR marks a normative revision of the text (a gap closed, a
+  collision resolved); PATCH is editorial. Distinct from **maturity** (`draft (under review)` /
+  `accepted`), which is carried by each chapter's Status line and never by the number.
