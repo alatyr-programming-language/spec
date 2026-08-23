@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How this repository works
+    url: https://github.com/alatyr-programming-language/spec/blob/main/CONTRIBUTING.md
+    about: Sources of truth, the FND-3 bar, and the process a normative change must follow. Worth two minutes before filing.

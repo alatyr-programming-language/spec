@@ -1,0 +1,4 @@
+# The repository is prose. Normalize to LF in the index on every platform so that a
+# Windows checkout cannot introduce a whole-file diff.
+* text=auto eol=lf
+*.md diff=markdown

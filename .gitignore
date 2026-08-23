@@ -1,0 +1,16 @@
+# Scratch output. The spec-checkpoint skill writes its packs into `*.tmp/` folders
+# precisely because this line keeps them out of git; do not narrow it.
+*.tmp
+
+# Local agent state. The skills themselves ARE tracked, via `.claude/skills` ->
+# `../.agents/skills`; only per-machine state is ignored here.
+.claude/worktrees/
+.claude/settings.local.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*~
+*.swp
+.idea/
+.vscode/

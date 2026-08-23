@@ -1,0 +1,60 @@
+# Alatyr specification — licensing
+
+Copyright (c) 2026 Nick Nizovtsev and the Alatyr specification contributors.
+
+This repository holds a **specification**, not an implementation, so it is licensed as
+two things at once. Which license applies depends on *what you take*, not on which file
+you took it from — the two kinds of material are interleaved inside the same chapters.
+
+## 1. The specification text — CC BY 4.0
+
+Every prose, table, grammar production, diagram, and normative rule in this repository —
+that is, the whole of `spec/`, `design/`, `README.md`, `AGENTS.md`, and this file, minus
+the code fragments described in §2 — is licensed under the
+
+**Creative Commons Attribution 4.0 International license (CC BY 4.0)**,
+full text in [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0),
+summary: <https://creativecommons.org/licenses/by/4.0/>.
+
+You may copy, quote, republish, translate, and build upon the specification, including
+commercially, provided you give appropriate credit ("the Alatyr language specification",
+with a link to this repository), indicate whether you made changes, and do not suggest
+that the Alatyr project endorses your derivative.
+
+**Attribution and conformance are separate things.** CC BY grants you the right to
+*reuse the text*. It grants no right to call an implementation "conforming"; conformance
+is defined by the specification itself (Overview §6) and is a factual claim about
+behavior, not a license grant.
+
+## 2. Code fragments — Apache-2.0
+
+Every code fragment in this repository — Alatyr source examples, `package.al` manifest
+snippets, assembly and WAT listings, emitted-code samples, command lines, and any file
+that may later be added under a directory of examples — is *additionally* licensed under
+the
+
+**Apache License, Version 2.0**,
+full text in [`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0),
+summary: <https://www.apache.org/licenses/LICENSE-2.0>.
+
+This exists so that an implementation can lift a fragment straight out of a chapter into
+its own test suite, conformance corpus, or standard library without a CC BY attribution
+notice riding along in the source, and so that the fragments carry Apache-2.0's explicit
+patent grant.
+
+At your option you may instead use a code fragment under CC BY 4.0; Apache-2.0 is offered
+as the more convenient of the two for code, not as a restriction on it.
+
+## 3. Contributions
+
+Unless you state otherwise in the contribution itself, any contribution you intentionally
+submit for inclusion in this repository is licensed under the same dual terms above, with
+no additional conditions — Apache-2.0 §5 applies to the code-fragment part.
+
+## 4. Names
+
+The names "Alatyr" and "Алатырь" and the `.al` extension are not licensed by either
+license above; they identify the project. You may use them to refer
+truthfully to this specification and to your implementation of it (for example, "an
+Alatyr compiler", "conforms to the Alatyr specification 1.0.0-draft.1"), but not in a way
+that suggests your project is the official one.

@@ -1,0 +1,54 @@
+name: Spec defect (a contradiction)
+description: Two places in the repository disagree, or a chapter contradicts an invariant.
+title: "[defect] "
+labels: ["defect"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A defect is a **disagreement between two places**. On any conflict the higher
+        source governs — invariants `I1–I11` > `spec/` > `design/decisions/` >
+        `design/glossary.md` > `design/aspects-map.md` — and the lower one is what has
+        to change. If nothing contradicts anything but a rule is simply missing, use
+        **Underspecification gap** instead.
+  - type: textarea
+    id: first
+    attributes:
+      label: First location
+      description: File and section, plus the exact lines.
+      placeholder: |
+        spec/50-functions.md §5.4
+
+        > quoted text
+    validations:
+      required: true
+  - type: textarea
+    id: second
+    attributes:
+      label: Second location
+      description: The place that disagrees with it — another chapter, a decision entry, the glossary, or an invariant.
+      placeholder: |
+        design/decisions/functions-abi.md — FN-7
+
+        > quoted text
+    validations:
+      required: true
+  - type: textarea
+    id: conflict
+    attributes:
+      label: Why these two cannot both be true
+      description: State the contradiction as a claim an implementer would have to choose between.
+    validations:
+      required: true
+  - type: textarea
+    id: resolution
+    attributes:
+      label: Which one you believe is right, and why
+      description: Optional, but it usually settles the issue. Say which source you think governs here.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: I checked the priority order in `CONTRIBUTING.md` — the lower source really is the one that must change.
+        - label: I read the decision entry behind the rule, not just its ID (a cited ID can be real but wrong).

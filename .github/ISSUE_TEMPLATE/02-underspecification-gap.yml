@@ -1,0 +1,53 @@
+name: Underspecification gap (FND-3 blocker)
+description: The text names something but never gives its rule, so two implementers would guess differently.
+title: "[gap] "
+labels: ["gap", "fnd-3"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The bar this repository is held to: **two independent implementations built
+        strictly to the text produce compatible results without guessing.** A gap is a
+        blocker even when nothing is self-contradictory.
+  - type: textarea
+    id: location
+    attributes:
+      label: Where
+      description: File and section that raises the thing but does not settle it.
+      placeholder: spec/90-codegen.md §6.2
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: What is left unsaid
+      description: Name the rule that is missing, not just the topic.
+    validations:
+      required: true
+  - type: textarea
+    id: divergence
+    attributes:
+      label: Two conforming implementations that disagree
+      description: |
+        The core of the report. Give a concrete case and two behaviors both permitted by
+        the current text.
+      placeholder: |
+        Given: <program / manifest / target>
+        Implementation A reads the text as … and produces …
+        Implementation B reads it as … and produces …
+        Nothing in the specification rules either out.
+    validations:
+      required: true
+  - type: dropdown
+    id: shape
+    attributes:
+      label: Shape of the gap
+      description: Optional. These are the high-yield kinds; picking one helps triage.
+      options:
+        - Missing result rule for an edge case (rounding, out-of-range, NaN, ordering, evaluation order)
+        - A category the rule depends on is never defined
+        - Delegated to an appendix that self-refers without enumerating
+        - A guarantee resting on an undefined grammar terminal
+        - A schema field with a default, a flag, or a duty — but no stated effect
+        - Something "declared, never inferred" with no mechanism to declare it
+        - Other

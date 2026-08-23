@@ -1,0 +1,60 @@
+name: Design proposal
+description: A change to what the language is. Expect it to be argued before any text is written.
+title: "[design] "
+labels: ["design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Decide first, record second.** Proposals are discussed to convergence before
+        the specification changes; please do not open a PR that settles a design fork by
+        fiat. Two questions decide most proposals before anything else is considered.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What cannot be expressed, or is expressed badly, today. Concrete code beats abstraction.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The proposal
+      description: What you want the language to do, and how it would be spelled.
+    validations:
+      required: true
+  - type: textarea
+    id: minimalism
+    attributes:
+      label: "Minimalism (PRIN-1): what does this give beyond existing mechanisms?"
+      description: |
+        The test question is "does this give something beyond what exists, or merely save
+        names?" If existing mechanisms already express it, the proposal is rejected — so
+        show what they cannot express.
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: "Invariants: how does this hold I1–I11?"
+      description: |
+        In particular I1 (codegen stays transparent), I2 (zero-cost), I3 (nothing
+        hidden), I11 (no undefined behavior — checked is correct-or-trap, unchecked and
+        raw are hardware-defined).
+    validations:
+      required: true
+  - type: textarea
+    id: additivity
+    attributes:
+      label: "Additivity (I10/PRIN-2): does this break a valid v1 program?"
+      description: Additivity governs future growth. It is not a reason to leave v1 vague, and it does not excuse a breaking change.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered, and why they lose
+      description: Rejected alternatives are recorded permanently in the decision entry, so they are part of the proposal, not an afterthought.
+  - type: textarea
+    id: affected
+    attributes:
+      label: Sources of truth this would touch
+      description: Invariants / chapters / decision entries / glossary / aspect map. A normative change updates all of them in one commit.
