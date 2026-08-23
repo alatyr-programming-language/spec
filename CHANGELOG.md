@@ -17,7 +17,8 @@ point of the scheme:
 - **MINOR is a normative revision of the document** — a gap closed, a collision resolved,
   a rule made explicit, an entry added to an enumeration. An implementer must re-read.
   Such a change can alter what an implementation must *do* without invalidating any
-  existing program; that is exactly the additive growth `I10` permits.
+  existing program; that is exactly the additive growth `I10` permits. During review this
+  is the digit that moves.
 - **PATCH is editorial only** — typos, wording, cross-references, added examples. No
   conforming implementation can observe the difference.
 
@@ -27,12 +28,16 @@ motion is the precision of the text, not the shape of the language. Pinning MAJO
 language version is what keeps the number meaningful instead of making every substantive
 correction look like a breaking release.
 
-**Pre-release.** Until the document is *accepted* it carries an ordered `-draft.N`
-counter: `1.0.0-draft.1` < `1.0.0-draft.2` < `1.0.0`. While the suffix is present the
-document is under review — the MINOR/PATCH split above is not yet promised between
-draft revisions, and any rule may still change. Every chapter carries
-`Status — draft (under review)`; the suffix and that line are the same fact, stated in
-the two places a reader looks.
+**Maturity is a separate axis, and it is not in the version string.** Whether the
+document is *accepted* is stated where a reader actually meets it: every chapter carries
+`Status — draft (under review)`, and the Status block in `README.md` and
+`spec/00-overview.md` says the same. Acceptance is recorded by flipping those lines and
+by an entry here — not by a version bump, and not by a `-draft` suffix. A suffix would
+say a third time what the Status line already says, and would freeze MINOR/PATCH during
+exactly the phase in which the most revisions happen.
+
+So `1.0.0` does **not** claim the text is settled. It says: revision 1.0.0 of the
+specification of Alatyr v1. Read the Status line for how far along it is.
 
 Each entry names the affected sources of truth, because a normative change touches
 several at once (see `CONTRIBUTING.md`).
@@ -41,7 +46,7 @@ several at once (see `CONTRIBUTING.md`).
 
 Nothing yet.
 
-## 1.0.0-draft.1
+## 1.0.0
 
 First public release of the complete first draft. The whole document is **under review**
 and not yet accepted.

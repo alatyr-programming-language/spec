@@ -89,10 +89,11 @@ of the cross-cutting pass whenever a norm or the repository's status changes.
   process here changes, change it there in the same commit; `AGENTS.md` governs.
 - **`CHANGELOG.md`** — the versioning policy and release history. A **normative** change
   gets an entry under *Unreleased*; an editorial one does not.
-- **The version** — `1.0.0-draft.1`, stated in `spec/00-overview.md` (the Status block),
+- **The version** — `1.0.0`, stated in `spec/00-overview.md` (the Status block),
   `README.md`, and `CHANGELOG.md`. Those three must agree. MAJOR is the *language*
   version (pinned at `1` by `I10`/`PRIN-2`), MINOR a normative revision of the text,
-  PATCH an editorial one; `-draft.N` runs until the document is accepted.
+  PATCH an editorial one. Maturity is **not** in the version string: it lives in the
+  per-chapter `Status` lines, and acceptance flips those, not the number.
 - **`LICENSE`** + `LICENSE-CC-BY-4.0` + `LICENSE-APACHE-2.0` — dual licensing: CC BY 4.0
   for specification text, Apache-2.0 for code fragments. Do not restate license terms
   anywhere else; link to `LICENSE`.

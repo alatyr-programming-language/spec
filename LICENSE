@@ -56,5 +56,5 @@ no additional conditions — Apache-2.0 §5 applies to the code-fragment part.
 The names "Alatyr" and "Алатырь" and the `.al` extension are not licensed by either
 license above; they identify the project. You may use them to refer
 truthfully to this specification and to your implementation of it (for example, "an
-Alatyr compiler", "conforms to the Alatyr specification 1.0.0-draft.1"), but not in a way
+Alatyr compiler", "conforms to the Alatyr specification 1.0.0"), but not in a way
 that suggests your project is the official one.

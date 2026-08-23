@@ -13,11 +13,11 @@
 > not yet accepted — and the conformance requirements in §6 describe the *completed*
 > specification's intent.
 >
-> **Version — `1.0.0-draft.1`.** The specification is living and versioned. The MAJOR
-> digit is the version of the *language* this document specifies (Alatyr v1); MINOR marks
-> a normative revision of the text and PATCH an editorial one. While the `-draft.N`
-> suffix is present the document is not accepted and any rule may still change. See
-> `CHANGELOG.md`.
+> **Version — `1.0.0`.** The specification is living and versioned. The MAJOR digit is
+> the version of the *language* this document specifies (Alatyr v1); MINOR marks a
+> normative revision of the text, PATCH an editorial one. The number is not a maturity
+> claim — whether the document is accepted is what the Status above states, and it is not
+> yet. See `CHANGELOG.md`.
 
 This is the **Overview** of the Alatyr language specification. The chapter is
 partly *informative* (it frames the language, its niche, and its non-goals) and
