@@ -39,6 +39,11 @@ exactly the phase in which the most revisions happen.
 So `1.0.0` does **not** claim the text is settled. It says: revision 1.0.0 of the
 specification of Alatyr v1. Read the Status line for how far along it is.
 
+**Revisions, not commits.** The number moves when a revision is *published*, not when a
+commit lands. Entries accumulate under *Unreleased* and are released together; each
+release is tagged `v<version>` in git, which is what makes a citation resolve to exact
+text. The procedure is in `CONTRIBUTING.md`.
+
 Each entry names the affected sources of truth, because a normative change touches
 several at once (see `CONTRIBUTING.md`).
 

@@ -93,7 +93,10 @@ of the cross-cutting pass whenever a norm or the repository's status changes.
   `README.md`, and `CHANGELOG.md`. Those three must agree. MAJOR is the *language*
   version (pinned at `1` by `I10`/`PRIN-2`), MINOR a normative revision of the text,
   PATCH an editorial one. Maturity is **not** in the version string: it lives in the
-  per-chapter `Status` lines, and acceptance flips those, not the number.
+  per-chapter `Status` lines, and acceptance flips those, not the number. Versions are
+  **cut as revisions, not per commit** — normative entries accumulate under *Unreleased*,
+  and a release bumps those places, renames the section, and is tagged `v<version>`
+  (procedure in `CONTRIBUTING.md`). Do not cut or tag a revision unasked.
 - **`LICENSE`** + `LICENSE-CC-BY-4.0` + `LICENSE-APACHE-2.0` — dual licensing: CC BY 4.0
   for specification text, Apache-2.0 for code fragments. Do not restate license terms
   anywhere else; link to `LICENSE`.

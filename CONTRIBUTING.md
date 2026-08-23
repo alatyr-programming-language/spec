@@ -73,6 +73,43 @@ plainly in the text, that is itself a gap worth recording.
 - **Fix inconsistencies, do not route around them.** If you find one while doing
   something else, either fix it in its own commit or file it.
 
+## Cutting a revision
+
+**Commits are not revisions.** A version number identifies a *published revision of the
+document* — something an implementer can cite, pin to, and conform against — so it moves
+when a revision is cut, not when a commit lands. Most commits carry no tag; their entries
+accumulate under **Unreleased** in `CHANGELOG.md`.
+
+Tagging every commit would turn the version into a commit counter and destroy the one
+thing MINOR and PATCH exist for: telling an implementer whether they must re-read.
+
+**When to cut one.** There is no cadence, and a long stretch with a growing *Unreleased*
+section is normal during review. Cut a revision when someone downstream needs a stable
+thing to point at:
+
+- a batch of review findings has been resolved and the text is coherent again;
+- an implementation is about to conform against the current text and needs a citable
+  revision;
+- a single normative change is urgent enough that implementers should not wait for the
+  batch.
+
+**How to cut one.**
+
+1. **Pick the digit** from what accumulated under *Unreleased*: any normative entry →
+   MINOR; editorial only → PATCH. MAJOR is the language version and does not move.
+2. **Update the version in the four places that must agree** — the Status block in
+   `spec/00-overview.md`; `README.md` (badge, Status block, implementers section,
+   repositories table); `CHANGELOG.md`; and the citation example in `LICENSE` §4.
+3. **Rename *Unreleased*** to the new version, and open a fresh empty *Unreleased* above
+   it.
+4. **Commit** as `Release <version>`.
+5. **Tag and push**: `git tag -a v1.1.0 -m 'Alatyr v1 specification, revision 1.1.0'`
+   then `git push --follow-tags`. The git tag carries a leading `v`; the document version
+   does not.
+
+The tag is what makes a citation resolve. "Conforms to the Alatyr specification 1.1.0"
+has to land on exact text, permanently — a branch name cannot promise that.
+
 ## Pull-request checklist
 
 - [ ] Every affected source of truth is updated **in the same commit** (invariants /
