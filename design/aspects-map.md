@@ -103,7 +103,7 @@ verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
   (`clone`/three-way `compare`/streaming `Hasher`/serialization), field-level `typeinfo` annotations.
   Implementation details: the `gen` provider surface (its generational-ref representation) + the OS-backed region provider (contracts set by MEM-1; the
   region/handle v1 surface is now specified by **MEM-3** — `Handle(T)`, `@alloc`→handle/trap, access via `get`).
-  **Allocator providers:** v1 specifies the **`arena`** provider surface only (region mechanism, §5.2.1/MEM-3);
+  **Allocator providers:** v1 has the **`arena`** provider surface only (region mechanism, §5.2.1/MEM-3);
   **`gen`/`manual`/`system` are additive** (surfaces specified when first built). There is **no package-wide
   `allocator` manifest field in v1** (deferred/additive — no zero-config default provider; `arena_over` needs a
   caller buffer); allocation is **per-site `@alloc(value)`** on every target.
