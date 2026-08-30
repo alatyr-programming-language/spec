@@ -375,6 +375,21 @@ Commands: **`new`** / **`build`** / **`run`** / **`test`** / **`check`** / **`pl
   §2.2) is **not** reported by `check`, since that stage does not run; and `check` writes
   nothing under `target_dir` except what the `.s`/`.o` cache (§2.6) may already hold.
 
+- **Introspection** — **`help`** and **`version`** (TOOL-21) report on the **toolchain
+  itself** rather than on a package, and are available both as a command (`alatyr help`) and
+  as a flag (`--help`); an implementation **MAY** also accept short forms. Neither reads a
+  manifest, performs discovery (TOOL-14), resolves dependencies, nor produces an artifact, so
+  both are valid from **any** working directory, including one containing no package. Each
+  writes to **stdout** and exits **successfully**. `help` **MUST** list the commands above;
+  `version` **MUST** identify the implementation and **MUST** report the **revision of this
+  specification** it conforms to (§7, Overview §6) — an implementation's own version and the
+  revision are separate axes, and reporting only the former leaves a user unable to tell what
+  the toolchain implements. An invocation with **no arguments at all** is `help`. The
+  **content and formatting** of both outputs are **quality-of-implementation** (§5), with those
+  clauses as the floor: no implementation may be assumed to emit a particular string, and
+  tooling **MUST NOT** parse `help` output. Introspection output is **not** a build input
+  (§6.2) and does not participate in reproducibility.
+
 - **`--manifest <path>`** names the manifest file explicitly; its directory becomes the
   package root. Without it, **`package.al` is searched for from the current working
   directory upward** to the filesystem root, and the first one found fixes the package
@@ -396,6 +411,12 @@ Commands: **`new`** / **`build`** / **`run`** / **`test`** / **`check`** / **`pl
   manifest nor a file list is a Config diagnostic — never a silent no-op (TOOL-14). Both are
   **invocation-level**: there is no source to point at, so they are the one exception to the
   mandatory-span rule (§5).
+- **An unrecognised command or flag** is likewise an **invocation-level** Config diagnostic
+  naming the offending argument (TOOL-14, §5) — on the same footing as the two cases above. An
+  implementation **MUST NOT** silently reinterpret an argument it does not recognise as a source
+  path or as a package name: doing so reports a fault in a file the user never named, and hides
+  a mistyped flag behind a file-system error.
+
 - **`--target <name>`** selects one of the manifest's `targets` by its `Target.name`;
   **`--target all`** builds every target; absent, the `default_target` is built (absent
   or `""` → the first). A name not in `targets` is a Config diagnostic. This is a
@@ -410,6 +431,15 @@ Commands: **`new`** / **`build`** / **`run`** / **`test`** / **`check`** / **`pl
 - **Temporary overrides** of the comptime **budget** or **limits** are for **debugging
   only**: a package's *success* **MUST NOT** depend on such a flag (that would make it
   non-self-contained; Comptime §2.2, FND-7) — the manifest is authoritative for these.
+- **Output verbosity** (TOOL-22). An implementation **MAY** provide flags that vary how much a
+  command reports about its **own progress** (conventionally `--verbose` / `--quiet`). Such a
+  flag **MUST NOT** change the artifact, the diagnostics reported, the accept/reject outcome, or
+  the exit status: the same build input built with and without it **MUST** produce
+  **byte-identical** artifacts (§6.2). Verbosity is an **observation** of a build, never a
+  parameter of one, so it is not part of the build-input tuple (§5, §6.2). This is stricter than
+  the debug-only overrides above, whose effect a package's *success* merely must not depend on.
+  What is reported at each level is **quality-of-implementation**.
+
 - **Cross-run**: for a non-host target, `run`/`test` execute under **QEMU**.
 - **Where artifacts land** (TOOL-10, TOOL-13). Every file a command produces for a package — the
   executable or library, the intermediate `.s`/`.o`, and the **test artifact** `alatyr test` builds — is
@@ -756,12 +786,18 @@ A conforming implementation MUST:
    difference between profiles on the compiler's own initiative; the only
    profile-dependent behavior is what the source author explicitly gates on `build.*`
    (e.g. `comptime if build.debug`) (§2.7, §3; CG-5/FND-7);
-4. provide the CLI commands (`new`/`build`/`run`/`test`/`check`/`plan`/`fmt`), `--manifest`,
+4. provide the CLI commands (`new`/`build`/`run`/`test`/`check`/`plan`/`fmt`), the
+   **introspection** pair `help`/`version` — each as a command and as a flag, reporting the
+   revision this implementation conforms to, producing no artifact, and valid outside a package
+   (TOOL-21) — `--manifest`,
    `--target <name>`/`--target all` (selecting from `targets`, else `default_target`),
    `--profile`/`--release` (default profile `debug`, or the manifest's
    `default_profile`), `-o`/`--target-dir` (location only, never build
    input), debug-only budget/limit overrides that a package's success does
-   **not** depend on, QEMU cross-run, and the lockfile/job modes (§4); and run **`@test`**
+   **not** depend on, QEMU cross-run, and the lockfile/job modes (§4); report an
+   **unrecognised command or flag** as an invocation-level Config diagnostic rather than
+   reinterpreting it as a path (TOOL-14); keep any **verbosity** flag free of effect on the
+   artifact, the diagnostics, and the outcome (TOOL-22); and run **`@test`**
    items as **isolated runtime tests** under `alatyr test` (a trap = a failure), while
    `build`/`run` ignore them (§4.1; TOOL-5);
 5. discover `package.al` by searching **upward** from the working directory (the first
