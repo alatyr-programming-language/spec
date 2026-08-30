@@ -49,6 +49,34 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
+the command set, discovery, target and profile selection, and artifact placement, but said
+nothing about how a toolchain reports on *itself*. Two conforming implementations could
+therefore disagree on whether `alatyr --version` works at all, and nothing stopped a
+`--verbose` flag from changing the artifact it was supposed to be merely describing.
+
+**TOOL-21** makes `help` and `version` introspection commands: available as both a command and
+a flag, forbidden to read a manifest, discover a package, resolve dependencies or produce an
+artifact, hence valid from any directory; written to stdout with a successful exit; `version`
+must report the **revision of this specification** the implementation conforms to, since an
+implementation's own version and the revision are separate axes (Overview §6). A bare invocation with no
+arguments reports the same material on **stderr** with a **failure** exit — help asked for is an
+answer, the same text volunteered after a mistake is a diagnostic — so a script that lost its
+arguments still fails. What either prints is quality-of-implementation.
+
+**TOOL-22** makes output verbosity an observation rather than a build parameter: such a flag
+must not change the artifact, the diagnostics, the accept/reject outcome or the exit status,
+and the same input must build byte-identically with and without it (§6.2). This is stricter
+than the debug-only budget/limit overrides, whose effect a package's success merely must not
+depend on.
+
+**TOOL-14** is clarified: an unrecognised command or flag is an invocation-level Config
+diagnostic naming the offending argument, and an implementation must not silently reinterpret
+an argument it does not recognise as a source path — which reports a fault in a file the user
+never named and hides a mistyped flag behind a file-system error.
+
+§7 conformance item 4 now carries all three.
+
 **Normative — conformance cites a revision, not the language version.** Overview §6 now
 states that `v1` (the language) and `1.0.0`, `1.1.0`, … (revisions of this document) are
 separate axes: program validity holds across the whole major (I10), conformance does not,
