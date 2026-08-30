@@ -59,8 +59,10 @@ therefore disagree on whether `alatyr --version` works at all, and nothing stopp
 a flag, forbidden to read a manifest, discover a package, resolve dependencies or produce an
 artifact, hence valid from any directory; written to stdout with a successful exit; `version`
 must report the **revision of this specification** the implementation conforms to, since an
-implementation's own version and the revision are separate axes (Overview §6). A bare
-invocation with no arguments is `help`. What either prints is quality-of-implementation.
+implementation's own version and the revision are separate axes (Overview §6). A bare invocation with no
+arguments reports the same material on **stderr** with a **failure** exit — help asked for is an
+answer, the same text volunteered after a mistake is a diagnostic — so a script that lost its
+arguments still fails. What either prints is quality-of-implementation.
 
 **TOOL-22** makes output verbosity an observation rather than a build parameter: such a flag
 must not change the artifact, the diagnostics, the accept/reject outcome or the exit status,

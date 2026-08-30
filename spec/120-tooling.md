@@ -384,8 +384,13 @@ Commands: **`new`** / **`build`** / **`run`** / **`test`** / **`check`** / **`pl
   `version` **MUST** identify the implementation and **MUST** report the **revision of this
   specification** it conforms to (§7, Overview §6) — an implementation's own version and the
   revision are separate axes, and reporting only the former leaves a user unable to tell what
-  the toolchain implements. An invocation with **no arguments at all** is `help`. The
-  **content and formatting** of both outputs are **quality-of-implementation** (§5), with those
+  the toolchain implements. An invocation with **no arguments at all** **MUST** report the same
+  material as `help`, but on **stderr** and with a **failure** exit: a bare tool name is a
+  mistaken invocation, not a request (TOOL-14 — never a silent no-op), and a caller that lost
+  its arguments must not see success. The distinction is deliberate: `help` asked for is an
+  **answer** (stdout, success), the same text volunteered after a mistake is a **diagnostic**
+  (stderr, failure), so `alatyr help | …` pipes while a dropped argument in a script still
+  fails. The **content and formatting** of both outputs are **quality-of-implementation** (§5), with those
   clauses as the floor: no implementation may be assumed to emit a particular string, and
   tooling **MUST NOT** parse `help` output. Introspection output is **not** a build input
   (§6.2) and does not participate in reproducibility.
@@ -788,7 +793,8 @@ A conforming implementation MUST:
    (e.g. `comptime if build.debug`) (§2.7, §3; CG-5/FND-7);
 4. provide the CLI commands (`new`/`build`/`run`/`test`/`check`/`plan`/`fmt`), the
    **introspection** pair `help`/`version` — each as a command and as a flag, reporting the
-   revision this implementation conforms to, producing no artifact, and valid outside a package
+   revision this implementation conforms to, producing no artifact, and valid outside a package,
+   with a bare no-argument invocation reporting the same material on stderr and failing
    (TOOL-21) — `--manifest`,
    `--target <name>`/`--target all` (selecting from `targets`, else `default_target`),
    `--profile`/`--release` (default profile `debug`, or the manifest's
