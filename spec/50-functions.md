@@ -441,11 +441,16 @@ required"). There is **no** silent fallback to a hidden heap (I3). Because the p
 **declared in the signature** and the ambient is a **named binding in scope**, the elision
 is determinate from the closed package (CG-11), not hidden.
 
-A §5.1 default on an allocator parameter is evaluated as a **call-site temporary** (§5.1);
-it is therefore sound only when the allocations it backs **do not escape** the call (the
-escape checker enforces this, Memory §5.4/§5.6). An **escaping** producer (a container
-constructor) therefore declares a *required* allocator parameter and relies on `alloc::with`
-above it, not on a create-fresh default.
+Whatever fills an omitted allocator argument names an **existing place that outlives the
+call** (Memory §5.2.1). Steps (1)–(2) name a binding in scope; a §5.1 default on an allocator
+parameter (step 3) MUST be `ptr(mut P)` with `P` a place of **static** storage (Memory
+§5.2.1), and any other default expression — one that would
+create an allocator for the call — is **ill-formed**. There is **no** call-site temporary
+allocator: a fresh owning `Arena` would need a `close` no source line writes. Temporary memory
+is a local arena, `defer close(a)`, and `alloc::with(a) { … }` or an explicit argument (Memory
+§5.2.1). An elided argument is a use of the ambient place: if that place is consumed on a path
+reaching the call (`alloc::with(a) { close(a) ; f() }`), the call is a linearity error (Memory
+§5.9).
 
 **UFCS interaction.** An elided allocator parameter does **not** participate in receiver
 binding: `recv.f(…)` binds `recv` to the first **written** (non-elided) parameter, and the

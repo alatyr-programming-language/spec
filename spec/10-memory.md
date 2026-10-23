@@ -441,10 +441,39 @@ A function relates to allocation in one of three shapes:
 - **(B)** **`in a : ptr(mut alloc)`** — a required, ambient-elidable allocator; the shape
   for an **escaping** producer (a container constructor returns storage backed by the caller's
   arena, which outlives the call);
-- **(C)** **B with a Functions §5.1 default** — always short-callable, but the default is a
-  call-site temporary, so it is sound **only when the allocations do not escape** (scratch);
-  the escape checker (§5.4 / §5.6) enforces this. An escaping producer therefore uses B, not a
-  create-fresh default.
+- **(C)** **B with a Functions §5.1 default** naming a **static** allocator — always
+  short-callable; the default is the address of an existing allocator place of static storage
+  (below), so it outlives every call and its allocations may escape.
+
+**An omitted allocator argument always names an existing place that outlives the call** — never
+a value created for the call. The ambient is a named binding in scope (an `alloc::with` argument
+or the enclosing function's allocator parameter, Functions §5.5); a Functions §5.1 default on an
+allocator parameter MUST be `ptr(mut P)` where `P` is a place of **static** storage (§2.1–§2.2,
+§2.4: a module-level binding or a `@static` one), named directly or through field and array-element
+steps — never through a pointer. Any other default expression — a
+call (`arena_over(…)`, a constructor), a local, a pointer variable — is **ill-formed** on an
+allocator parameter: an owning `Arena` created for one call would need a `close` that no source
+line writes, and none without a closer can satisfy linearity (§5.9).
+
+The elided argument **is a use of the ambient place**, checked like the written `ptr(mut a)`: if
+`a` is consumed (moved or `close`d) on a path reaching the call, the call is a **linearity error**
+(§5.9) — `alloc::with(a) { close(a) ; f() }` is ill-formed, exactly as `close(a) ; f(ptr(mut a))`
+is.
+
+**Temporary memory is written explicitly.** A function that needs scratch allocation for the
+duration of one call makes a local arena, registers its release with `defer`, and passes it — by
+name, or as the ambient:
+
+```alatyr
+summarize := fn(in text : str) -> u64 {
+  mut buf : [bits8; 4096] = uninit
+  mut a := unchecked arena_over(ptr(mut buf[0]), 4096)   # buf is a local: the author vouches (Stdlib appendix §5.2.1)
+  defer close(a)                                         # the arena is consumed on every exit (§5.8, §5.9)
+  alloc::with(a) { tally(text) }                         # tally's elided allocator is `a`
+}
+```
+
+The allocation, the arena's lifetime and its release are each on a line of the caller.
 
 #### 5.3 Scoped references (second-class)
 

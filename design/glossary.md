@@ -309,7 +309,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   mutable allocator, `in a : ptr(mut alloc)`; never `in out`, Functions §5.1/§2.2). Distinguished
   by type alone; within the body it **is** the ambient allocator, and at a call site it is **elidable**
   from the ambient (Functions §5.5). Shapes: **A** none / **B** required (escaping producers) / **C**
-  B + a §5.1 default (scratch-only, escape-checked). MEM-4.
+  B + a §5.1 default naming a static allocator place (never a value created for the call; temporary
+  memory is a local arena + `defer close`). MEM-4/MEM-5.
 
 - **Handle / index** — a key value (a number) into an arena; not a pointer, hence without the lifetime problem;
   validity is checked on access against the owning arena. For long-lived links (graphs and the like). v1
