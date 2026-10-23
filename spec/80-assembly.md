@@ -117,20 +117,22 @@ function.)
 
 - A **raw instruction intrinsic emits exactly one GAS instruction** (I1) and carries
   **no guard** — there is nothing to check; it *is* the machine instruction.
-- A **checkable operation** (division by zero; a shift ≥ the operand width; an
-  unaligned load/store where the target faults) gets, by default (**checked**), a
-  **documented runtime guard + inline trap** (the exact target instruction is the
-  per-architecture appendix §2 table: `ud2` / `brk #0` / `udf #0` / `ebreak`) → a defined
-  trap, never UB (I11). **Inside an `unchecked` scope** the guard is dropped (1:1)
-  (the verification mode; Control Flow §2.3; decisions CG-7/CG-6/CG-8).
-- A **library-defined** operator/conversion guard (the kernel/prelude split makes
-  `u64 +`, `char(n)`, … library functions, TYP-2/TYP-5) is **not** recognized by the
-  compiler. The library makes its guard mode-dependent by reading the verification mode
-  as a comptime fact — `comptime if verify.checked { <guard> }` (Comptime §7.5 / CT-11) — so the
-  guard is present in the function's **checked** instantiation and comptime-absent in
-  its **unchecked** one. `unchecked(x + y)` thus drops the guard by selecting the
-  unchecked instantiation (leaving the intrinsic's wrap), not by the compiler stripping
-  a guard it understands.
+- A **checkable operation** of the built-in interpretations (the checked-overflow set;
+  division by zero; a shift ≥ the operand width; an unaligned load/store where the target
+  faults) gets, by default (**checked**), a **documented runtime guard + inline
+  trap**, emitted by the **compiler at the operation site** before the instruction (the
+  exact target instruction is the per-architecture appendix §2 table: `ud2` / `brk #0` /
+  `udf #0` / `ebreak`) → a defined trap, never UB (I11; Concurrency §6.1 / CG-13). The guard
+  belongs to the operation, not to the intrinsic the operator lowers to, nor to a routed
+  operator body. **Inside an `unchecked` scope** the guard is dropped (1:1) (the
+  verification mode; Control Flow §2.3; decisions CG-7/CG-6/CG-8).
+- A **library-defined** check — a library numeric type's (`uint(N)`), a checked
+  conversion's (`char(n)`), a container's — is library code and is **not** recognized by
+  the compiler. The library makes it mode-dependent by reading the verification mode as a
+  comptime fact — `comptime if verify.checked { <guard> }` (Comptime §7.5 / CT-11) — so it
+  is present in the function's **checked** instantiation and comptime-absent in its
+  **unchecked** one; a check mirroring the built-in family fails through `trap()`, the
+  same instruction (Stdlib §4.1).
 - **Compile-time checks are always applied**: a constant out of range, a write
   through an immutable path, operand-kind validity (§5), and arity.
 - **`no_abstractions` is orthogonal to verification** (CG-6): it restricts a unit to

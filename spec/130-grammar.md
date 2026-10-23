@@ -125,7 +125,7 @@ struct  enum  union  fn  type  mod  abi  dyn
 reserved now so adding the feature later does not break programs.
 
 **Not keywords:** built-ins are **prelude identifiers** (OP-1) — flat word-functions
-(`typeinfo`, `bitcast`, `compiles`, `resolves`, `embed`, `forget`, `panic`, `exit`, `assert`,
+(`typeinfo`, `bitcast`, `compiles`, `resolves`, `embed`, `forget`, `panic`, `exit`, `trap`, `assert`,
 `asm`, the pointer ops `ptr`/`deref`, the layout words `size`/`align`, the dyn-closure builder
 `dyn_over` (FN-11), instruction names, …)
 and members of the **prelude modules** `atomic` / `volatile` (`atomic::load`, …, reached by

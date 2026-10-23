@@ -102,7 +102,7 @@ kinds**:
 - **Compiler intrinsics** — cannot be written in the language; the compiler provides
   them: `typeinfo`, `bitcast`, `T.size()` / `T.align()` (Memory-model
   §4.3; field offsets via `typeinfo(T).fields`), `ptr` / `deref`, `resolves` / `compiles` (Comptime §6.1), `embed`
-  (Comptime §2.4), `forget` (Memory §5.9), and the instruction intrinsics
+  (Comptime §2.4), `forget` (Memory §5.9), `trap` (§4.1), and the instruction intrinsics
   (Assembly chapter).
 - **Ordinary prelude functions** — could be written in the language but are provided:
   `panic`, `exit`, `assert` (§4), and the library operations.
@@ -119,6 +119,18 @@ future growth (FND-6) — not left unspecified.
 `panic` and a `trap` are a **defined failure** (a controlled termination), never UB
 (I11). There is **no** stack unwinding (cleanup is `defer` on normal exits only;
 Memory §5.8) — a panic/trap terminates the process.
+
+**`trap() -> Never`** is the language's **direct inline trap** as a prelude identifier: it
+emits exactly the per-architecture checked-failure instruction (per-arch appendix §2) —
+the **same** instruction a failed built-in checked guard executes (Concurrency §6.1;
+CG-13) — with no message, no hook, no OS exit and no unwinding, identically in every
+context (hosted, `freestanding`, bare). It is a compiler intrinsic (§3): its one
+instruction is the target's, not a library choice. Its use is fixed for library-defined
+numeric types: a check that mirrors a member of the built-in guard family (overflow,
+division or remainder by zero) — e.g. in `uint(N)` (Type System §7) — MUST fail through
+`trap()` under `comptime if verify.checked` (Comptime §7.5), never through `panic`, so
+such a failure is indistinguishable from the built-in guard's. `panic` (§4.2) stays the
+failure of ordinary library logic — a container precondition, an `Option` unwrap.
 
 #### 4.2 Hosted versus freestanding
 

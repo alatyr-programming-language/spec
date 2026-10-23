@@ -121,7 +121,12 @@ operator is marked **`@inline`** (Codegen §3.5 / CG-10), so the compiler
 operand shape (I2 — zero-cost; the operator function then carries no `call`).
 Inlinability is **declared by the marker**, not inferred from the body's shape. The kernel keeps
 **no** built-in numeric knowledge — `u64`'s `+` is library code over the `add`
-intrinsic, exactly as `u128`'s `+` is library code over a multiword routine.
+intrinsic, exactly as `u128`'s `+` is library code over a multiword routine. What the
+compiler does know is the closed **checked-guard family** (Concurrency §6; CG-8/CG-13):
+*which* operations of the built-in interpretations are guarded, so that in checked code it
+emits the guard (overflow, division by zero, …) **at the operation site**, before the
+inlined instruction. The operator body carries **no** guard, and the instruction intrinsic
+never does (Assembly §3).
 
 #### 3.2 Signedness lives in operations
 
@@ -235,8 +240,8 @@ words are kept only for what a function cannot express (control flow, declaratio
 forms desugar to ordinary prelude functions resolved by UFCS over the base's type:
 
 - a scalar index `a[i]` ≡ `at(a, i)` — the **bounds-checked element access**
-  (out of range traps, I11; the check is library code, mode-dependent like any
-  checked operator above);
+  (out of range traps, I11; for arrays and slices the compiler emits the bounds guard,
+  below; a library aggregate's `at` makes its own check);
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
 - a range index `a[lo..hi]` ≡ `index_range(a, lo, hi)` — the **sub-slice** view.
 
@@ -251,15 +256,18 @@ sequences (the `+`/`==` treatment, applied to `[]`), without enlarging the gramm
 (the `[]` postfix already exists; Grammar §3.4).
 
 A **checked** operator or conversion (one that traps by default and whose check is
-dropped inside `unchecked`, §4.2 / CG-8) expresses that check in **library code**, and
-makes it **mode-dependent** by reading the verification mode as a comptime fact —
-`comptime if verify.checked { <guard> }` (Comptime §7.5 / CT-11). Such a function is
-**mode-polymorphic**: instantiated per the call site's verification mode, so the guard
-is present in a checked use and comptime-absent in an `unchecked` one. This is how a
-**library-defined** native operator (`u64 +`'s overflow guard) or checked conversion
-(`char(n)`'s code-point guard, §4.2) satisfies both "trap by default" and "wrap/raw
-under `unchecked`" **without** the compiler recognizing the guard — the kernel keeps no
-built-in numeric knowledge (§5.3 / TYP-2/TYP-5). `unchecked` itself stays non-transitive for
+dropped inside `unchecked`, §4.2 / CG-8) of a **built-in** numeric interpretation, and
+built-in array/slice indexing, is guarded by the **compiler at the operation site**
+(Concurrency §6.1 / CG-13): the operator body carries no guard, and `unchecked` drops the
+guard because the compiler emits it. **Library code** makes its *own* checks mode-dependent
+by reading the verification mode as a comptime fact — `comptime if verify.checked { <guard>
+}` (Comptime §7.5 / CT-11). Such a function is **mode-polymorphic**: instantiated per the
+call site's verification mode, so the check is present in a checked use and comptime-absent
+in an `unchecked` one. This is how a **library-defined** numeric type (`uint(N)`, §7) or
+checked conversion (`char(n)`'s code-point check, §4.2) satisfies both "trap by default"
+and "wrap/raw under `unchecked`" **without** the compiler recognizing the check; a check
+that mirrors a member of the built-in family fails through the prelude `trap()` (Stdlib
+§4.1), the built-in guard's own instruction. `unchecked` itself stays non-transitive for
 any function that does **not** read the mode (CG-7).
 
 **Receiver/access coercion — auto-ref and auto-deref (MOD-3 / OP-5).** A value-access
@@ -692,7 +700,11 @@ cost is **visible**.
   word count — ripple-carry `+` / `-`, schoolbook `*` keeping the low `N` bits,
   binary long-division `/` / `%`, and a hi-word-to-lo-word lexicographic **unsigned**
   comparison — with **visible** cost: a value occupies `N/64` words; the operations
-  are `O(words)` (add/sub/compare) or `O(words²)` (multiply/divide). This is the
+  are `O(words)` (add/sub/compare) or `O(words²)` (multiply/divide). The compiler emits
+  no guard for them: overflow of `+` / `-` / `*` and division or remainder by zero are
+  checked in the operator bodies under `comptime if verify.checked` (§4.5) and fail
+  through `trap()` (Stdlib §4.1) — the built-in guard's instruction, so `x / 0` fails
+  identically for `u64` and `uint(256)` (CG-13). This is the
   concrete library multiword value that makes a non-native width (`u64` on a 32-bit
   target, a `usize` decomposition) an ordinary `{word…}` value, **never** a backend
   register pair. Widths that are **not** a multiple of 64 (an arbitrary `N` with a
