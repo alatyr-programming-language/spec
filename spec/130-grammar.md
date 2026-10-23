@@ -557,8 +557,8 @@ alloc-with-region ::= "alloc" "::" "with" "(" expr ")" block  (* ambient-allocat
 behavior (arithmetic wraps, indexing skips bounds, narrowing truncates, float→int and
 div0/shift/alignment faults pass through; never UB, I11) — **and** the genuinely-raw
 operations (pointer arithmetic, int↔ptr, raw transfer, raw-union reads whose member is not
-definitely active, `uninit` reads, raw `asm`, a call to `arena_over` — Stdlib appendix
-§5.2.1) become writeable, and a block may bind a `scoped`
+definitely active, `uninit` reads, raw `asm`, a call to `arena_over` or `str_at` — Stdlib
+appendix §5.2.1, §3.6) become writeable, and a block may bind a `scoped`
 call result to a local (Memory §5.3.1); as an expression it yields
 the inner value. `@` never wraps an
 expression (CG-6).

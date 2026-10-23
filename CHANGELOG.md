@@ -197,6 +197,15 @@ Temporary memory is a local arena, `defer close(a)`, then an explicit argument o
 `alloc::with(a) { close(a) ; f() }` is a linearity error. A compiler-closed call-site temporary is
 recorded as rejected for now, additive later (MEM-5; Memory §5.2.1; Functions §5.5; glossary).
 
+**Normative — a call to `str_at` requires `unchecked`.** `str_at(p, n)` builds a `str` from an
+integer address and was documented as "unchecked, encapsulated in the one function"; but
+`unchecked` is non-transitive, so checked code could call it and read arbitrary memory, against
+I11. A call to `str_at` is now a raw operation (CG-7), like `arena_over`: ill-formed in checked
+code and under `no_unchecked`, written `unchecked str_at(p, n)`, the caller vouching for valid
+UTF-8 that outlives the view. The `bitcast` catalog row now states that a `bitcast` to a pointer
+type is the same `unchecked`-only fabrication Memory §4.5 already required (CG-7; Memory §4.5, §8;
+Stdlib appendix §3.6, §4.1, §8; Grammar §3.7; glossary).
+
 **Normative — a function value has the target's default calling convention.** Functions §6.2
 said a call uses "the calling convention carried by the callee's type", but the function-value
 type `fn(T…) -> R` carries no convention and `@abi` on a type is forbidden, so an indirect call
