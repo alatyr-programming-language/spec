@@ -343,7 +343,7 @@ byte_len(in self) -> usize             # O(1)
 codepoint_count(in self) -> usize      # O(n)
 chars(in self) -> CharIter             # iterate code points (Iterator, §2.4)
 bytes(in self) -> [u8]                 # the underlying bytes
-str_at(in p : usize, in n : usize) -> str   # raw view: `n` bytes at address `p` (unchecked inverse of `bytes`)
+str_at(in p : usize, in n : usize) -> str   # raw view: `n` bytes at address `p` (raw inverse of `bytes`; a call requires `unchecked`)
 ```
 
 Indexing by **byte** offset is bounds-checked and checked to land on a code-point boundary
@@ -355,9 +355,15 @@ A growable string is `String` (alloc tier, §6).
 `str_at(p, n)` is the **raw inverse of `bytes`**: it reinterprets the `n` bytes at
 address `p` as a `str` (`usize → ptr(u8) → [u8] → str`) in one step, so a scanner
 walking a byte buffer by address (a lexer reading `base + offset`) names a lexeme without
-the three-line pointer dance. It is **unchecked** — the caller guarantees the bytes are
-valid UTF-8 and outlive the view (the view aliases the storage, no copy); the unsafety is
-encapsulated in the one function rather than repeated at each call site.
+the three-line pointer dance. It is a **raw operation: a call to it requires an enclosing
+`unchecked`** (`unchecked expr` or `unchecked { … }`, CG-7) and is ill-formed in checked code and
+under `no_unchecked` — it fabricates a pointer from an integer (Memory §4.5), so in checked code it
+would read arbitrary memory (I11). At the visible `unchecked` the caller vouches that the `n` bytes
+at `p` are valid UTF-8 and outlive the view (the view aliases the storage, no copy):
+`s := unchecked str_at(base + off, len)`. A view that breaks either fact has **hardware-defined**
+behavior when read, never UB (I11). The function's body does the pointer work once; it does not
+make its call checked — `unchecked` is non-transitive (CG-7), so the obligation stays with the
+caller.
 
 #### 3.7 `Never` (base)
 
@@ -386,7 +392,7 @@ lives on the arch surface (Assembly §4). Two kinds.
 | Built-in | Signature (UFCS receiver where applicable) | Contract |
 |----------|--------------------------------------------|----------|
 | `typeinfo`  | `typeinfo(comptime T : type) -> TypeInfo`            | comptime type introspection; no RTTI (Comptime §5) |
-| `bitcast`   | `bitcast(comptime T : type, in v : U) -> T`          | reinterpret bits; **equal width** required (Type System §4.4) |
+| `bitcast`   | `bitcast(comptime T : type, in v : U) -> T`          | reinterpret bits; **equal width** required (Type System §4.4); to a pointer type it fabricates a pointer from an integer — a raw operation, `unchecked` only (Memory §4.5) |
 | `size`   | `T.size() -> usize` (prefix `size(comptime T : type)`) | size in bytes; compiler-folded over the machine model (Memory §4.3) |
 | `align`  | `T.align() -> usize` (prefix `align(comptime T : type)`) | alignment in bytes; compiler-folded (layout = machine model, I6) |
 | `ptr`   | `ptr(place) -> ptr([mut] T)`                 | take an address (Memory §4.3); on a *type* `ptr(T)` / `ptr(mut T)` it is the pointer **type** (`mut` on the pointee), on a *place* its address — UFCS `place.ptr()` |
@@ -880,7 +886,8 @@ A conforming implementation MUST:
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the
    enumerated operations, **bounds/UTF-8/validity checks trapping** as defined failures
    (never UB, I11) — a library-code check that mirrors the built-in guard family failing
-   through `trap()`, never `panic` (§3) — and visible cost (I2);
+   through `trap()`, never `panic` (§3) — and visible cost (I2), rejecting a call to `str_at`
+   outside an `unchecked` grant (and under `no_unchecked`, §3.6);
 3. provide the **built-in catalog** of §4 with each built-in's signature and contract —
    compiler intrinsics (§4.1) and ordinary prelude functions (§4.2), with `panic`/`exit`/`trap`
    returning **`Never`**, `trap` emitting exactly the per-arch checked-failure instruction

@@ -344,7 +344,8 @@ identity; Type System chapter).
 
 #### 4.5 Pointer arithmetic and integer↔pointer
 
-Pointer arithmetic and fabricating a pointer from an integer (`bitcast`) are
+Pointer arithmetic and fabricating a pointer from an integer (`bitcast` to a pointer type, or a
+`str` view at an integer address, `str_at` — Stdlib appendix §3.6) are
 capability-requiring operations: they are legal only inside an `unchecked` grant
 (or the assembly surface), and there they have hardware-defined behavior (I11).
 Outside such a grant they are ill-formed. Checked code traverses by
@@ -907,7 +908,8 @@ A conforming implementation MUST:
    definite assignment — at compile time (§3);
 5. represent pointers as non-null `ptr(T)`/`ptr(mut T)`, represent absence
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
-   pointer arithmetic and integer→pointer to an `unchecked` grant / assembly (§4);
+   pointer arithmetic and integer→pointer (including `str_at`) to an `unchecked` grant /
+   assembly (§4);
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
    check for handles, by generation trap for generational), reject
