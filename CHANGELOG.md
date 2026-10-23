@@ -89,6 +89,14 @@ identically for an array, a slice and a `Vec`, in every context including `frees
 `Err` (CG-13; CT-11; OP-3; Stdlib §4.1; Stdlib appendix §3, §3.6, §4.2, §5.2.1, §6, §8;
 Types §4.5; Memory §5.4; Concurrency §6.1).
 
+**Normative — the grammar gains the slice type `[T]` / `[mut T]`.** The slice view was
+used as a type throughout (Type System §7, Stdlib appendix §2.4/§3.5, the `Writer`
+protocol's `[u8]`, `sort` on `[mut T]`), but `type-atom` had no production for it, so the
+normative grammar rejected every such program. `slice-type ::= "[" [ "mut" ] type-expr
+"]"` joins `type-atom` (Grammar §3.3; Type System §11). It does not collide with
+`array-type`: after `"[" type-expr` a `"]"` ends a slice type, while `";"` or `"="`
+continues an array type, and a leading `mut` occurs only in a slice type.
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could

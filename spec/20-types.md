@@ -1084,10 +1084,13 @@ union-type    ::= "union"  "{" [ union-member { item-sep union-member } ] "}"
 array-type    ::= "[" type-expr [ "=" expr ] ";" expr "]"  (* [T; N] | [T = v; N] — N comptime (§6.4);
                                                               the optional "= v" is the type-level
                                                               element default (§9.4) *)
+slice-type    ::= "[" [ "mut" ] type-expr "]"            (* [T] | [mut T] — the slice view (§7; Stdlib appendix §3.5);
+                                                              a "]" right after the element type ends a slice-type,
+                                                              ";" or "=" continues an array-type *)
 tuple-type    ::= "(" [ type-expr { "," type-expr } ] ")"
 type-expr     ::= { attribute } type-atom              (* prefix attributes decorate a type: @align(N) T, @require(pred) T, @nonzero u32 (§8/§8.1) *)
 type-atom     ::= ident                                (* bitsN, uN/iN/fN, usize, char, str, bool, … *)
-                | struct-type | enum-type | union-type | array-type | tuple-type
+                | struct-type | enum-type | union-type | array-type | slice-type | tuple-type
                 | type-atom "(" arg-list ")"           (* generic instantiation: Vec(T), Option(T), Result(T,E) *)
                 | fn-type                              (* function-value type — a non-capturing code-pointer, one word (Functions §1.5, FN-10) *)
                 | "dyn" fn-type                        (* type-erased closure type — a {code, env} fat pair, env in explicit storage (Functions §1.6, FN-11) *)
