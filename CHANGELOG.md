@@ -126,6 +126,15 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — `clamp` with `lo > hi` and an `@alloc` that cannot allocate fail through
+`trap()`.** Both said only "traps". `clamp`'s `lo <= hi` is an operand-domain check (like
+division by zero), made under `comptime if verify.checked`, failing through `trap()`, never
+`panic`; its body is now specified (`lo` if `x < lo`, else `hi` if `hi < x`, else `x`), so the
+unchecked result is defined. `@alloc`'s exhaustion (`OutOfMemory`) fails through the direct
+inline trap in every verification mode — there is no value to bind, so `unchecked` cannot drop
+it; the recoverable path stays `allocate(…)?` (CG-13; MEM-4; Memory §2.4, §5.4; Stdlib §4.1;
+Stdlib appendix §2.6, §5.2.1; glossary).
+
 **Normative — a call to `arena_over` requires `unchecked`.** `arena_over(buf, cap)` keeps the
 address of a caller buffer inside an owning `Arena` that can be moved, returned or stored past
 `buf`'s scope, and the local escape rule cannot tie the result to `buf` without a lifetime

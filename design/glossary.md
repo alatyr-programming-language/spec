@@ -57,7 +57,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   hook, no OS exit, no unwinding, identical in every context. A library check that mirrors the built-in family fails through
   it, never through `panic` — a library-defined numeric type's overflow or division by zero, and a library container's
   bounds check (`Vec` indexing, `str`/`String` byte access, the arena's `get`), so `xs[10]` fails alike for an array and a
-  `Vec`. `panic` is the failure of ordinary library logic (an explicit assertion, `unwrap` on `None`).
+  `Vec`; `clamp` with `lo > hi`; and, in every mode, an `@alloc` that cannot allocate. `panic` is the failure of
+  ordinary library logic (an explicit assertion, `unwrap` on `None`).
 
 - **Raw union / member payload / definitely active** (TYP-11) — a **raw union** is an
   untagged overlap of named members, all at offset `0`, with no hidden discriminant or

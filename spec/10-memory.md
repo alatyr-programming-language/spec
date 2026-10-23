@@ -174,7 +174,8 @@ The default storage class MAY be overridden per binding by a storage specifier
 - `@alloc(allocator)` — dynamic allocation through the given allocator value; the
   allocator's type selects the lifetime mechanism (§5). The binding it introduces is the
   mechanism's **reference** (for a region, `@alloc(a) x := init` binds `x : Handle(T)` —
-  §5.4 / MEM-3), not the value itself; capacity exhaustion traps (the recoverable path is
+  §5.4 / MEM-3), not the value itself; capacity exhaustion fails through `trap()` in every
+  verification mode (Stdlib §4.1; the recoverable path is
   `allocator.allocate(T, …)?`, whose result is typed by the mechanism — `Handle(T)` for a
   region, Stdlib appendix §5.1).
 
@@ -572,8 +573,9 @@ The concrete v1 surface (MEM-3): a handle is the ordinary library type `Handle(T
 System §4.1 — not a language construct, and carrying **no** region name or lifetime
 variable). Allocation uses the `@alloc` storage attribute (§2.4):
 `@alloc(a) x := init` allocates through `a`'s allocator protocol (Stdlib appendix §5.1),
-writes `init`, and binds `x : Handle(T)`; capacity exhaustion **traps** (a defined
-failure, I11), and the recoverable path is to call `a.allocate(T, …)?` directly — its
+writes `init`, and binds `x : Handle(T)`; capacity exhaustion fails through **`trap()`** (a
+defined failure, I11; never `panic`, and not dropped under `unchecked` — there is no value to
+bind; Stdlib §4.1), and the recoverable path is to call `a.allocate(T, …)?` directly — its
 result is typed by the mechanism, so for a region it already yields `Handle(T)` (§5.1). A handle is
 **not** dereferenced (no `deref` on a handle; §5.6 rule 4): the value is reached by
 exchanging *handle + arena* for a **scoped reference** with `get(ptr(a), h) -> scoped ptr(mut T)`,

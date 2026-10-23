@@ -132,12 +132,15 @@ that mirrors a member of the built-in guard family: a library-defined numeric ty
 overflow or division/remainder by zero (e.g. in `uint(N)`, Type System §7), and a library
 container's bounds, alignment or narrowing check — `Vec` indexing and `at`, a
 library-implemented `str` / `String` byte access, the arena's `get` (Stdlib appendix §3,
-§5.2.1, §6). Such a check MUST be made under `comptime if verify.checked` (Comptime §7.5)
+§5.2.1, §6) — and an operand-domain check of a value primitive, `clamp`'s `lo <= hi` (Stdlib
+appendix §2.6). Such a check MUST be made under `comptime if verify.checked` (Comptime §7.5)
 and fail through `trap()`, never through `panic`, so the failure is indistinguishable from
 the built-in guard's: `xs[10]` fails identically for an array and a `Vec`, in every
 context, and the check drops under `unchecked` as the built-in one does (CG-13). `panic`
 (§4.2) stays the failure of ordinary library logic — an explicit assertion, an `Option`
-`unwrap`, a precondition that mirrors no guard-family member.
+`unwrap`, a precondition that mirrors no guard-family member. The failure of the language
+construct **`@alloc`** to obtain storage (`OutOfMemory`) also fails through `trap()` — in every
+verification mode, since there is no value to bind (Memory §2.4; Stdlib appendix §5.2.1).
 
 #### 4.2 Hosted versus freestanding
 

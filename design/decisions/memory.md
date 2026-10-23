@@ -136,7 +136,7 @@ mechanism** (region → a handle, etc.), so cost stays visible (I1/I2).
 **Rejected.** `@alloc` itself yielding `Result(Handle(T), AllocError)` — an attribute that
 silently changes the binding's type and forces a near-ubiquitous trailing `?`; the
 recoverable form is the explicit `allocate(…)?` call instead (the trapping `@alloc` is the
-convenience over it).
+convenience over it; its failure is `trap()` in every verification mode, CG-13).
 
 ### MEM-5. The ambient allocator — `alloc::with`
 *spec: Memory §5.2.1, Functions §5.5, Overview §4.1*
