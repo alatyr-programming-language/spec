@@ -126,7 +126,9 @@ Memory §5.8) — a panic/trap terminates the process.
 emits exactly the per-architecture checked-failure instruction (per-arch appendix §2) —
 the **same** instruction a failed built-in checked guard executes (Concurrency §6.1;
 CG-13) — with no message, no hook, no OS exit and no unwinding, identically in every
-context (hosted, `freestanding`, bare). It is a compiler intrinsic (§3): its one
+context (hosted, `freestanding`, bare). It is **not** admitted in a `no_abstractions` unit
+(Assembly §1.1; CG-12): it names no instruction, so there the per-arch instruction is written
+directly. It is a compiler intrinsic (§3): its one
 instruction is the target's, not a library choice. Its use is fixed for a library check
 that mirrors a member of the built-in guard family: a library-defined numeric type's
 overflow or division/remainder by zero (e.g. in `uint(N)`, Type System §7), and a library
