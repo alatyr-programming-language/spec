@@ -196,8 +196,9 @@ contract-changing region, not an open-set representation attribute).
 **Why.** `unchecked` is a **scoped verification mode parallel to `comptime`**. Within
 `unchecked expr` (one expression) or `unchecked { … }` (a block) the **checked-guard
 family is dropped** and each guarded operation takes its **hardware-defined** behavior —
-never UB (I11): arithmetic and `MIN ÷ -1` **wrap** (two's-complement); division-by-zero
-and over-width shift take the hardware fault/result; indexing skips the bounds check;
+never UB (I11): `+`, `−`, `*` and unary `−` **wrap** (two's-complement); division by zero,
+`MIN / -1`, `MIN % -1` and an over-width shift take the hardware fault/result (CG-13);
+indexing skips the bounds check;
 narrowing truncates and float→int is hardware-defined; alignment-requiring access skips
 the alignment check. The scope **additionally permits the genuinely-raw operations**
 ill-formed in checked code (pointer arithmetic, `int↔ptr`, reading a raw-union member
@@ -209,9 +210,11 @@ over per-operation visibility — and action-at-a-distance is bounded by I11. Th
 **non-transitive by default** (a call encapsulates its own value/trap) but **observable
 on demand**: a function may read the mode via `comptime if verify.checked` (a comptime
 fact, like target/build gating), making it **mode-polymorphic** — instantiated per the
-call site's mode. This is precisely how a *library-defined* operator/conversion drops its
-guard inside `unchecked` (so library overflow arithmetic wraps per CG-8) without the
-compiler recognizing any guard: the library declares the mode-dependence. There is **no
+call site's mode. This is how **library code** — a container, a library-defined numeric
+type such as `uint(N)` — makes its *own* checks drop inside `unchecked` without the
+compiler recognizing them: the library declares the mode-dependence (CT-11). The built-in
+guard family needs no such declaration — the compiler emits it, so the compiler drops it
+(CG-13). There is **no
 re-entry and no `checked` keyword** — by symmetry with the phase axis there is no
 `runtime` to re-enter from inside `comptime`, so there is no `checked { }`; the
 `unchecked` scope *sets* the mode and `verify.checked` only *reads* it. To get a checked
@@ -238,6 +241,12 @@ arithmetic. **By default (checked) it traps** — everywhere except inside an `u
 scope — via an inline check + a defined trap (cost = the checked-guard family, I2); the
 checked-overflow set is `+`, `−`, `*`, unary `−` (negate MIN), and `MIN / -1` (division
 overflow), with division-by-zero and shift-≥-width as separate guards that also trap.
+**`MIN % -1` is not in the set**: its mathematical remainder `0` is representable, so a
+checked `%` yields `0` and does **not** trap. The compiler guards the divisor `== -1` case
+— the same compare as the `MIN / -1` guard — and produces `0` without executing the divide,
+so no target faults on it (`x86_64`'s `idiv` would raise `#DE`). *Rejected:* trapping on
+`MIN % -1` — it fails an operation whose correct result exists, only because one ISA's
+instruction computes quotient and remainder together.
 **The guard is a checked-guard-family trap emitted by the compiler** — the same category
 as the division-by-zero and bounds guards (CG-2), *not* something only a routed `u`/`i`
 library operator supplies. It therefore holds in **every** context, including a bare or
@@ -247,9 +256,10 @@ trap fixed by CG-13, identical in every context (a bare or `freestanding` progra
 included) and on every architecture. *Superseded:* an earlier reading let a std operator
 supply a richer `panic` flavor while a bare context emitted a hardware trap — two
 observable mechanisms for one guard, below the FND-3 bar. **Inside an `unchecked` scope
-the same operations wrap** (two's-complement,
-hardware-defined) and the guards are dropped for the whole scope, as a mode (CG-7), not
-per operation. **Explicit policy operations** exist everywhere without a grant —
+`+`, `−`, `*` and unary `−` wrap** (two's-complement) and the guards are dropped for the
+whole scope, as a mode (CG-7), not per operation; `MIN / -1`, `MIN % -1`, division by zero
+and an over-width shift then take the target's hardware-defined behaviour (CG-13; per-arch
+appendix §2). **Explicit policy operations** exist everywhere without a grant —
 `wrapping_*` (wrap), `saturating_*` (clamp), `checked_*` (→ `Option`), `overflowing_*`
 (→ `(T, bool)`) — as ordinary prelude functions (OP-1), so wrap is available even outside
 an `unchecked` scope. `bitsN` has no arithmetic (only bit-operations); overflow concerns
@@ -389,9 +399,10 @@ programmer did not write is forbidden. This resolves the boundary construct-by-c
 **Forbidden — structured abstractions, a compile error located at the site:**
 - **The library value-operators as surface syntax** — arithmetic `+ - * / %`, comparison,
   bitwise, `and`/`or`, unary `-`/`not`. A native operator is an ordinary *library function*
-  (Type System §3.1) whose 1:1 body is the instruction intrinsic; its **checked instantiation
-  carries a guard**, and a guarded checkable operation is **not 1:1** (Assembly §3). Write the
-  intrinsic (`add(out, b)`) directly.
+  (Type System §3.1) whose 1:1 body is the instruction intrinsic, but in checked code the
+  compiler emits the operation's **checked guard** at the operator site (CG-13), and a
+  guarded checkable operation is **not 1:1** (Assembly §3). Write the intrinsic
+  (`add(out, b)`) directly — an intrinsic never carries a guard.
 - **Structured control flow** — `if` / `while` / `for` / `loop` / `match` / `break` /
   `continue` (expression or statement): the *other* control level (Control Flow §1), lowering
   to compiler-chosen compare+branch sequences (§10). Use labels + raw transfer.
@@ -430,7 +441,8 @@ keeps exactly one memory-access form. **Forbidding comptime** — the discarded 
 property.
 
 ### CG-13. One failure mechanism for the whole checked-guard family — the direct inline trap
-*provenance: refines CG-2/CG-8 · spec: Concurrency §6.1; Assembly §3; Codegen §3.5; per-arch
+*provenance: refines CG-2/CG-8; narrows CT-11 to library code · spec: Concurrency §6.1;
+Assembly §3; Codegen §3.5; Types §4.5, §7; Stdlib §4.1; Stdlib appendix §3, §4.1; per-arch
 appendix §2, §3.2*
 
 **Why.** The guard family was specified failure-by-failure: overflow traps "via an inline
@@ -443,7 +455,10 @@ two conforming implementations with observably different failures for the same p
 which is the FND-3 bar, not a quality-of-implementation detail. It also made the
 failure of *one* family depend on which arithmetic the source happened to use.
 
-**The rule.** Every checked-guard failure — the checked-overflow set (`+`, `−`, `*`, unary
+**The rule.** For the built-in numeric interpretations (the native-width `uN`/`iN`/`fN`
+operators and conversions, and the built-in array/slice indexing) the compiler emits the
+guard **at the operation site**; an instruction intrinsic never carries one (it is 1:1,
+Assembly §3). Every checked-guard failure — the checked-overflow set (`+`, `−`, `*`, unary
 `−`, `MIN / -1`), division by zero, an over-width shift, the bounds / alignment /
 narrowing guards, and a false `@require` predicate (TYP-12) — fails through **one**
 mechanism: the direct inline trap, emitted as the per-architecture instruction in per-arch
@@ -455,7 +470,28 @@ built-in guard. Inside `unchecked` the guard is absent and the operation takes i
 hardware-defined behaviour (CG-7) — including the machine's own fault on a zero divisor or
 on `MIN / -1`, which is then hardware behaviour, not a language guard. Only `+ − * unary −`
 *wrap* under `unchecked`; the divide and shift guards drop to target-specific behaviour
-(Concurrency §6.2), which is why the checked mechanism has to be uniform.
+(Concurrency §6.2; per-arch appendix §2), which is why the checked mechanism has to be
+uniform. **`MIN % -1`** is the one divide case that is guarded without being a failure: in
+checked code the compiler compares the divisor with `-1` (the compare the `MIN / -1` guard
+already makes) and yields `0`, the correct remainder, without executing the divide (CG-8);
+under `unchecked` it is hardware-defined (`x86_64`/`i386` `idiv` faults, `#DE`; `aarch64`,
+`aarch32` `sdiv` and RISC-V yield `0`).
+
+**Library-defined numeric types fail through `trap()`.** The guard family above is the
+compiler's for the built-in interpretations; a library-defined numeric type — `uint(N)`
+(TYP-10), and so the wider-than-native `u128` ≡ `uint(128)` — implements its
+operators in library code, where the compiler emits no guard. Such an operator whose check
+mirrors a family member (division or remainder by zero, overflow) MUST make the check under
+`comptime if verify.checked` (CT-11) and fail through the prelude **`trap() -> Never`** —
+the same direct inline trap instruction (per-arch appendix §2), with no message, no hook, no
+OS exit and no unwinding, valid in every context including `freestanding` and bare — never
+through `panic`. So `x / 0` fails identically for `u64` and for `uint(256)`. `trap` passes
+PRIN-1: it is not a second name for `panic` but a capability `panic` cannot give — a library
+failing by **exactly** the mechanism of a built-in guard, in every context; `panic`'s
+behaviour is a target/limits property (a hook, stderr + exit) and so cannot be that.
+Without `trap` a library could only re-spell the per-arch instruction itself in raw `asm`
+under `unchecked`, once per architecture — duplicating appendix §2 in every library and
+not following it when an architecture or backend is added.
 
 **Routed operators.** Operators are library functions (TYP-5), so an implementation may
 lower `a / b` into a prelude operator body. The guard attaches to the **operation**, not to
@@ -465,6 +501,11 @@ is therefore not a permitted variant — it makes the observable failure depend 
 prelude operator is in scope, and it reintroduces the IO/hook path CG-8's superseded
 sentence used to allow. `panic`/`assert` in ordinary library logic (a container's own bounds
 check, an explicit precondition) is unaffected and stays an ordinary library call.
+*Superseded:* two other placements the text once carried — the built-in guard as library
+code in the prelude operator body under `comptime if verify.checked` (the first CT-11 and
+the Stdlib appendix's "mode-polymorphism guarantee"), and the guard as a property of the
+instruction intrinsic (the per-arch tables' guard column) — three locations for one guard;
+the operation site is the only one.
 
 **Cost.** One compare-and-branch ahead of the divide/shift, in the same category as the
 overflow guard (I2): the guard family already sets that visible ceiling, and a divide is

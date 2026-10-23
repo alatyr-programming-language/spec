@@ -39,7 +39,7 @@ be generous without penalising the freestanding target.
 
 The **built-in catalog** is partitioned, not duplicated: compiler **intrinsics** that
 cannot be written by hand (`typeinfo`/`bitcast`/`ptr`/`deref`/`size`/`align`/`resolves`/`compiles`/`embed`/
-`forget`/instructions) versus ordinary prelude functions (`panic`/`exit`/`assert`). The
+`forget`/`trap`/instructions) versus ordinary prelude functions (`panic`/`exit`/`assert`). The
 catalog core lives in the appendix; the per-domain families (Assembly, Concurrency) are
 normative in their feature chapters, and the full catalog is the union. `assert` is an
 **ordinary function** whose phase comes from context (a comptime context turns a false

@@ -49,6 +49,33 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — one checked-guard model: the compiler's inline trap.** The text placed the
+guard of the checked-guard family in three incompatible places: at the operation site,
+emitted by the compiler (CG-13, Concurrency §6.1); in the prelude operator body under
+`comptime if verify.checked`, failing through `panic` (CT-11, Stdlib appendix §3, Types
+§3.1/§4.5, Comptime §7.5, Assembly §3, CG-12); and on the instruction intrinsic itself (the
+per-arch tables' guard column, against Assembly §3's "an intrinsic carries no guard"). The
+operation site is now the only one: for the built-in numeric interpretations the compiler
+emits the guard before the operation as the per-arch direct inline trap; a routed operator
+body and an instruction intrinsic carry none. `comptime if verify.checked` (CT-11) stays,
+narrowed to **library code** making its own checks respond to `unchecked`. TYP-2/TYP-5 now
+say precisely what the compiler knows: the closed guard family, not the arithmetic. The
+per-arch guard column describes the guard the compiler emits for that operator family.
+
+**Normative — `trap() -> Never`.** A new prelude intrinsic emitting exactly the per-arch
+checked-failure instruction — no message, hook, OS exit or unwinding, valid in every
+context. A library-defined numeric type (`uint(N)`, and so `u128`) MUST fail a check that
+mirrors the built-in family (overflow, division or remainder by zero) through `trap()`,
+never `panic`, so `x / 0` fails identically for `u64` and `uint(256)`. `panic` stays the
+failure of ordinary library logic (Stdlib §4.1; Stdlib appendix §4.1; CG-13).
+
+**Normative — `MIN % -1` yields `0`.** In checked code it is not an overflow and does not
+trap: the compiler guards the divisor `-1` case (the `MIN / -1` compare) so no target faults.
+Under `unchecked` it is hardware-defined; the per-arch appendix §2 now tabulates unchecked
+integer-divide behaviour for all six architectures. CG-7 no longer says `MIN ÷ -1` wraps
+under `unchecked` — only `+ − *` and unary `−` wrap; division and shifts are
+hardware-defined (Concurrency §6.2; CG-7/CG-8/CG-13; CT-12).
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could

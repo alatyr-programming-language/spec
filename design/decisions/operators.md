@@ -109,8 +109,9 @@ could not tell **which function `v[i]` desugars to** for a library type (a
 reproducibility defect: the surface was mandated, the dispatch unspecified). The fix
 makes `[]` one of the **overloadable operators**, uniform with `+`/`==`: the postfix
 index forms are sugar over ordinary prelude functions resolved by UFCS over the base's
-type — `a[i]` ≡ `at(a, i)` (the bounds-checked element read; out-of-range traps, the guard
-being library code, mode-dependent like any checked operator); `a[i] = v` ≡
+type — `a[i]` ≡ `at(a, i)` (the bounds-checked element read; out-of-range traps — for
+arrays and slices by the compiler's operation-site guard (CG-13), for a library aggregate
+by its own mode-dependent check (CT-11)); `a[i] = v` ≡
 `index_set(a, i, v)`; `a[lo..hi]` ≡ `index_range(a, lo, hi)` (the sub-slice view).
 Arrays and slices supply these as **compiler-known built-ins** (bounds check + pointer
 arithmetic emitted directly — the floor, exactly as a native operator's one-instruction

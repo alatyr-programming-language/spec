@@ -18,7 +18,7 @@ each architecture's data.
 
 Per CG-2, the instruction set per architecture is a **curated v1 set** (the common
 integer / memory / control / system / baseline-SIMD instructions, each 1:1 with GAS and
-carrying its checked-guards); **everything else on the ISA is reachable through
+carrying **no** guard of its own — Assembly §3); **everything else on the ISA is reachable through
 `asm(…)`** (Assembly §4), the uncurated escape that guarantees lower-layer completeness
 (I4). "Additive" (FND-6) governs only *future* growth of the curated set — it does not
 make the v1 set optional (Overview §6).
@@ -90,8 +90,13 @@ register name and its width(s)/sub-register names:
 
 **(b) Instructions** (Assembly §4) — the curated v1 set, each row: the Alatyr
 **intrinsic name**, the **operand kinds** it accepts (the §5 kinds: reg / imm / mem /
-label / reloc / SIMD), the **GAS mnemonic** it lowers to (the I1 1:1 contract), and any
-**checked-guard** (Assembly §3; e.g. division-by-zero, over-width shift):
+label / reloc / SIMD), the **GAS mnemonic** it lowers to (the I1 1:1 contract), and a
+**checked-guard** column. That column is **not** a property of the intrinsic: an
+intrinsic is 1:1 and carries no guard (Assembly §3), whether called directly or reached by
+an operator. It names the guard the **compiler** emits at the operation site, before the
+instruction, when a built-in operator of that family lowers to this instruction in checked
+code (Concurrency §6.1 / CG-13; e.g. division-by-zero, over-width shift), plus per-row
+notes:
 
 > `intrinsic | operands | GAS | checked-guard`
 
@@ -189,6 +194,26 @@ before it is a supported target.
 | `riscv64` | `ebreak` |
 | `riscv32` | `ebreak` |
 
+The prelude **`trap()`** (Stdlib §4.1) emits exactly this instruction, so a library-defined
+type's check fails identically to a built-in guard (CG-13).
+
+**Integer divide under `unchecked` (all six arches).** In checked code every row below is
+guarded (division by zero traps; `MIN / -1` traps; `MIN % -1` yields `0` — Concurrency §6.1).
+Inside an `unchecked` scope the guard is absent and the result is **hardware-defined**
+(Concurrency §6.2; I11) — the target's divide instruction, with the remainder taken from it
+as the arch's `%` lowering does:
+
+| arch | `x / 0` | `x % 0` | `MIN / -1` | `MIN % -1` |
+|------|---------|---------|------------|------------|
+| `x86_64`, `i386` (`idiv`/`div`) | faults (`#DE`) | faults (`#DE`) | faults (`#DE`) | faults (`#DE`) |
+| `aarch64` (`sdiv`/`udiv` + `msub`) | `0` | `x` | `MIN` | `0` |
+| `aarch32` (`sdiv`/`udiv` + `mls`, `idiv` feature) | `0`¹ | `x`¹ | `MIN` | `0` |
+| `riscv64`, `riscv32` (`div`/`divu`/`rem`/`remu`, `m` feature) | all bits set (`-1`; `divu`: the maximum value) | `x` | `MIN` | `0` |
+
+¹ On an R- or M-profile core whose divide-by-zero trap is enabled by system configuration
+(`SCTLR.DZ` / `CCR.DIV_0_TRP`), the zero-divisor case faults instead — a property of the
+configured machine, outside the language.
+
 ---
 
 ### 3. `x86_64` (reference exemplar)
@@ -226,7 +251,7 @@ or `win64` (PE) — ABI appendix §4.1/§4.2.
 | `add` / `sub` | reg/mem, reg/mem/imm | `add`/`sub` | overflow set (Concurrency §6) on the checked op |
 | `imul` / `mul` | reg/mem (, reg, imm) | `imul`/`mul` | overflow |
 | `idiv` / `div` | reg/mem | `idiv`/`div` | **division by zero** (and `MIN/-1`) → the inserted guard traps *before* the instruction (§2) |
-| `iremq`/`remq` · `imulhiq`/`mulhiq` (**synthetic**, §80 §4.1) | reg/mem (divisor / multiplier) | `idiv`/`div` capturing `rdx`; `imul`/`mul` capturing high `rdx` | div-by-zero (remainder) / overflow (high-multiply) |
+| `iremq`/`remq` · `imulhiq`/`mulhiq` (**synthetic**, §80 §4.1) | reg/mem (divisor / multiplier) | `idiv`/`div` capturing `rdx`; `imul`/`mul` capturing high `rdx` | div-by-zero (remainder; `MIN % -1` → `0` without the `idiv`, §2) / overflow (high-multiply) |
 | `andq`/`andl`/`andw`/`andb` · `orq`/`orl`/… · `xor` | reg/mem, reg/mem/imm | `and`/`or`/`xor` | — (binary bitwise; keyword-collision rule §3.2) |
 | `notq`/`notl`/… · `neg` | reg/mem | `not`/`neg` | — (unary; `neg` overflow) |
 | `shl` / `shr` / `sar` | reg/mem, `cl`/imm | `shl`/`shr`/`sar` | **over-width shift** → trap (Concurrency §6) |
@@ -335,7 +360,7 @@ programmer writes the frame/return.
 | `lea` | reg, mem | `lea` | — |
 | `add` / `sub` | reg/mem, reg/mem/imm | `add`/`sub` | overflow set (Concurrency §6) |
 | `imul` / `mul` | reg/mem (, reg, imm) | `imul`/`mul` | overflow |
-| `idiv` / `div` | reg/mem | `idiv`/`div` | **division by zero** (and `MIN/-1`) → the inserted guard traps *before* the instruction (§2) |
+| `idiv` / `div` | reg/mem | `idiv`/`div` | **division by zero** (and `MIN/-1`) → the inserted guard traps *before* the instruction (§2); for `%`, `MIN % -1` → `0` without the `idiv` (§2) |
 | `andl`/`andw`/`andb` · `orl`/… · `xor` | reg/mem, reg/mem/imm | `and`/`or`/`xor` | — (binary bitwise; keyword-collision rule §3.2) |
 | `notl`/`notw`/`notb` · `neg` | reg/mem | `not`/`neg` | — (unary; `neg` overflow) |
 | `shl` / `shr` / `sar` | reg/mem, `cl`/imm | `shl`/`shr`/`sar` | **over-width shift** → trap |
@@ -543,7 +568,8 @@ Every supported `aarch32` triple carries `Env.eabi` or `Env.eabihf` (incl. frees
 The high-level integer division **operator** (`/`) is distinct from the `sdiv`/`udiv`
 intrinsic: with the `idiv` feature it lowers to that intrinsic; **without** it, the
 operator lowers to a **runtime helper** (a codegen/stdlib lowering, not an instruction —
-the helper still enforces the div-by-zero trap). The instruction intrinsic itself is
+the compiler's operation-site guards of Concurrency §6.1 apply to the operator unchanged,
+and the helper carries none of its own). The instruction intrinsic itself is
 simply **unavailable** on a core without `idiv`.
 
 Return is `bx(lr)` (there is no dedicated `ret`). Conditional execution on arbitrary
@@ -637,9 +663,10 @@ Register names are the **ABI names** (the `xN` numbers are the alternate spellin
 
 The high-level integer `*`/`/`/`%` **operators** use the `m`-extension intrinsics when
 `m` is present; **without `m`**, they lower to **runtime helpers** (a codegen/stdlib
-lowering, not an instruction). The helper preserves **all** checked guards of the
-operator (Concurrency §6): multiplication overflow, the `MIN / -1` overflow case, and
-division/remainder by zero — each traps exactly as the in-hardware path would. The
+lowering, not an instruction). The compiler's operation-site guards of the operator
+(Concurrency §6.1) apply unchanged — multiplication overflow, the `MIN / -1` overflow case,
+division/remainder by zero (each a trap), and `MIN % -1` (yielding `0`) — so the result is
+exactly that of the in-hardware path; the helper carries no guard of its own. The
 `mul`/`div`/`rem` **intrinsics** themselves are simply **unavailable** without `m`.
 Atomics (`a` extension — via the Concurrency builtins), fences (`fence`), CSR access,
 and the full vector (`v`) ISA are reached with `asm(…)` (Assembly §4). The
@@ -734,13 +761,14 @@ A conforming implementation MUST:
    reject any other `arch`×`os`×`env`×`container` `Target` with a Config diagnostic at
    configuration (Manifest §3.1; ABI §2); treat new triples as additive (FND-6);
 2. for each supported architecture, provide the **five tables** of §2 — registers,
-   curated instructions (each 1:1 with its GAS mnemonic and carrying its checked-guards),
+   curated instructions (each 1:1 with its GAS mnemonic, with the guard column of §2(b)),
    addressing modes, relocation/TLS decorators, and **operand decorators** (SIMD +
    arch-specific, e.g. x86 segment override) — populating the Assembly chapter schema
    (Assembly §4–§8);
 3. emit each curated instruction **1:1** with the listed GAS mnemonic (I1; Assembly §3),
-   apply the listed **checked-guards** (division-by-zero, over-width shift, overflow set;
-   Concurrency §6), emit the exact §2 **checked-failure trap** for every direct-trap guard
+   emit the listed **checked-guards** at the operation site of the built-in operator that
+   lowers to it — never as part of a direct intrinsic call (division-by-zero, over-width
+   shift, overflow set, the `MIN % -1` → `0` case; Concurrency §6), emit the exact §2 **checked-failure trap** for every direct-trap guard
    (including `@require`, Types §8.1), and require an `unchecked` grant for raw control
    transfer (Control Flow §2);
 4. make any ISA construct **not** in the curated set reachable via `asm(…)` (lower-layer

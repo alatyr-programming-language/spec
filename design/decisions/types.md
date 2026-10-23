@@ -35,7 +35,11 @@ prelude on top of the kernel: a single name (`u64`), a target-dependent realizat
 visible cost. **Signedness lives in the operations, not the storage** (LLVM `iN`
 precedent): which instruction the operator body selects (`divq` vs `idivq`, `setb` vs
 `setl`) *is* the signedness, so the compiler holds **no built-in numeric/signedness
-table** — `bitcast` is identity on the block, zero-cost by construction. The
+table** — `bitcast` is identity on the block, zero-cost by construction. What the compiler
+does know is the closed **checked-guard family** (CG-8/CG-13): *which* operations of the
+built-in interpretations are guarded (overflow, division by zero, `MIN / -1`, over-width
+shift, bounds, narrowing, …) so that it can emit the guard at the operation site — not the
+arithmetic, which stays in the operator bodies. The
 interpretation a brand *names* also fixes its ABI register class (an `fN` → floating-point
 regs), keyed on the named interpretation, **not** on peeling to the `bitsN` base (peeling
 `fN` to `bitsN` would mis-class a float as an integer). Widths wider than native are
@@ -98,7 +102,11 @@ type-producing functions (`fn Vec(T: type) type { return struct{…} }`, TYP-1).
 the kernel and for derived types: a native operator's one-instruction body uses the
 instruction intrinsic as a statement (destination-first) and the compiler **inlines** it
 to that single instruction (I2 zero-cost), so the kernel keeps **no** built-in numeric
-knowledge — signedness/overflow are entirely in the operator bodies and guard code.
+knowledge — the arithmetic and its signedness are entirely in the operator bodies. The one
+exception is deliberately narrow: the compiler knows the closed checked-guard family
+(CG-8/CG-13) — which built-in operations are guarded — and emits those guards at the
+operation site; an operator body carries none. A library-defined type's own checks are
+library code (CT-11).
 
 **Rejected.** A `brand`-carried numeric-domain descriptor the compiler reads to lower
 operators — it keeps operator lowering inside the compiler instead of in the library.
@@ -220,7 +228,10 @@ only, and every wider width must carry visible cost): a `uint(N)` value visibly 
 generated from the word count, so the compiler holds **no** multiword numeric knowledge:
 ripple-carry `+` / `-` (`O(words)`), schoolbook `*` keeping the low `N` bits (`O(words²)`),
 binary long-division `/` / `%` (`O(words²)`), and a hi-word-to-lo-word lexicographic
-**unsigned** comparison (`O(words)`). This is the concrete library multiword value TYP-2/TYP-10
+**unsigned** comparison (`O(words)`). Their checks — overflow of `+` / `-` / `*`, division
+or remainder by zero — are library code under `comptime if verify.checked` (CT-11) and fail
+through `trap()`, the built-in guard's own instruction, so a `uint(256)` fails exactly as a
+`u64` does (CG-13). This is the concrete library multiword value TYP-2/TYP-10
 demand so that a non-native width (`u64` on a 32-bit target, a `usize` decomposition) is an
 ordinary `{word…}` value — **never** backend register-pair magic (the words are visible,
 I1/I3).

@@ -52,13 +52,13 @@ and **deferred (additive) growth**.
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
   `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6).
-- `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1/checked-guards (CG-2), operands/registers/
+- `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
   `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2). Content — additive data.
 - `[x]` **11. Codegen / lowering / GAS.** Pipeline structured→backend-specific assembly-correspondence→backend emission
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
   determinism; centralized emission; containers by target (CG-1).
 - `[x]` **12. Standard library / built-ins.** Prelude tiering (base/alloc/std) + auto-DCE;
-  intrinsics vs builtins; panic/exit/assert; allocators `@alloc(value)` (STD-1).
+  intrinsics vs builtins; panic/exit/assert, `trap()` (CG-13); allocators `@alloc(value)` (STD-1).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),
   per-module compilation + the output-neutral content-addressable cache / incremental build (TOOL-6).

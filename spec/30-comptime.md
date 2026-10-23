@@ -169,7 +169,7 @@ CG-13), but it has no process to trap in: a guard that fails during comptime eva
 is a **located compile-time diagnostic** at the operation's site. This covers the
 checked-overflow set, division by zero, an over-width shift, the bounds / alignment /
 narrowing guards, a false `@require` predicate (Types §8.1), and an explicit `panic` /
-failed `assert` reached by comptime code. The failure is **never** deferred into the
+`trap()` / failed `assert` reached by comptime code. The failure is **never** deferred into the
 emitted program, and no wrapped, saturated, or otherwise adjusted value is materialized
 in its place: a comptime binding whose initializer overflows (`K : u64 = MAX + 1`) is
 rejected where it is written, not left to fail when some run-time path reaches it.
@@ -177,7 +177,7 @@ rejected where it is written, not left to fail when some run-time path reaches i
 Inside an `unchecked` scope (CT-11) the evaluator drops the guards exactly as run time
 does, with one difference forced by there being no machine: an operation whose unchecked
 behaviour is *hardware-defined* rather than *defined* — division by zero, an over-width
-shift, and **`MIN / -1`** (Concurrency §6.2) — remains a **diagnostic** at comptime,
+shift, **`MIN / -1`** and **`MIN % -1`** (Concurrency §6.2) — remains a **diagnostic** at comptime,
 because the evaluator has no hardware behaviour to reproduce and I11 forbids inventing
 one. The two's-complement wrap of `+`, `−`, `*` and unary `−` is fully defined, so those
 evaluate normally and reproducibly under `unchecked`.
@@ -461,27 +461,28 @@ default**, CG-7). The mode reaches **only** the observing functions, one level d
 call inside a mode-polymorphic body runs at that body's own lexical mode unless
 re-scoped).
 
-This is what lets a **library-defined** operator or checked conversion (the
-kernel/prelude split, TYP-2/TYP-5) drop its guard under `unchecked` without the compiler
-recognizing the guard. A native operator is written once and describes both modes —
-the guard lives in a `comptime if verify.checked { … }` block, present in the checked
-instantiation and comptime-absent in the unchecked one:
+This is what lets **library code** — a library-defined numeric type, a checked
+conversion, a container (the kernel/prelude split, TYP-2/TYP-5) — drop its **own** check
+under `unchecked` without the compiler recognizing the check. (The **built-in** guard
+family needs none of this: the compiler emits those guards at the operation site and drops
+them itself, Concurrency §6 / CG-13.) A library operator is written once and describes
+both modes — the check lives in a `comptime if verify.checked { … }` block, present in the
+checked instantiation and comptime-absent in the unchecked one:
 
 ```alatyr
-add := fn(in a : u64, in b : u64) -> u64 {       # the native `+` body
-  mut out : u64 = a
-  unchecked { addq(out, b) }                     # the raw instruction always wraps
-  comptime if verify.checked { if out < a { panic("integer overflow") } } # overflow guard — only when checked
-  return out
+div := fn(in a : uint(256), in b : uint(256)) -> uint(256) {   # the library `/` of uint(256)
+  comptime if verify.checked { if b == 0 { trap() } }          # division-by-zero check — only when checked
+  return long_divide(a, b)                                     # the multiword routine (Type System §7)
 }
 ```
 
-`x + y` selects the checked instantiation (the guard traps on overflow); `unchecked(x
-+ y)` selects the unchecked one (the guard is comptime-absent, leaving the wrapping
-add — Concurrency §7 / CG-8). The same shape gives `char(n)` its code-point guard
-(Type System §4.2; appendix §3.2). The two-phase checking of the mode-gated branch is
-§9 (a `comptime if verify.checked`-false branch is parsed but not emitted in the unchecked
-instantiation).
+`x / y` on `uint(256)` selects the checked instantiation (a zero divisor traps); `unchecked(x
+/ y)` selects the unchecked one (the check is comptime-absent). The check fails through
+`trap()` — the built-in guard's own instruction (Stdlib §4.1) — not `panic`, so it fails
+exactly as `u64`'s compiler-emitted guard does (CG-13). The same shape gives `char(n)` its
+code-point check (Type System §4.2; appendix §3.2). The two-phase checking of the
+mode-gated branch is §9 (a `comptime if verify.checked`-false branch is parsed but not
+emitted in the unchecked instantiation).
 
 ---
 

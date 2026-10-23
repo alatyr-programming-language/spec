@@ -47,9 +47,14 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   scope; the scope *sets* the mode, `verify.checked` only *reads* it — not re-entry). A function whose body reads it
   (`comptime if verify.checked { <guard> }`) is **mode-polymorphic**: instantiated per the verification mode of the call site
   (≤ 2 variants, the unused one DCE'd, zero-cost). A function that does not read it is **mode-opaque** — its verification
-  is fixed at definition and a caller's `unchecked` does not alter it. This is how a **library-defined** operator/conversion
-  (TYP-2/TYP-5) drops its guard inside `unchecked` (the guard is comptime-absent in the unchecked instantiation) without the
-  compiler recognizing the guard.
+  is fixed at definition and a caller's `unchecked` does not alter it. This is how **library code** (a library-defined
+  numeric type such as `uint(N)`, a checked conversion, a container) drops its **own** check inside `unchecked` (the check is
+  comptime-absent in the unchecked instantiation) without the compiler recognizing it. It is **not** the mechanism of the
+  built-in checked-guard family, which the compiler emits at the operation site and drops itself (CG-13).
+- **`trap()`** (CG-13) — the prelude intrinsic `trap() -> Never`: exactly the language's **direct inline trap** (the per-arch
+  checked-failure instruction, per-arch appendix §2), the same instruction a failed built-in guard executes; no message, no
+  hook, no OS exit, no unwinding, identical in every context. A library-defined numeric type's check that mirrors the built-in
+  family fails through it, never through `panic`; `panic` is the failure of ordinary library logic.
 
 - **Raw union / member payload / definitely active** (TYP-11) — a **raw union** is an
   untagged overlap of named members, all at offset `0`, with no hidden discriminant or
@@ -368,7 +373,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 — *Stdlib types & analyses (terms used normatively across the spec):*
 
 - **`Never`** (*bottom type*) — the named divergence type (CF-7): it has **no value**, so an
-  expression of type `Never` only **diverges**. The result type of `panic`/`exit` and of any
+  expression of type `Never` only **diverges**. The result type of `panic`/`exit`/`trap` and of any
   non-returning function (incl. an `@extern` one) — so no separate `@noreturn` is needed (OP-1).
   A `Never` result is a **flow terminator** (code after it is unreachable; Control Flow §9). It is
   a named type, not a keyword/symbol (CF-7/STD-1 — clarity over terseness).

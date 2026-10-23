@@ -206,6 +206,12 @@ value), and **`MIN / -1`** (division overflow). Separate checked-guards (which a
 **trap**, but are not "overflow") are **division by zero** and a **shift amount ≥ the
 width** (Assembly §3).
 
+**`MIN % -1` yields `0`.** The remainder of the minimum value by `-1` is **not** in the
+checked-overflow set: its mathematical result `0` is representable, so a checked `%`
+yields `0` and does **not** trap. The compiler guards the divisor `== -1` case — the same
+compare as the `MIN / -1` guard — and produces `0` without executing the divide, so no
+target faults on it (CG-8/CG-13). Under `unchecked` it is hardware-defined (§6.2).
+
 **One failure mechanism** (CG-13). Every failure in this family — the checked-overflow
 set, division by zero, and an over-width shift — is the language's **direct inline trap**:
 the guard is emitted **before** the operation, and the trap is the per-architecture
@@ -218,7 +224,9 @@ and in every context (a bare/`freestanding` program included). `panic` stays an 
 library operation (Stdlib §4) that library code may call; it is never the mechanism of a
 built-in guard.
 
-**The guard belongs to the operation, not to whatever implements the operator.** Operators
+**The guard belongs to the operation, not to whatever implements the operator.** For the
+built-in numeric interpretations the compiler emits the guard at the operation site; an
+instruction intrinsic never carries one (Assembly §3). Operators
 are ordinary library functions (Type System §4.5, §5.3), so an implementation may route
 `+` / `−` / `*` / `/` / `%` through a prelude operator body — and that routing changes
 nothing here: the compiler emits the family's guard at the **operation site** whether or
@@ -227,7 +235,11 @@ Otherwise the same expression would fail one way with the prelude operator in sc
 another way without it, which is exactly the implementation fork CG-13 removes. `panic` and
 `assert` inside ordinary **library logic** — a container's own bounds check, an explicit
 precondition — are untouched: that is library behaviour, not a checked guard of the
-language.
+language. A **library-defined numeric type** (`uint(N)`, Type System §7) has no compiler
+guard; its operators make the checks that mirror this family (overflow, division or
+remainder by zero) under `comptime if verify.checked` (Comptime §7.5) and fail through the
+prelude **`trap()`** — this same instruction (Stdlib §4.1) — never through `panic`, so `x / 0`
+fails identically for `u64` and `uint(256)`.
 
 #### 6.2 Inside an `unchecked` scope: wrap
 
@@ -235,10 +247,11 @@ Inside an `unchecked` scope (a verification **mode**, CG-7 — `unchecked expr` 
 expression, `unchecked { … }` for a block), `+` / `−` / `*` / unary `−` **wrap** — plain
 two's-complement, the same defined value on every target. The remaining members of the
 family are dropped to **hardware behaviour**, which is *not* the same thing and *not*
-uniform: **division by zero**, an **over-width shift**, and **`MIN ÷ -1`** do whatever the
-target does — `x86_64` faults on `MIN ÷ -1` and on a zero divisor (`#DE`), `aarch64`
-yields `MIN` and `0` respectively, and an over-width shift is masked on some ISAs and not
-others. Writing them under `unchecked` is therefore target-specific by construction (I11:
+uniform: **division by zero**, an **over-width shift**, **`MIN ÷ -1`** and **`MIN % -1`**
+do whatever the target does — `x86_64` faults on `MIN ÷ -1`, on `MIN % -1` and on a zero
+divisor (`#DE`), `aarch64` yields `MIN`, `0` and `0` respectively, and an over-width shift
+is masked on some ISAs and not others (per-arch appendix §2 lists the divide behaviour per
+architecture). Writing them under `unchecked` is therefore target-specific by construction (I11:
 hardware-defined, never UB — but never portable either). The whole
 scope is affected (not a single operation), and the choice of granularity — one line or
 a block — is the programmer's; correctness inside the scope is the author's
@@ -340,9 +353,10 @@ A conforming implementation MUST:
    unsynchronized shared mutable as the discipline point, and treat `Send`/`Sync` as an
    additive comptime-protocol capability (§5; I11/FND-9/CC-4, CC-5);
 5. make integer overflow **trap** by default (the set `+ − * unary− MIN/-1`; div-by-0
-   and over-width shift are separate guards), with one uniform failure mechanism — the
-   direct inline trap (CG-13) — and inside an `unchecked` scope **wrap** `+ − * unary−`
-   while `MIN/-1`, div-by-0 and an over-width shift take their target's hardware
+   and over-width shift are separate guards), emitted by the compiler at the operation
+   site with one uniform failure mechanism — the direct inline trap (CG-13) — and make a
+   checked `MIN % -1` yield `0` without trapping or faulting; inside an `unchecked` scope
+   **wrap** `+ − * unary−` while `MIN/-1`, `MIN % -1`, div-by-0 and an over-width shift take their target's hardware
    behaviour (CG-7), and provide `wrapping_*`/`saturating_*`/`checked_*`(→
    Option)/`overflowing_*`(→(T,bool)) everywhere; `bitsN` has no arithmetic (§6; I11/CG-8);
 6. make comptime float **strict, host-independent IEEE-754 (RNE)** and runtime float

@@ -221,24 +221,29 @@ unprivileges `Option` (the enum niche-fold is one general compiler layout rule),
 the "how libraries configure types in comptime" thread.
 
 ### CT-11. Verification mode is an observable comptime fact — `comptime if verify.checked`
-*spec: Comptime §7, §8, §9*
+*provenance: scope narrowed to library code by CG-13 · spec: Comptime §7, §8, §9*
 
-**Why.** With operators and checked conversions made **library functions** (TYP-5),
-their guards are *library code* (`add(out,b); if out < a { panic("overflow") }`). But a guard must
-**trap by default and drop inside `unchecked`** (CG-8), while `unchecked` is **lexical and
-non-transitive** (CG-7) — it does not reach into a callee's body. These collide: a library
-`+` called under `unchecked` would keep its guard and trap. The compiler **cannot** just
-drop it, because that would require it to *recognize* the library `if … { panic("…") }` as
-"the overflow check" — exactly the built-in numeric knowledge TYP-2/TYP-5 removed. So the
-**library must declare** which code is verification-mode-dependent, read by a mechanism the
-language already has. The resolution: the **verification mode is a comptime-known fact**,
+**Why.** The built-in guard family is the compiler's: it emits each guard at the operation
+site and drops it inside `unchecked` (CG-13). **Library code** has checks of its own — a
+library-defined numeric type's division by zero (`uint(N)`, TYP-10), a container's bounds
+check — that should equally **fail by default and drop inside `unchecked`**, while
+`unchecked` is **lexical and non-transitive** (CG-7) — it does not reach into a callee's
+body. These collide: a library `/` called under `unchecked` would keep its check and trap.
+The compiler **cannot** just drop it, because that would require it to *recognize* an
+arbitrary library `if … { trap() }` as "the division check" — numeric knowledge the
+compiler holds only for its own closed guard family (TYP-2/TYP-5). So the **library must
+declare** which code is verification-mode-dependent, read by a mechanism the language
+already has. The resolution: the **verification mode is a comptime-known fact**,
 queryable through the unified comptime guard exactly like target gating and build flags,
 exposed as the comptime boolean **`verify.checked`**. The `unchecked` scope *sets* the
 mode; `verify.checked` *reads* it (distinct — still no `checked` keyword, no re-entry). A
 function that **observes** the mode (`comptime if verify.checked { <guard> }`) is
 **mode-polymorphic** — instantiated per the call site's mode (≤ 2 variants, the unused one
-DCE'd, zero-cost I2, the choice visible I1/I3): a native operator is written **once** and
-describes both modes. A function that does **not** observe it is **mode-opaque** — fixed at
+DCE'd, zero-cost I2, the choice visible I1/I3): a library operator is written **once** and
+describes both modes. A library-defined numeric type's check that mirrors a member of the
+built-in family (overflow, division or remainder by zero) fails through `trap()`, the
+built-in guard's own instruction (CG-13); ordinary library logic (a container precondition)
+may `panic`. A function that does **not** observe it is **mode-opaque** — fixed at
 definition, a caller's `unchecked` does not alter it (CG-7 non-transitivity preserved as the
 default). The mode reaches **only** explicitly-observing functions, and only one level — no
 hidden deep propagation (I3). This works uniformly for inlinable and non-inlinable
@@ -254,7 +259,10 @@ target/build facts are read. *(A, superseded) "mandatory inlining makes the guar
 so `unchecked` drops it"* — unsound: `unchecked` drops only the built-in
 checkable-operation family, not an arbitrary library `if … { panic("…") }`, so an inlined
 guard would survive; recognizing it would reintroduce built-in numeric knowledge. CT-11
-makes the drop **explicit in the library** instead.
+makes the drop **explicit in the library** instead. *Superseded:* CT-11 as first written
+made the **built-in** operator guards library code in the prelude operator bodies (`add(out,
+b); if out < a { panic("overflow") }`) — a second placement of the guard family, which
+CG-13 fixes at the operation site; CT-11 now covers library code only.
 
 ### CT-12. A failed checked guard at comptime is a located diagnostic, never a deferred trap
 *provenance: refines CT-1/CT-2/CT-11 and CG-8/CG-13 · spec: Comptime §2.6; Concurrency §6;
@@ -271,7 +279,7 @@ already knows the answer is unrepresentable; the only question is whether it say
 
 **The rule.** A checked-guard failure during comptime evaluation — the checked-overflow
 set, division by zero, an over-width shift, bounds / alignment / narrowing, a false
-`@require` predicate (TYP-12), an explicit `panic` or failed `assert` reached by comptime
+`@require` predicate (TYP-12), an explicit `panic` / `trap()` or failed `assert` reached by comptime
 code — is a **located compile-time diagnostic** at the operation's site. Nothing is
 deferred into the emitted program and no substitute value (wrapped, saturated, zero) is
 materialized. This is the same shape as the existing budget-exhausted and
@@ -280,7 +288,7 @@ result or fails visibly, never silently.
 
 **`unchecked` at comptime.** The evaluator drops the guards inside an `unchecked` scope
 just as run time does, with one forced difference: an operation whose unchecked behaviour
-is *hardware-defined* — division by zero, an over-width shift, `MIN / -1` — stays a
+is *hardware-defined* — division by zero, an over-width shift, `MIN / -1`, `MIN % -1` — stays a
 diagnostic,
 because the evaluator has no hardware whose behaviour it could reproduce and I11 forbids
 inventing one. The two's-complement wrap of `+`, `−`, `*`, unary `−` is *defined*, not

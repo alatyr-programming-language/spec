@@ -204,19 +204,26 @@ layer does not need — adding them changes neither the protocol shape nor the m
 
 ### 3. Base-tier types
 
-**Mode-polymorphism guarantee (the prelude operators, CT-11).** Every **prelude checked
-operator and conversion** — the arithmetic `+` `-` `*` (overflow), `/` `%` (div-by-zero),
-the comparisons, `char(n)` (code-point), narrowing conversions, indexing/sub-slicing bounds —
-is, by **prelude guarantee**, a **mode-polymorphic** library function (Type System §4.5 / CT-11):
-its guard is comptime-present in a checked context and comptime-absent inside an `unchecked`
-scope. So although operators are ordinary library functions (TYP-2/TYP-5 — the compiler keeps no
-built-in numeric knowledge), `unchecked (a + b)` still **wraps** and `unchecked xs[i]` still
-**skips the bounds check** — the guard drops in the unchecked instantiation (Concurrency §3 /
-CG-8). This is a **convention of the prelude**, relied on by users: a checked operation from the
-prelude responds to `unchecked`. A *user-defined* function is **mode-opaque** unless it itself
-reads `verify.checked` — a caller's `unchecked` does not reach into it (CG-7); a library that
-wants its own checked operation to be `unchecked`-responsive opts in the same way the prelude
-does (`comptime if verify.checked { … }`).
+**Checked prelude operations and `unchecked` (CG-13, CT-11).** The checked operators and
+conversions of the **built-in** numeric interpretations — `+` `-` `*` (overflow), `/` `%`
+(division by zero, `MIN / -1`), narrowing conversions, array/slice indexing and
+sub-slicing bounds — are guarded by the **compiler at the operation site** (Concurrency
+§6.1); their prelude operator bodies carry **no** guard. So `unchecked (a + b)` **wraps**
+and `unchecked xs[i]` **skips the bounds check** because the compiler drops the family
+inside the scope (Concurrency §6.2 / CG-7), not because the operator body observes the
+mode. The prelude's **library-defined** checked operations — `uint(N)` arithmetic (Type
+System §7), `char(n)`'s code-point check (§3.2), a container's own bounds check — are
+**mode-polymorphic** library functions (Type System §4.5 / CT-11): the check sits in
+`comptime if verify.checked { … }`, comptime-present in a checked context and
+comptime-absent inside `unchecked`. This is a **convention of the prelude**, relied on by
+users: a checked operation from the prelude responds to `unchecked`. A library-defined
+numeric type's check that mirrors a member of the built-in family (overflow, division or
+remainder by zero) — and `char(n)`'s conversion check — fails through **`trap()`** (§4.1),
+never `panic`; a container's own precondition stays an ordinary `panic` (Stdlib §4.1). A
+*user-defined* function is **mode-opaque** unless it itself reads `verify.checked` — a
+caller's `unchecked` does not reach into it (CG-7); a library that wants its own checked
+operation to be `unchecked`-responsive opts in the same way the prelude does (`comptime
+if verify.checked { … }`).
 
 #### 3.1 `bool` (base)
 
@@ -251,7 +258,7 @@ the kernel carries no built-in code-point type). Conversions to/from `u32` are e
 (`u32(c)` — the zero-cost brand/numeric crossing; `char(n)` — a **library conversion-
 constructor** (`@convert`, §4.6) whose code-point validity check (≤ 0x10FFFF, not a
 surrogate; I11) is library code, dropped under `unchecked` per the verification mode
-(CT-11)). `char` is **not** a byte. As a brand that marks a scalar interpretation, its `typeinfo`
+(CT-11), that fails through `trap()` like the built-in narrowing guard (§4.1)). `char` is **not** a byte. As a brand that marks a scalar interpretation, its `typeinfo`
 reifies as `Scalar{bits = 32, kind = Char}` (§4.1, not a `Brand`), on which a structural derive
 dispatches by `kind` (e.g. `fmt` renders it UTF-8).
 
@@ -346,7 +353,7 @@ encapsulated in the one function rather than repeated at each call site.
 
 The **bottom type** (the named divergence type fixed by CF-7): it has **no value**, so an
 expression of type `Never` cannot produce one — it only **diverges**. It is the result
-type of `panic` / `exit` (§4.2) and of any function that never returns, **including an
+type of `panic` / `exit` (§4.2), of `trap` (§4.1), and of any function that never returns, **including an
 `@extern` one** (`abort := @extern fn() -> Never`) — so no separate `@noreturn`
 attribute is needed (OP-1: nothing expressible by `-> Never` is re-introduced). A
 `Never` result is a **terminator** for flow analysis (definite-assignment and
@@ -379,6 +386,7 @@ lives on the arch surface (Assembly §4). Two kinds.
 | `embed`     | `embed(comptime path : str) -> [u8; N]`              | reproducible file embed → byte array (Comptime §2.4) |
 | `forget`    | `forget(in v : T)`                                    | discharge linearity without release (Memory §5.9) |
 | `typeof`    | `typeof(in v : T) -> type`                            | comptime: the **static type** of `v` as a `type` value (no RTTI; distinct from `typeinfo`, which is introspection *data*) |
+| `trap`      | `trap() -> Never`                                     | the language's **direct inline trap**: emits exactly the per-arch checked-failure instruction (per-arch appendix §2) — the **same** instruction as a failed built-in checked guard (CG-13); no message, no hook, no OS exit, no unwinding; identical in every context (hosted, `freestanding`, bare). The failure a library-defined numeric type uses for a check that mirrors the built-in family (Stdlib §4.1) |
 
 (The per-arch **instruction** intrinsics are also compiler intrinsics, but belong to the
 Assembly per-domain family of §4.3 — they are not relisted here, so the partition stays
@@ -435,7 +443,7 @@ exactly `{ name, type, offset, mutable }`.
 | `assert` | `assert(in cond : bool)`        | runtime → `panic` when false; in a comptime context → **compile error** (Stdlib §4.3); always emitted at runtime |
 | `get`    | `get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)` | region-handle access: bounds-checks `h` against `a` (out-of-range → trap); the result is a **`scoped` second-class return** (Memory §5.3.1) — the escape checker's generic rule, **no** built-in arena contract, **no** lifetime variable. An ordinary prelude function, not a compiler intrinsic (MEM-3). Stdlib §5.2.1; Memory §5.4 |
 
-`panic` and `exit` **diverge**: their result type is **`Never`** (§3.7), the bottom
+`panic` and `exit` — and the intrinsic `trap` (§4.1) — **diverge**: their result type is **`Never`** (§3.7), the bottom
 type, which has no value — so control does not return and a call is a **terminator** for
 flow analysis (like `return`; definite-assignment and block-value rules treat the
 following code as unreachable, Control Flow §9; Grammar §3.1). (`Never` is the named
@@ -715,8 +723,9 @@ A conforming implementation MUST:
    enumerated operations, **bounds/UTF-8/validity checks trapping** as defined failures
    (never UB, I11), and visible cost (I2);
 3. provide the **built-in catalog** of §4 with each built-in's signature and contract —
-   compiler intrinsics (§4.1) and ordinary prelude functions (§4.2), with `panic`/`exit`
-   returning **`Never`** and `assert` per Stdlib §4.3 (always emitted at runtime;
+   compiler intrinsics (§4.1) and ordinary prelude functions (§4.2), with `panic`/`exit`/`trap`
+   returning **`Never`**, `trap` emitting exactly the per-arch checked-failure instruction
+   (CG-13), and `assert` per Stdlib §4.3 (always emitted at runtime;
    compile error in a comptime context) — and honor the **per-domain families** (§4.3)
    normative in their feature chapters (Assembly `asm`/`mem`/instructions; Concurrency
    atomics/fence/`volatile`/overflow ops), the catalog being **partitioned** between
