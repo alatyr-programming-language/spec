@@ -120,6 +120,20 @@ expression. `deref(get(a, h)).x = 5` is well-formed, `p := get(a, h)` is not. In
 `unchecked { … }` the result may be bound to a local, with staleness hardware-defined (CG-7;
 glossary; Grammar §3.7).
 
+**Normative — a function value has the target's default calling convention.** Functions §6.2
+said a call uses "the calling convention carried by the callee's type", but the function-value
+type `fn(T…) -> R` carries no convention and `@abi` on a type is forbidden, so an indirect call
+through a value taken of an `@abi(naked)`, `@abi(entry)`, `@abi(syscall)` or user-`Abi(...)`
+function was undefined. **FN-10** now admits a function value — and, per **FN-11**, the `code`
+of a `dyn` — only of a function with the target's default convention (ABI appendix §2: no
+`@abi`, `@abi(c)`, or that convention's own prelude name); any other selector is a located
+Semantic diagnostic, and on `Container.com`, whose default is `naked`, no function value can be
+taken. §6.2 now reads: a direct call uses the callee's declared convention, an indirect call
+the default. Low-level code reaches other conventions through the raw surface (a symbol operand
+plus raw `call` / `jmp`). A convention carried in the type (`@abi(X) fn(…)`) is recorded as
+deferred, additive growth; carrying it now, and silently calling with the default, are
+rejected. Functions §1.5, §1.6, §6.2, §8, §9 and §10 items 1 and 7; glossary; aspects map.
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could

@@ -119,7 +119,8 @@ by appearing where a **type** is expected. Its **representation is one machine w
 code address** (Memory §1.2 / §6.1): a value of this type is **bound, passed, returned,
 stored** (in a struct, array, or tuple field), and **called** `f(args)` — one **indirect
 call**, with no environment and no allocation (I2/I3). Taking a top-level function or a
-non-capturing lambda yields such a value.
+non-capturing lambda **of the target's default convention** yields such a value; taking
+one of any other convention is ill-formed (below).
 
 - A parameter entry is an optional **direction** (`in` — the default — / `out` / `in out`,
   §2.1) followed by a **type**, with **no name**: `fn(u64, u64) -> u64` is the all-`in`
@@ -136,6 +137,43 @@ non-capturing lambda yields such a value.
   pointer, the predicate abstracts over any callable. Storing a heterogeneous set of
   **capturing** closures under one type is the type-erased **`dyn`** (§1.6; FN-11), built
   over this signature.
+
+**A function value has the target's default convention (FN-10).** The type carries
+directions, types, and result, but **no** calling convention (`@abi` on a type is
+ill-formed, Type System §8). A function value may therefore be taken **only** of a function
+whose selector is the **target's default convention** — the `Conv(abi)` that the ABI
+appendix §2 computes for the target, which is the convention the prelude `c` names there.
+A function qualifies when it is declared with no `@abi`, with `@abi(c)`, or with
+`@abi(name)` where `name` is the prelude name the ABI appendix §2 gives that same convention
+on that target (`sysv` on `x86_64` Linux, `win64` on `Machine.Windows`, `lp64d` on a
+`riscv64` target with `d`, …). The default convention lowers every passing mode of §4 —
+`out`, `in out`, slices, several named `out`s — against that one `Abi` value, so all of
+these spellings mean one and the same lowering.
+
+- Taking a function value of a function with **any other selector** is a located
+  **Semantic** diagnostic naming the function and its selector: `@abi(naked)`,
+  `@abi(entry)`, `@abi(syscall)`, a user-defined `Abi(...)` value (§6.3) — by name, never
+  by comparing its fields with the default — or a prelude convention that is not the
+  target's default (`sysv` on a `Machine.Windows` target, `lp64` on a `riscv64` target with
+  `d`). "Taking" is every use that yields a value of a `fn(T…) -> R` type: naming the
+  function in value position to bind, pass, return, store, or call it indirectly, and
+  `dyn_over` over a static closure whose function carries such a selector (§1.6).
+- On a target whose default selector is **not** a convention — `Container.com`, whose
+  default is `naked` (ABI appendix §2(b)) — there is no default convention, and no function
+  value can be taken and no `dyn` built.
+- **Not** a function value: a callable passed through the generic **callable**
+  constraint (above; e.g. a `@require` predicate, Type System §8.1) is specialized and
+  called **directly** with its declared convention; and a function's name used as the
+  **symbol operand** of a raw instruction (`call` / `jmp`, Assembly §2; per-arch appendix)
+  is not a value. That raw surface — the symbol as an instruction operand, or its address
+  formed into a register by an instruction, and a raw `call` / `jmp` (Control Flow §2.3) —
+  is how low-level code transfers to a `naked`, `entry`, `syscall`, or other non-default
+  function; the convention at that transfer is the programmer's, as for any raw code.
+
+Every indirect call through a function value therefore uses the target's default
+convention, by construction (§6.2). *(Deferred, additive: a calling convention carried in the
+type, e.g. `@abi(X) fn(T…) -> R` — every v1 function type then keeps meaning "default
+convention", so no program breaks; FN-10.)*
 
 **Required-type predicates.** The Type System §8.1 contract
 `@require(pred) U` uses that generic callable-interface rule, requiring the post-
@@ -180,6 +218,11 @@ fat pair), **not** an `@`-attribute (which is compile-time only, never a represe
 - **Call.** `d(args)` — the ordinary postfix call (§3.2) — lowers, for a `dyn`-typed callee,
   to an **indirect call through `code`** passing `env` as the leading environment pointer to
   the adapter. Nothing is hidden (I3).
+- **Convention.** The `code` adapter has the **target's default convention**, like every
+  function value (§1.5), so the indirect call through it is defined by that convention.
+  `dyn_over` over a static closure whose function is declared with any other selector
+  (`@abi(naked)` / `@abi(entry)` / `@abi(syscall)` / a user `Abi(...)` / a non-default
+  prelude convention) is the same located **Semantic** diagnostic as §1.5.
 
 ```
 store := fn(x : u64) -> u64 { x + base }          # a static closure; explicit env storage (a named place)
@@ -418,7 +461,11 @@ The **default** ABI comes from the **target / environment** fixed at configurati
 per-site override uses the **`@abi(value)`** attribute (decisions TYP-7/SYN-7) on a
 **function** (the override site is the function declaration, not the call — `@` never
 wraps a call expression, CG-6): it sets the **calling convention** (`@abi(c)`,
-`@abi(syscall)`). A call uses the calling convention carried by the **callee's type**.
+`@abi(syscall)`). A **direct** call — to a function named at the call site — uses the
+callee's **declared** convention (its `@abi`, or the default when it has none). An
+**indirect** call — through a value of a `fn(T…) -> R` or `dyn fn(T…) -> R` type — uses the
+**target's default convention**: a function value can be taken only of a function with that
+convention (§1.5, §1.6; FN-10), so the convention is never missing and never guessed (I1/I11).
 `@abi` is a calling-convention attribute only; a **type's data layout** is fixed by the
 default plus the closed layout levers (Type System §8), **not** by `@abi`.
 
@@ -491,7 +538,8 @@ C functions such as `printf`.
 
 ### 8. Lowering
 
-- A **call** lowers per the function's ABI (§6): arguments are placed in
+- A **call** lowers per the function's ABI (§6; an indirect call through a function
+  value by the target's default, §6.2): arguments are placed in
   registers/stack per the convention (§4), `out` / `in out` as references to the
   caller's places, and the result is projected (§3.2).
 - A **generic** function is **monomorphized** (Comptime §3.4): each comptime-argument
@@ -574,8 +622,10 @@ Normative notes:
 - The **variadic** surface form is fixed in the Grammar chapter; semantically the
   three forms are comptime-tuple (primary), slice (homogeneous), and C-variadic
   (FFI, `unchecked`-grant only) (§7).
-- `@abi(...)` selects the **calling convention** on a **function** declaration (a call
-  uses the callee type's convention; `@` never wraps a call expression, CG-6); it is
+- `@abi(...)` selects the **calling convention** on a **function** declaration (a direct
+  call uses the callee's declared convention, an indirect call through a function value
+  the target's default — the only convention a function value can have, §1.5; `@` never
+  wraps a call expression, CG-6); it is
   **not** a type-layout lever in v1 (type layout is the default plus the closed levers,
   Type System §8) (§6.2).
 
@@ -590,7 +640,11 @@ A conforming implementation MUST:
    hidden boxing (§1; I3); admit the **function-value type** `fn(T…) -> R` in type
    position — the bodyless signature (directions + types, no names) — as a one-word
    code-pointer type that a non-capturing value inhabits, storable and indirectly
-   callable (§1.5; FN-10); admit the **type-erased** closure type `dyn fn(T…) -> R`
+   callable (§1.5; FN-10); admit a function value — of either type — **only** of a function
+   with the target's default convention, rejecting with a located Semantic diagnostic one
+   taken of an `@abi(naked)` / `@abi(entry)` / `@abi(syscall)` / user-`Abi(...)` /
+   non-default-convention function, or any on a target whose default selector is `naked`
+   (§1.5, §1.6; FN-10); admit the **type-erased** closure type `dyn fn(T…) -> R`
    (the `dyn` keyword over a fn-type) as a two-word `{code, env}` fat pair, construct it
    with the prelude `dyn_over(ptr(mut store))` over a **named place** holding a static
    closure (environment in explicit storage, never a hidden box), call it `d(args)` as an
@@ -620,7 +674,9 @@ A conforming implementation MUST:
 7. treat an ABI as a comptime value, default it from the target, allow per-site
    `@abi(value)` selecting the calling convention on a function, provide the prelude
    ABI values and accept a user-defined `Abi(...)` value, and support `@abi(naked)` and
-   `@abi(entry)` (§6; ABI appendix §3.1, §3.3);
+   `@abi(entry)`; lower a direct call by the callee's declared convention and an indirect
+   call through a function value by the target's default convention (§6; ABI appendix
+   §3.1, §3.3);
 8. provide comptime-tuple variadics (primary), slice variadics (homogeneous), and
    C-variadics only under `@abi(c)` within an `unchecked` grant — forbidden in
    checked code (§7; I11);
