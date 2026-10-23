@@ -62,8 +62,12 @@ included, takes a **`ptr(mut T)`**: an atomic location is shared mutable state, 
 some targets the widest atomic load is itself a read-modify-write (`CMPXCHG16B`).
 
 - **Admissible `T`.** An integer type (`uN` / `iN`, `usize` / `isize`, the multiword
-  `uint(N)`) or a pointer type, of an atomic-capable width (below). The `fetch_*`
-  operations take an **integer** `T` only.
+  `uint(N)`), a pointer type, or an optional pointer `Option(ptr(U))` /
+  `Option(ptr(mut U))`, of an atomic-capable width (below). The optional pointer is
+  admitted because it has exactly the pointer's representation — `None` is the all-zero
+  niche, Memory §4.2 / Type System §6.2 — so a lock-free structure can hold "no node" in
+  checked code without a raw `ptr == 0` comparison (CAS compares its bits like any other
+  `T`). The `fetch_*` operations take an **integer** `T` only.
 - **RMW arithmetic wraps.** `atomic::fetch_add` / `atomic::fetch_sub` store `old ± v`
   modulo `2^N` (two's-complement) and **never trap**, in checked code and inside
   `unchecked` alike: an atomic read-modify-write is one indivisible instruction (or LL/SC
@@ -288,7 +292,8 @@ ordinary functions (Type System §4.5):
 - **`wrapping_*`** — wrap (two's-complement); equal in result to an unchecked op but
   available everywhere;
 - **`saturating_*`** — clamp to the type's min/max;
-- **`checked_*`** — `→ Option(T)` (`None` on overflow);
+- **`checked_*`** — `→ Option(T)` (`None` on overflow, and — for `checked_div` — on a
+  zero divisor: the family reports every failure as `None` and never traps);
 - **`overflowing_*`** — `→ (T, bool)` (the wrapped value and an overflow flag).
 
 Each family covers exactly the **checked-overflow set** (§6.1): `add`, `sub`, `mul` on
@@ -296,8 +301,11 @@ Each family covers exactly the **checked-overflow set** (§6.1): `add`, `sub`, `
 overflow member in that set) — the 20 names `wrapping_add` … `overflowing_div`, enumerated
 with their signatures in the Stdlib appendix §4.4. A policy operation **does not read the
 verification mode** (mode-opaque, CG-7): its result is the same in checked code and inside
-`unchecked`. Division by zero is not overflow, so a `*_div` with a zero divisor **traps**
-(the division-by-zero guard, §6.1) in both modes.
+`unchecked`. Division by zero is not overflow, so `wrapping_div`, `saturating_div` and
+`overflowing_div` with a zero divisor **trap** (the division-by-zero guard, §6.1) in both
+modes. **`checked_div`** is the exception: the `checked_` family's contract is "report
+failure as `None`, never trap", so `checked_div(a, 0)` is `None`, as is
+`checked_div(MIN, -1)`, in both modes.
 
 #### 6.4 Kernel has no arithmetic
 
@@ -383,7 +391,8 @@ A conforming implementation MUST:
    `atomic::store`/`atomic::swap`/`atomic::cas_strong`/`atomic::cas_weak` (each → `(T,
    bool)`)/`atomic::fetch_*`) with a comptime `Ordering` argument and **no** `Atomic(T)`
    type, atomic-capable widths as per-arch data, every operation on a `ptr(mut T)` of an
-   admissible `T`, natural atomic alignment guarded in checked code, `fetch_add`/`fetch_sub`
+   admissible `T` (an integer, a pointer, or `Option(ptr(U))` — the last not for
+   `fetch_*`), natural atomic alignment guarded in checked code, `fetch_add`/`fetch_sub`
    wrapping, lowering to atomic instructions + barriers, zero-cost — with exactly the
    names and signatures of the Stdlib appendix §4.4 (§2; I1/I2);
 3. provide explicit `fence(ord)` and `volatile::load`/`volatile::store` (each access
@@ -399,7 +408,8 @@ A conforming implementation MUST:
    **wrap** `+ − * unary−` while `MIN/-1`, `MIN % -1`, div-by-0 and an over-width shift take their target's hardware
    behaviour (CG-7), and provide `wrapping_*`/`saturating_*`/`checked_*`(→
    Option)/`overflowing_*`(→(T,bool)) everywhere — exactly the 20 mode-opaque members of
-   the Stdlib appendix §4.4; `bitsN` has no arithmetic (§6; I11/CG-8);
+   the Stdlib appendix §4.4, `checked_div` yielding `None` on a zero divisor and the other
+   `*_div` trapping on it; `bitsN` has no arithmetic (§6; I11/CG-8);
 6. make comptime float **strict, host-independent IEEE-754 (RNE)** and runtime float
    the **target IEEE-754 with no hidden contraction/reassociation**, provide FMA only
    via explicit `fma` (rounded once; a correctly-rounded software routine where the target

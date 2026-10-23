@@ -236,7 +236,8 @@ completeness and symmetry (precedent: Zig's `@setRuntimeSafety(false)`).
 ## Overflow and float
 
 ### CG-8. Integer overflow is defined — trap by default, wrap under `unchecked`
-*provenance: the policy families enumerated by the v1 built-in catalogue · spec: Codegen §3
+*provenance: the policy families enumerated by the v1 built-in catalogue; `checked_div`
+reports a zero divisor as `None` · spec: Codegen §3
 (spec/90); Concurrency §6.3; Stdlib appendix §4.4*
 
 **Why.** Per I11 overflow is **defined, not UB**, extending the checked guards (CG-2) to
@@ -268,19 +269,27 @@ appendix §2). **Explicit policy operations** exist everywhere without a grant �
 an `unchecked` scope. **Each family covers exactly the checked-overflow set**: `add`, `sub`,
 `mul` on `uN`/`iN`, `neg` and `div` on `iN` — 20 names, `wrapping_add` … `overflowing_div`
 (Stdlib appendix §4.4). A policy operation is **mode-opaque** (it does not read
-`verify.checked`, CG-7), so its result is the same in both modes, and a `*_div` with a zero
-divisor traps in both — division by zero is a separate guard, not overflow. *Rejected:*
+`verify.checked`, CG-7), so its result is the same in both modes. Division by zero is a
+separate guard, not overflow, so `wrapping_div`, `saturating_div` and `overflowing_div`
+with a zero divisor trap in both modes; **`checked_div(a, 0)` is `None`**, as is
+`checked_div(MIN, -1)`, because the `checked_` family's contract is "report failure as
+`None`, never trap" — a caller picks `checked_` precisely to handle every failure as a
+value, and a zero divisor is a failure of the call like any other. *Rejected:*
 policy members for `%` (`MIN % -1` yields `0`, nothing overflows), for shifts (an over-width
 count is its own guard and OP-6 rejected a wrapping/saturating count), for unsigned `neg`
 and `div` (no member of the checked-overflow set), and for `uint(N)` (a library type; its
 `unchecked` wrap already exists via CT-11) — each a name with no overflow to give a policy
-to, or one more obligation for a library type, against PRIN-1. A `checked_div` returning
-`None` on a zero divisor — it would make a policy family also absorb a non-overflow guard.
+to, or one more obligation for a library type, against PRIN-1. `checked_div` trapping on a zero divisor —
+it breaks the family's contract (a `checked_` call that can still trap), and the cost of the
+extra compare is the same compare the division-by-zero guard already emits. Giving
+`wrapping_div` / `saturating_div` / `overflowing_div` a zero-divisor result too — their
+result types have no slot for "no quotient", so any value would be invented.
 `bitsN` has no arithmetic (only bit-operations); overflow concerns
 the numeric interpretations `u`/`i`.
 
 ### CG-9. Float determinism — strict at comptime, no hidden contraction at runtime
-*provenance: `fma` and the saturating conversion pinned by the v1 built-in catalogue ·
+*provenance: `fma`, the saturating conversion and the constants `NaN` / `Infinity` pinned by
+the v1 built-in catalogue ·
 spec: Codegen §3 (spec/90); Concurrency §7.3, §7.7; Stdlib appendix §4.4*
 
 **Why.** Reproducibility (CT-1/CT-2) and predictability (I1) constrain floats.
@@ -302,6 +311,15 @@ target, which is the point of determinism. *Rejected:* a located compile error o
 without a fused instruction — it would make `fma` unusable on the baseline `x86_64` and on
 `i386` although a correct result is computable, and soft-float already sets the precedent of
 visible-cost software arithmetic; a double-rounded fallback — it silently changes results.
+**`NaN` / `Infinity`** (the Grammar §2.4 prelude constants) have fixed bit patterns, so a
+`bitcast` of either is the same on every target and at comptime: `NaN` is the canonical
+quiet NaN with positive sign and zero payload (`f32` `0x7FC00000`, `f64`
+`0x7FF8000000000000`), `Infinity` is +∞ (`0x7F800000`, `0x7FF0000000000000`), `-Infinity`
+the ordinary unary minus. Each is typed as an untyped float literal is (TYP-13: a
+floating-point context, else `f64`), so no third typing rule exists; comparisons stay IEEE
+754 (`NaN != NaN`). *Rejected:* leaving the NaN payload/sign to the target — two
+implementations would disagree on `bitcast(u64, NaN)`; fixed-type constants (`f64` only, or
+per-type `f32::NaN` names) — a second spelling where the literal rule already decides.
 
 ---
 

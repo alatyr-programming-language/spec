@@ -504,10 +504,14 @@ name not listed here is not part of v1 (additive, FND-6). All are base-tier.
 **Atomics** (Concurrency §2) — compiler intrinsics in the prelude module `atomic`
 (qualified UFCS `p.atomic::load(ord)`). `T` is an **atomic-capable type**: an integer
 type — an interpretation `uN` / `iN` (with `usize` / `isize`) or the multiword `uint(N)`
-(so `u128`) — or a pointer type `ptr(U)` / `ptr(mut U)`, whose width `T.size() × 8` is an
-atomic-capable width of the selected target's features (per-arch appendix §2,
-atomic-widths); any other `T`, or an unavailable width, is a compile error. `I` is an
-atomic-capable **integer** type (a pointer has no atomic arithmetic). Every `ord` is
+(so `u128`) — a pointer type `ptr(U)` / `ptr(mut U)`, or an optional pointer
+`Option(ptr(U))` / `Option(ptr(mut U))`, whose width `T.size() × 8` is an atomic-capable
+width of the selected target's features (per-arch appendix §2, atomic-widths); any other
+`T`, or an unavailable width, is a compile error. The optional pointer has exactly the
+pointer's representation — `None` is the all-zero niche (Memory §4.2, Type System §6.2) —
+so it is the same atomic access, and a lock-free structure tests "no node" by `match`, not
+by a raw `ptr == 0`. `I` is an atomic-capable **integer** type (neither kind of pointer
+has atomic arithmetic). Every `ord` is
 `comptime`; its legal values per operation are Concurrency §2.
 
 ```
@@ -558,16 +562,19 @@ Here `uN` / `iN` are the built-in interpretations at every width the target prov
 (with `usize` / `isize`). The four policies fix the result type and the result on
 overflow; without overflow every member returns the exact result:
 
-| Policy | Result type | On overflow |
-|--------|-------------|-------------|
-| `wrapping_<op>`    | `T`            | the two's-complement result modulo `2^N` (`wrapping_neg(MIN)` and `wrapping_div(MIN, -1)` are `MIN`) |
-| `saturating_<op>`  | `T`            | the nearest bound, `T`'s `MIN` or `MAX` (`saturating_neg(MIN)` and `saturating_div(MIN, -1)` are `MAX`) |
-| `checked_<op>`     | `Option(T)`    | `None` (otherwise `Some(result)`) |
-| `overflowing_<op>` | `(T, bool)`    | `(the wrapping result, true)` (otherwise `(result, false)`) |
+| Policy | Result type | On overflow | `<policy>_div(a, 0)` |
+|--------|-------------|-------------|----------------------|
+| `wrapping_<op>`    | `T`            | the two's-complement result modulo `2^N` (`wrapping_neg(MIN)` and `wrapping_div(MIN, -1)` are `MIN`) | traps |
+| `saturating_<op>`  | `T`            | the nearest bound, `T`'s `MIN` or `MAX` (`saturating_neg(MIN)` and `saturating_div(MIN, -1)` are `MAX`) | traps |
+| `checked_<op>`     | `Option(T)`    | `None` (otherwise `Some(result)`) | `None` |
+| `overflowing_<op>` | `(T, bool)`    | `(the wrapping result, true)` (otherwise `(result, false)`) | traps |
 
 So the v1 set is exactly 4 × 5 names — `wrapping_add` … `overflowing_div` — with `neg` and
-`div` absent for `uN`. A division by zero is **not** overflow: each `*_div` fails it by the
-division-by-zero guard, a trap (Concurrency §6.3). `%`, shifts and rotations have no policy
+`div` absent for `uN`. A division by zero is **not** overflow: `wrapping_div`,
+`saturating_div` and `overflowing_div` fail it by the division-by-zero guard, a trap, while
+`checked_div` reports it as `None` — the `checked_` family reports every failure as `None`
+and never traps (Concurrency §6.3). Every entry of the table holds in checked code and
+inside `unchecked` alike. `%`, shifts and rotations have no policy
 members (`MIN % -1` yields `0` and cannot overflow; an over-width shift is its own guard,
 OP-6).
 
@@ -583,6 +590,24 @@ saturating_convert(comptime T : type, in v : F) -> T         # ordinary prelude 
 `bitcast`) rounds toward zero like `T(v)`, then clamps to `T`'s `MIN` / `MAX`; `NaN` maps
 to `0`, `±Infinity` to `MAX` / `MIN`; it never traps and is mode-opaque. It shares the
 `saturating` prefix but is a conversion, not one of the 20 overflow-policy members above.
+
+**Float constants** (Grammar §2.4; Concurrency §7.4, §7.5) — prelude constants, not
+literals and not keywords:
+
+| Constant | Type | `f32` bits | `f64` bits |
+|----------|------|-----------|-----------|
+| `NaN`      | contextual | `0x7FC00000` | `0x7FF8000000000000` |
+| `Infinity` | contextual | `0x7F800000` | `0x7FF0000000000000` |
+
+Each takes its type **as an untyped floating-point literal does** (Type System §9.1): from
+context, which MUST be a floating-point type (`n : u64 = NaN` is a compile error, as is
+`n : u64 = 1.0`), and with **no** context the documented default `f64`. `NaN` is the
+canonical **quiet** NaN — positive sign, quiet bit set, zero payload; `Infinity` is positive
+infinity, and `-Infinity` is the ordinary unary minus applied to it (the sign bit flipped).
+`Infinity` is a named value, not a literal out of range, so it is not caught by Type System
+§9.1's "never a silent infinity" rule. Comparisons follow IEEE 754 (Concurrency §7.5): `NaN ==
+NaN` is `false`, so a NaN test is `x != x`, and the bit pattern above is what `bitcast`
+observes, not what `==` compares.
 
 ---
 
@@ -842,7 +867,8 @@ A conforming implementation MUST:
    compile error in a comptime context) — and honor the **per-domain families** (§4.3)
    normative in their feature chapters (Assembly `asm`/`at`/instructions; Functions
    `dyn_over`), and exactly the enumerated Concurrency families of §4.4 — `atomic::*`,
-   `fence`, `volatile::*`, the 20 overflow policy functions, `fma`, `saturating_convert` —
+   `fence`, `volatile::*`, the 20 overflow policy functions, `fma`, `saturating_convert`,
+   the constants `NaN` / `Infinity` —
    the catalog being **partitioned** between this appendix and those chapters, not
    duplicated;
 4. accept any value satisfying the **allocator protocol** of §5 as `@alloc(value)`,
