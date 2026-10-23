@@ -492,7 +492,7 @@ range-pattern ::= literal ".." literal | literal "..=" literal   (* scalar range
 ```
 
 A `match` **arm list** MAY contain a `comptime for x in <comptime collection> { <arm> … }` (`comptime-for-arm`, §3.7) that **unrolls** to one copy of its arms
-per iteration (the arm-position analog of statement-position `comptime for`, §8.3; CT-9) — the form that makes a `match`
+per iteration (the arm-position analog of statement-position `comptime for`, Comptime §8.3; CT-9) — the form that makes a `match`
 over a **generic enum** exhaustive in a structural derive (Comptime §5.5).
 
 #### 3.6 Functions, parameters, ABI (Functions §9; SYN-6/SYN-7)
