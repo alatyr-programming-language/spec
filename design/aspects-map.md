@@ -76,7 +76,11 @@ and **deferred (additive) growth**.
   `(variant, arch)` pairs, and a non-ISA backend is a new variant (TOOL-18). **Android** is such a variant,
   carrying the API level (TOOL-19). The toolchain's output contract is the **build plan** (`--plan` /
   `alatyr plan`); distribution packaging (`.deb`, APK, …) is deliberately **not** a `Kind` and not a
-  command — an external tool, or a future `publish`, consumes the plan (TOOL-20).
+  command — an external tool, or a future `publish`, consumes the plan (TOOL-20). The CLI reports on
+  itself through the **introspection** pair `help`/`version`, valid outside a package, with `version`
+  reporting the specification revision and a bare invocation failing with help on stderr (TOOL-21); an
+  **unrecognised argument** is an invocation-level Config diagnostic, never a source path (TOOL-14);
+  and **output verbosity** may not affect a build (TOOL-22).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4), declarations/expressions (SYN-5),
   attributes `@` — flat syntax + a **family taxonomy** (storage/layout/contract/abi/codegen/linkage/build/
   control/test) for docs & diagnostics, no `@family.name` (SYN-7/3B; isolation via the diagnostic, which names

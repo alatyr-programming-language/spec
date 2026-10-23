@@ -538,7 +538,12 @@ temporary location instead, which it MUST clean up (TOOL-10).
 different answers to "what is being built"). An invocation with neither a discoverable manifest nor a
 file list is a **Config diagnostic** naming that nothing was found — never a silent no-op. Both are
 **invocation-level**: no source exists to point at, so they are the one exception to the mandatory-span
-rule, naming the offending argument or the working directory instead (spec: Tooling §5).
+rule, naming the offending argument or the working directory instead (spec: Tooling §5). An
+**unrecognised command or flag** is the same case: an invocation-level Config diagnostic naming the
+offending argument, **never** a source path or a package name. The rule already covered it in substance,
+since an argument matching no command and no flag is exactly an offending argument, but it never said so,
+and nothing forbade reading `alatyr build --verbose package.al` as a bare file list beginning with
+`--verbose`.
 
 **Rejected.** Looking only in the current directory (the `zig build` shape) — it makes the command's
 result depend on the shell's location inside one package, which is exactly the accident a package root
@@ -547,7 +552,10 @@ repository, and a repository need not be a package (TOOL-9 defers workspaces), s
 a second, invisible rule. Dropping the manifest-less mode instead of specifying it — a single-file
 program is the language's own smoke test, and TOOL-10 already made normative claims about it. Treating
 extra listed files as additional roots — one module tree (MOD-1); the first file is the root and the
-rest are reached through it, or they are not part of the build.
+rest are reached through it, or they are not part of the build. Reinterpreting an unrecognised argument
+as a source path (the start of a bare file list) — two implementations then agree that the invocation is
+wrong but disagree about *what* is wrong with it, and the one that guesses reports a fault in a file the
+user never named, hiding a mistyped flag behind a file-system error.
 
 ### TOOL-15. The manifest handle is an ordinary root-module declaration — package-wide, never `pub`, and it collides with a same-named module
 *provenance: refines TOOL-3/TOOL-4 (the binding name is the handle) and TOOL-11 (the binding
@@ -824,3 +832,61 @@ result would depend on a file a previous build wrote, which is precisely the inc
 avoids by keying the cache on content. A full **install** section in v1 — installation has its own
 questions (prefixes, permissions, symlinks, man pages, `DESTDIR`) and none of them is decided; the derived
 install path answers the packaging case without pretending to answer those.
+
+### TOOL-21. `help` and `version` are introspection commands; `version` reports the specification revision
+*provenance: refines TOOL-1 (the CLI is part of the toolchain contract) and TOOL-14 (a bare invocation is
+never a silent no-op); applies Overview §6 (the language version and the document revision are separate
+axes) · spec: Tooling §4, §7 item 4*
+
+**Why.** Tooling §4 fixed the command set, discovery, target and profile selection and artifact placement,
+but said nothing about how a toolchain reports on *itself*: the words `--help` and `--version` did not occur
+in the chapter. So one conforming implementation answers `alatyr --version` and another, having no such
+surface, takes `--version` for a source path and fails with file-not-found. Both satisfied §7 item 4. Yet
+`--version` is the first thing anyone runs against an unfamiliar toolchain, and the natural thing for a CI
+job to record.
+
+**The rule.** `help` and `version` report on the toolchain rather than on a package, and each is available
+both as a command and as a flag (short forms MAY be added). Neither reads a manifest, performs discovery,
+resolves dependencies, nor produces an artifact, so both are valid from **any** working directory, including
+one with no package. Each writes to **stdout** and exits **successfully**. `help` lists the commands;
+`version` identifies the implementation **and the revision of this specification it conforms to**. An
+implementation's own version and the revision are separate axes (Overview §6), and a conformance claim
+cites a revision, so reporting only the former leaves a user unable to tell what the toolchain implements. A
+**bare invocation** with no arguments reports the same material as `help`, but on **stderr** with a
+**failure** exit. Help that was asked for is an **answer**; the same text volunteered after a mistake is a
+**diagnostic**. So `alatyr help | …` pipes cleanly, while a script that lost its arguments still fails. What
+either command prints is **quality-of-implementation**, by the same split as §5's diagnostics (the stage and
+shape are normative, the wording is not). No implementation may be assumed to emit a particular string,
+tooling MUST NOT parse `help` output, and introspection output is not a build input (§6.2).
+
+**Rejected.** Leaving introspection unspecified — the `--version` disagreement above stays conforming.
+`version` reporting only the implementation's own version — it does not say which revision the toolchain
+implements, which is the thing a conformance claim cites. A bare invocation as a Config diagnostic with no
+content (the first branch of the fork in spec issue #1) — a first-time user meets an error that does not say
+what the tool does. A bare invocation as `help` itself, on stdout with success (the second branch, first
+proposed in PR #2) — a script that lost its arguments silently succeeds, which is TOOL-14's silent no-op
+applied to the invocation itself. Pinning the text or format of either output — §5 already fixes
+*what must happen* and leaves *what is printed* to the implementation, and introspection follows the same
+principle.
+
+### TOOL-22. Output verbosity is an observation of a build, never a parameter of one
+*provenance: refines TOOL-1 (reproducible builds) and sits beside Tooling §4's debug-only budget/limit
+overrides; parallel to TOOL-20's output-only build plan · spec: Tooling §4, §6.2, §7 item 4*
+
+**Why.** §4 classified `--target` and `--profile` as build parameters and the budget/limit overrides as
+debug-only, but said nothing about a flag that varies only how much the tool reports about its own progress.
+§6.2's build-input tuple `(source, manifest, target, profile, lockfile, toolchain)` contains no such flag,
+yet nothing excluded one either. So an implementation whose `--verbose` also turns on extra assertions, or
+emits additional symbols, was conforming. Two users following the same instructions with different
+implementations would then get artifacts that are not byte-identical, which is exactly what §6 exists to
+prevent.
+
+**The rule.** An implementation MAY provide verbosity flags (conventionally `--verbose` / `--quiet`). Such
+a flag MUST NOT change the artifact, the diagnostics reported, the accept/reject outcome, or the exit status:
+the same build input built with and without it produces **byte-identical** artifacts. It is therefore not
+part of the build-input tuple (§5, §6.2). What is reported at each level is quality-of-implementation.
+
+**Rejected.** Leaving verbosity unclassified — the assertion-adding `--verbose` above stays conforming.
+Putting it on the footing of the debug-only overrides, which a package's *success* merely must not depend on
+— that still lets the artifact differ, and a flag whose purpose is to *describe* the build has no reason to
+alter it at all.
