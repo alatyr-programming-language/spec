@@ -111,7 +111,8 @@ makes `[]` one of the **overloadable operators**, uniform with `+`/`==`: the pos
 index forms are sugar over ordinary prelude functions resolved by UFCS over the base's
 type — `a[i]` ≡ `at(a, i)` (the bounds-checked element read; out-of-range traps — for
 arrays and slices by the compiler's operation-site guard (CG-13), for a library aggregate
-by its own mode-dependent check (CT-11)); `a[i] = v` ≡
+by its own mode-dependent check (CT-11), failing through `trap()` like the built-in guard
+(CG-13)); `a[i] = v` ≡
 `index_set(a, i, v)`; `a[lo..hi]` ≡ `index_range(a, lo, hi)` (the sub-slice view).
 Arrays and slices supply these as **compiler-known built-ins** (bounds check + pointer
 arithmetic emitted directly — the floor, exactly as a native operator's one-instruction

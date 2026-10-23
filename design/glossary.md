@@ -53,8 +53,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   built-in checked-guard family, which the compiler emits at the operation site and drops itself (CG-13).
 - **`trap()`** (CG-13) — the prelude intrinsic `trap() -> Never`: exactly the language's **direct inline trap** (the per-arch
   checked-failure instruction, per-arch appendix §2), the same instruction a failed built-in guard executes; no message, no
-  hook, no OS exit, no unwinding, identical in every context. A library-defined numeric type's check that mirrors the built-in
-  family fails through it, never through `panic`; `panic` is the failure of ordinary library logic.
+  hook, no OS exit, no unwinding, identical in every context. A library check that mirrors the built-in family fails through
+  it, never through `panic` — a library-defined numeric type's overflow or division by zero, and a library container's
+  bounds check (`Vec` indexing, `str`/`String` byte access, the arena's `get`), so `xs[10]` fails alike for an array and a
+  `Vec`. `panic` is the failure of ordinary library logic (an explicit assertion, `unwrap` on `None`).
 
 - **Raw union / member payload / definitely active** (TYP-11) — a **raw union** is an
   untagged overlap of named members, all at offset `0`, with no hidden discriminant or
@@ -380,8 +382,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib §3.6): a
   `{ptr, byte-length}` view; its byte length is **not** its code-point count, and indexing is by
-  byte (an in-bounds byte read, traps out of range). `String` is the **alloc-tier growable owned**
-  UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
+  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13). `String` is the
+  **alloc-tier growable owned** UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
 
 - **Range** — the value `a..b` (**half-open**, `a ≤ x < b`) or `a..=b` (**inclusive**); used in
   slicing (`s[lo..hi]`, open-ended `s[lo..]`/`s[..hi]`/`s[..]`) and `match` patterns (Control

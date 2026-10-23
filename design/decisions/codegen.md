@@ -442,8 +442,8 @@ property.
 
 ### CG-13. One failure mechanism for the whole checked-guard family — the direct inline trap
 *provenance: refines CG-2/CG-8; narrows CT-11 to library code · spec: Concurrency §6.1;
-Assembly §3; Codegen §3.5; Types §4.5, §7; Stdlib §4.1; Stdlib appendix §3, §4.1; per-arch
-appendix §2, §3.2*
+Assembly §3; Codegen §3.5; Types §4.5, §7; Memory §5.4; Stdlib §4.1; Stdlib appendix §3,
+§3.6, §4.1, §4.2, §5.2.1, §6, §8; per-arch appendix §2, §3.2*
 
 **Why.** The guard family was specified failure-by-failure: overflow traps "via an inline
 check", division by zero and the over-width shift "also trap", and the per-arch appendix
@@ -493,14 +493,31 @@ Without `trap` a library could only re-spell the per-arch instruction itself in 
 under `unchecked`, once per architecture — duplicating appendix §2 in every library and
 not following it when an architecture or backend is added.
 
+**A library container's checked access fails through `trap()` too.** The same holds for a
+library container's checks that mirror a family member — bounds, alignment, narrowing:
+`Vec`'s indexing (`at`, `index_set`, `index_range`) and `set`, a library-implemented
+`str` / `String` byte access (its range and code-point-boundary check), the arena's `get`
+bounds check, and every `comptime if verify.checked { … }` bounds guard in the prelude and
+stdlib catalogue. Each is made under `comptime if verify.checked` (CT-11), so it drops
+inside `unchecked` exactly as the built-in bounds guard does, and fails through `trap()`,
+never `panic`. So `xs[10]` fails identically whether `xs` is an array, a slice or a `Vec`,
+in every context including `freestanding` and bare — one failure mechanism for one guard,
+whatever implements it, the reasoning of the rule above. `panic` / `assert` stay ordinary
+library operations for program **logic**: an explicit user assertion, `unwrap` on `None` /
+`Err` (a defined-failure `panic`), and a library precondition that mirrors no family
+member. *Superseded:* the earlier text of this entry that called "a container's own bounds
+check" an ordinary `panic` — it contradicted the Stdlib appendix's trapping `Vec` indexing
+and `get`, and it would make `xs[10]` fail by two mechanisms depending on the type of `xs`.
+
 **Routed operators.** Operators are library functions (TYP-5), so an implementation may
 lower `a / b` into a prelude operator body. The guard attaches to the **operation**, not to
 that body: the compiler emits it at the operation site regardless of routing, and the
 routed body carries none. A library-supplied `panic("division by zero")` inside the operator
 is therefore not a permitted variant — it makes the observable failure depend on whether the
 prelude operator is in scope, and it reintroduces the IO/hook path CG-8's superseded
-sentence used to allow. `panic`/`assert` in ordinary library logic (a container's own bounds
-check, an explicit precondition) is unaffected and stays an ordinary library call.
+sentence used to allow. `panic`/`assert` in ordinary library logic (an explicit assertion,
+`unwrap` on `None`, a precondition that mirrors no family member) is unaffected and stays an
+ordinary library call; a container's bounds check is not such logic (above).
 *Superseded:* two other placements the text once carried — the built-in guard as library
 code in the prelude operator body under `comptime if verify.checked` (the first CT-11 and
 the Stdlib appendix's "mode-polymorphism guarantee"), and the guard as a property of the

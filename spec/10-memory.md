@@ -546,7 +546,8 @@ failure, I11), and the recoverable path is to call `a.allocate(T, …)?` directl
 result is typed by the mechanism, so for a region it already yields `Handle(T)` (§5.1). A handle is
 **not** dereferenced (no `deref` on a handle; §5.6 rule 4): the value is reached by
 exchanging *handle + arena* for a **scoped reference** with `get(a, h) -> scoped ptr(mut T)`,
-which bounds-checks the handle against the arena (out-of-range → trap) and returns a pointer the
+which bounds-checks the handle against the arena (out-of-range → `trap()`, never `panic`,
+exactly as a built-in index fails; Stdlib §4.1) and returns a pointer the
 caller then `deref`s. `get` is an **ordinary prelude function** (MEM-3): its result is declared a
 **second-class scoped reference** (the `scoped` return marker, §5.3.1), so the escape checker applies
 its **generic** second-class rule — the result cannot be stored or returned past the call site — with

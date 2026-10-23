@@ -216,10 +216,13 @@ System §7), `char(n)`'s code-point check (§3.2), a container's own bounds chec
 **mode-polymorphic** library functions (Type System §4.5 / CT-11): the check sits in
 `comptime if verify.checked { … }`, comptime-present in a checked context and
 comptime-absent inside `unchecked`. This is a **convention of the prelude**, relied on by
-users: a checked operation from the prelude responds to `unchecked`. A library-defined
-numeric type's check that mirrors a member of the built-in family (overflow, division or
-remainder by zero) — and `char(n)`'s conversion check — fails through **`trap()`** (§4.1),
-never `panic`; a container's own precondition stays an ordinary `panic` (Stdlib §4.1). A
+users: a checked operation from the prelude responds to `unchecked`. A library check that
+mirrors a member of the built-in family fails through **`trap()`** (§4.1), never `panic`:
+a library-defined numeric type's overflow or division/remainder by zero, `char(n)`'s
+conversion check, and a container's bounds check — `Vec` indexing (§6), `str` byte access
+(§3.6), the arena's `get` (§5.2.1) — so `xs[10]` fails identically for an array, a slice
+and a `Vec` (Stdlib §4.1; CG-13). `panic` stays for ordinary library logic: an explicit
+`assert`, `unwrap` on `None` / `Err` (§3.3, §3.4). A
 *user-defined* function is **mode-opaque** unless it itself reads `verify.checked` — a
 caller's `unchecked` does not reach into it (CG-7); a library that wants its own checked
 operation to be `unchecked`-responsive opts in the same way the prelude does (`comptime
@@ -339,8 +342,11 @@ bytes(in self) -> [u8]                 # the underlying bytes
 str_at(in p : usize, in n : usize) -> str   # raw view: `n` bytes at address `p` (unchecked inverse of `bytes`)
 ```
 
-Indexing by **byte** offset is checked to land on a code-point boundary (a mid-code-point
-index traps, I11). A growable string is `String` (alloc tier, §6).
+Indexing by **byte** offset is bounds-checked and checked to land on a code-point boundary
+(an out-of-range or mid-code-point index traps, I11). Where `str` byte access is library
+code rather than the built-in slice read, these checks sit under `comptime if
+verify.checked` and fail through `trap()` (§3, §4.1), exactly as the built-in index does.
+A growable string is `String` (alloc tier, §6).
 
 `str_at(p, n)` is the **raw inverse of `bytes`**: it reinterprets the `n` bytes at
 address `p` as a `str` (`usize → ptr(u8) → [u8] → str`) in one step, so a scanner
@@ -441,7 +447,7 @@ exactly `{ name, type, offset, mutable }`.
 | `panic`  | `panic(in msg : str) -> Never` | defined failure (never UB); no unwinding; hosted = stderr + exit, freestanding = hook or trap (Stdlib §4) |
 | `exit`   | `exit(in code : usize) -> Never` | hosted = OS exit; freestanding = trap/hook (Stdlib §4); code per §100 (the chapter governs the appendix) |
 | `assert` | `assert(in cond : bool)`        | runtime → `panic` when false; in a comptime context → **compile error** (Stdlib §4.3); always emitted at runtime |
-| `get`    | `get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)` | region-handle access: bounds-checks `h` against `a` (out-of-range → trap); the result is a **`scoped` second-class return** (Memory §5.3.1) — the escape checker's generic rule, **no** built-in arena contract, **no** lifetime variable. An ordinary prelude function, not a compiler intrinsic (MEM-3). Stdlib §5.2.1; Memory §5.4 |
+| `get`    | `get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)` | region-handle access: bounds-checks `h` against `a` under `comptime if verify.checked` (out-of-range → `trap()`, §4.1, never `panic`; CG-13); the result is a **`scoped` second-class return** (Memory §5.3.1) — the escape checker's generic rule, **no** built-in arena contract, **no** lifetime variable. An ordinary prelude function, not a compiler intrinsic (MEM-3). Stdlib §5.2.1; Memory §5.4 |
 
 `panic` and `exit` — and the intrinsic `trap` (§4.1) — **diverge**: their result type is **`Never`** (§3.7), the bottom
 type, which has no value — so control does not return and a call is a **terminator** for
@@ -602,7 +608,7 @@ free(in out self : Arena, comptime T : type, in h : Handle(T), in size : usize, 
 
 # construct over a caller-supplied buffer (freestanding; no OS):
 arena_over(in buf : ptr(mut bits8), in cap : usize) -> Arena
-# access: exchange handle + arena for a scoped pointer, bounds-checked (out-of-range traps):
+# access: exchange handle + arena for a scoped pointer, bounds-checked (out-of-range → trap(), §4.1):
 # `get` is an ordinary prelude function with a second-class return (Memory §5.3.1);
 # the result is scoped to the call site, with no arena-specific compiler contract.
 get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)
@@ -643,6 +649,9 @@ visible (I2).
   established named read `at`, distinct from `get`'s `Option`; no separate `index` shim, OP-1),
   `self[i] = v` is `self.index_set(i, v)`, and `self[a..b]` is `self.index_range(a, b)`. So
   the `[]` notation is uniform with a built-in array's, dispatched to `Vec`'s own functions.
+  The bounds check of `at`, `index_set`, `index_range` and `set` is made under `comptime if
+  verify.checked` (dropped under `unchecked`, §3) and fails through **`trap()`** (§4.1),
+  never `panic` — so `v[10]` fails exactly as a built-in array's `xs[10]` does (CG-13).
 - **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`). v1
   operations: `new` / `with_capacity(n)` / `from_str(s)`; `push(c: char)` / `push_str(s)`
   (each → `Result(usize, AllocError)`); `byte_len` / `is_empty`; `as_str` → `str` / `chars`
@@ -721,7 +730,8 @@ A conforming implementation MUST:
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the
    enumerated operations, **bounds/UTF-8/validity checks trapping** as defined failures
-   (never UB, I11), and visible cost (I2);
+   (never UB, I11) — a library-code check that mirrors the built-in guard family failing
+   through `trap()`, never `panic` (§3) — and visible cost (I2);
 3. provide the **built-in catalog** of §4 with each built-in's signature and contract —
    compiler intrinsics (§4.1) and ordinary prelude functions (§4.2), with `panic`/`exit`/`trap`
    returning **`Never`**, `trap` emitting exactly the per-arch checked-failure instruction
@@ -735,9 +745,9 @@ A conforming implementation MUST:
    require an `unchecked` grant for `manual`-mechanism allocation/reference use (rejected
    under `no_unchecked`), keep `scoped` non-allocating, and forbid `@alloc` under `no_alloc`;
 5. provide the **alloc-tier** types of §6 only given an allocator (forbidden under
-   `no_alloc`) and the **std** surface of §7 only when imported (forbidden under
-   `freestanding`), with all fallible std operations returning `Result` (no hidden
-   failure);
+   `no_alloc`), their bounds checks failing through `trap()` (§6), and the **std** surface
+   of §7 only when imported (forbidden under `freestanding`), with all fallible std
+   operations returning `Result` (no hidden failure);
 6. treat every definition here as **required v1 content** — additive (FND-6) only for
    future growth, not optional (Stdlib §6; Overview §6) — and charge **zero binary
    cost** for unused prelude items (monomorphization + the normative reachability rule of
