@@ -47,6 +47,12 @@ identifiers/constants, not keywords**, so the keyword surface does not grow with
 library (OP-1). `async`/`await` are reserved now for additive async (CC-6) — a safe
 direction of breakage. Import/re-export is a plain declaration (`name := path`), so `use`
 is gone; `@extern`/`@label` are attributes (SYN-7), so `extern`/`label` are not keywords.
+`scoped` is **contextual** like the directions — a keyword only immediately before `ptr` in
+a type position (`scoped ptr(T)`, MEM-1) — and `brand` is a **prelude identifier**: `brand(T)`
+is an ordinary comptime call returning a type (TYP-4), with no production of its own.
+*Rejected:* reserving `scoped` outright (the grammar needs it in one position only) and a
+dedicated `"brand" "(" type-expr ")"` type production (it duplicated the call form and made
+`brand` a keyword the keyword list never named).
 
 ### SYN-3. Literals, text types, and comments — explicit, no hidden block forms
 *spec: Grammar §2.1, §2.4, §2.5*
