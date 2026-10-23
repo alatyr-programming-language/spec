@@ -165,9 +165,10 @@ opt-in that links libc and lets its start-up own the process entry.
 
 Under `raw` the **OS primitive** the hosted `exit`/`panic` path uses is **per container**
 (ABI appendix §3.3): on **ELF** it is the exit syscall (`@abi(syscall)`, ABI appendix §5);
-on **PE** and **Mach-O** there is no usable syscall ABI — `@abi(syscall)` is rejected there
-— so the primitive is the platform library's (`kernel32::ExitProcess`, `libSystem::exit`),
-which the toolchain links **dynamically** by the fixed table of ABI appendix §3.3, with the
+on **PE** (`Os.windows`) and **Mach-O** (`Os.macos`) there is no stable public syscall ABI —
+`@abi(syscall)` is rejected on both alike — so the primitive is the platform library's
+(`kernel32::ExitProcess`, `libSystem::exit`), which the toolchain links **dynamically** by
+the fixed table of ABI appendix §3.3, with the
 usual non-hermetic Config note (Tooling §2.5). So `exit`/`panic` are defined on every
 supported hosted triple, and what they cost is visible per target.
 

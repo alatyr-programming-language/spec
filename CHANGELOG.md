@@ -134,6 +134,18 @@ plus raw `call` / `jmp`). A convention carried in the type (`@abi(X) fn(…)`) i
 deferred, additive growth; carrying it now, and silently calling with the default, are
 rejected. Functions §1.5, §1.6, §6.2, §8, §9 and §10 items 1 and 7; glossary; aspects map.
 
+**Normative — `@abi(syscall)` is rejected on macOS, as on Windows.** ABI appendix §5 listed
+`x86_64-macos` and `aarch64-macos` syscall rows and allowed a direct-syscall program
+"targeting a specific OS version", while §3.3 and Stdlib §4.2 said `@abi(syscall)` is
+rejected on Mach-O. The rejection now holds: the macOS rows are removed, and on
+`Os.macos` (container `macho`) `@abi(syscall)` is a located diagnostic, worded in parallel
+with `Os.windows`. Apple's syscall numbers are not a stable public ABI, and the platform's
+entry and exit already go through `libSystem` (§3.3); programs call `libSystem` through
+`@extern` / `@abi(c)`. The raw trap stays writable as an instruction intrinsic under
+`unchecked` — `syscall()` on `x86_64`, `svc(0x80)` on `aarch64` — so nothing expressible
+in the assembler is lost (I4). §7 conformance item 4 names the rejected OSes; **FN-9** records
+the decision and the rejected alternative.
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could

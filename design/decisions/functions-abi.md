@@ -213,9 +213,16 @@ bodyless declaration (the trap is the implementation, like `@extern`, and only u
 `unchecked`) with a fixed positional parameter→register mapping and register-width
 integer/pointer operands only — its result is `isize` because the Linux convention returns
 **`−errno`** in the result register, so a signed register-width value is the natural carrier;
-it is specified per-arch for Linux plus BSD/macOS, while
-Windows (no stable public syscall ABI) and freestanding/unlisted OSes reject it — further
-OSes being additive.
+it is specified per-arch for Linux plus FreeBSD, while
+Windows and macOS (neither has a stable public syscall ABI) and freestanding/unlisted OSes
+reject it with a located diagnostic — further OSes being additive. Windows and macOS are
+treated alike: their syscall numbers change between OS releases without notice, and the
+platform's own interface — through which entry and exit already go (ABI appendix §3.3) — is
+its library (`kernel32`, `libSystem`), reached by `@extern` / `@abi(c)`. A convention over
+numbers the platform does not promise would be a version-coupled, silently breakable surface
+(I1/I3). Completeness (I4) is untouched: the raw trap (`syscall()` / `svc(0x80)`) stays
+writable as an instruction intrinsic under `unchecked`. **Rejected:** allowing a version-coupled direct
+syscall on macOS (silent breakage on an OS update; a second path beside `libSystem`).
 
 ---
 
