@@ -218,10 +218,11 @@ container:
 | `pe` (`Os.windows`) | the loader passes **no** arguments and no command line; `argv` does not exist at entry — the library obtains it on demand | `kernel32`'s `ExitProcess` (see below); never a plain `ret` |
 
 **Platform libraries under `startup = raw`.** `raw` links no start-up files and no libc
-(TOOL-12), but two containers have **no syscall ABI to fall back on**: Windows has no
-stable public syscall numbering and macOS routes calls through `libSystem`, so `@abi(syscall)`
-is **rejected** on both (§5). For them the toolchain therefore adds the **platform library**
-the entry contract needs, as a **`dynamic`** dependency (MOD-9), and nothing else:
+(TOOL-12), but two containers have **no syscall ABI to fall back on**: neither Windows nor
+macOS has a stable public syscall numbering — each platform's interface is its library
+(`kernel32`, `libSystem`) — so `@abi(syscall)` is **rejected** on both (§5). For them the
+toolchain therefore adds the **platform library** the entry contract needs, as a
+**`dynamic`** dependency (MOD-9), and nothing else:
 
 | container | added library | the entries used |
 |---|---|---|
@@ -433,23 +434,27 @@ not fixed here.
 | `riscv64` | `a7`       | `a0 … a5`                          | `a0`   | `−errno` in `a0`  | —          | `ecall`     |
 | `riscv32` | `a7`       | `a0 … a5`                          | `a0`   | `−errno` in `a0`  | —          | `ecall`     |
 
-**FreeBSD and macOS** (BSD-style) — an error is signalled by the **carry flag** (`CF` on
-x86, the `C` bit of `PSTATE` on AArch64); on error the result register holds the
-**positive `errno`**:
+**FreeBSD** (BSD-style) — an error is signalled by the **carry flag** (`CF` on x86); on
+error the result register holds the **positive `errno`**:
 
-| Target            | Number reg                         | Argument regs                | Result | Error signal     | Trap        |
-|-------------------|------------------------------------|------------------------------|--------|------------------|-------------|
-| `x86_64-freebsd`  | `rax`                              | `rdi, rsi, rdx, r10, r8, r9` | `rax`  | carry flag set   | `syscall`   |
-| `x86_64-macos`    | `rax` (+ BSD class `0x2000000`)    | `rdi, rsi, rdx, r10, r8, r9` | `rax`  | carry flag set   | `syscall`   |
-| `aarch64-macos`   | `x16`                              | `x0 … x5`                    | `x0`   | carry flag set   | `svc #0x80` |
+| Target            | Number reg | Argument regs                | Result | Error signal     | Trap        |
+|-------------------|------------|------------------------------|--------|------------------|-------------|
+| `x86_64-freebsd`  | `rax`      | `rdi, rsi, rdx, r10, r8, r9` | `rax`  | carry flag set   | `syscall`   |
 
-- On **macOS** the syscall *numbers* are **not a stable public ABI** (Apple routes calls
-  through `libSystem`); a direct-syscall program therefore targets a specific OS version
-  — consistent with `@abi(syscall)` being an `unchecked`, OS-coupled interface. The
-  `x86_64` number additionally carries the BSD class bits (`0x2000000`).
-- **Windows** (`x86_64-windows-msvc`) has **no stable public syscall ABI** (NT syscall
-  numbers are unstable); `@abi(syscall)` is **rejected** — call the platform libraries
-  via `@extern` / `@abi(c)` instead.
+- **Windows** (`Os.windows`, container `pe`) has **no stable public syscall ABI** (NT
+  syscall numbers change between OS releases); `@abi(syscall)` is **rejected** with a
+  diagnostic located at the declaration — call the platform libraries (`kernel32`, …) via
+  `@extern` / `@abi(c)` instead.
+- **macOS** (`Os.macos`, container `macho`) has **no stable public syscall ABI** (Apple's
+  syscall numbers are not a public contract; the platform's interface is `libSystem`);
+  `@abi(syscall)` is **rejected** with a diagnostic located at the declaration — call
+  `libSystem` via `@extern` / `@abi(c)` instead.
+- On both, the raw trap instruction remains writable as an **instruction intrinsic**
+  (Assembly §2) inside an `unchecked` grant — `syscall()` on `x86_64`, `svc(0x80)` on
+  `aarch64` (per-arch appendix §3.2, §5.2) — so the assembler's expressiveness is kept
+  (I4); what is withheld is only a *calling convention* over numbers the platform does not
+  promise. Such code is coupled to one OS release, and nothing in this specification makes
+  it portable across releases.
 - A **freestanding** target (`os = none`) defines no syscalls; `@abi(syscall)` is
   **rejected** with a diagnostic. Further operating systems are **additive** (FND-6): the
   same schema, populated with that OS's documented convention.
@@ -478,7 +483,7 @@ register is preserved (I1).
 
 **Error model.** The result is the Result reg verbatim — interpreting it is the caller's
 job. On a **Linux** target a negative result is `−errno`, so the natural result type is
-`isize` (a library wraps it into a `Result`); on a **BSD/macOS** target the **carry
+`isize` (a library wraps it into a `Result`); on a **FreeBSD** target the **carry
 flag** signals error (the Result reg then holds the positive `errno`).
 
 The **normative surface** for the carry condition is a **second named result** on the
@@ -489,8 +494,6 @@ constant `false` on a negative-errno target (where the sign of the Result reg ca
 condition instead). A declaration that omits it observes only the Result reg (the Linux
 form). This makes the condition observable identically across implementations — two
 toolchains built to this appendix agree (FND-3) — without a target-specific ad-hoc channel.
-On macOS the syscall numbers are OS-version data (§5); the row fixes the calling
-mechanism, not a stable public numbering contract.
 
 ---
 
@@ -566,8 +569,9 @@ A conforming implementation MUST:
    as the documented `alatyr_entry_state` static only when `args`/`env` are reachable; and
    supporting the `startup = libc` start-up-called function per the §3.3 table — and
    `@abi(value)` per-site selection (Functions §6.2);
-4. implement **`@abi(syscall)`** per the OS/arch table of §5 where the OS defines one,
-   rejecting it with a diagnostic where it does not, and permit it only inside an
+4. implement **`@abi(syscall)`** per the OS/arch table of §5 where §5 defines one for the
+   target (`Os.android` uses the Linux rows), rejecting it with a located diagnostic where it
+   does not — `Os.windows`, `Os.macos`, `Os.none` — and permit it only inside an
    `unchecked` grant — lowering a call to the table's **trap instruction** (not a §4
    call) with the **positional** parameter mapping of §5 (first parameter → the Number
    reg; the rest → the Argument regs in order; result ← the Result reg), and rejecting a

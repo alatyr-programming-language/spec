@@ -416,7 +416,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Startup mode** (TOOL-12) — the per-target choice of whether the platform's **start-up files**
   and **libc** are linked: **`raw`** (the default — none of them; the process entry is the symbol
-  `Target.entry` names, and the library reaches the OS through `@abi(syscall)`) or **`libc`** (they
+  `Target.entry` names, and the library reaches the OS through `@abi(syscall)` on ELF, through the
+  platform library on PE/Mach-O, ABI appendix §3.3) or **`libc`** (they
   are linked and **own** the process entry, so `entry` is not applicable and the program supplies the
   function start-up calls — `main` on ELF/Mach-O). Distinct from the triple's **`env`** (`gnu`/`musl`/
   `msvc`/…), which is an **ABI** parameter and *not* an instruction to link libc; and distinct from
