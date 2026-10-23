@@ -313,7 +313,7 @@ place       ::= ident                                  (* an assignable location
 type-expr   ::= { attribute } type-atom                (* prefix attributes decorate a type: @align(N) T, @require(pred) T, @nonzero u32 — the prefix surface of §8/§8.1 (CT-10); §3.6 *)
 type-atom   ::= ident                                  (* bitsN, uN/iN/fN, usize, char, str, bool, … *)
               | path
-              | struct-type | enum-type | union-type | array-type | tuple-type
+              | struct-type | enum-type | union-type | array-type | slice-type | tuple-type
               | type-atom "(" arg-list ")"             (* generic instantiation: Vec(T), Option(T), Result(T,E) *)
               | [ "scoped" ] "ptr" "(" [ "mut" ] type-expr ")"  (* pointer type (Memory §4.1); the `scoped` qualifier marks a **second-class return** — meaningful only as a result type; a `scoped` in any other type position is **ill-formed** (a Semantic error, not silently ignored — Memory §5.3.1 / MEM-1) *)
               | "brand" "(" type-expr ")"              (* nominal brand over a layout (Type System §5.4) *)
@@ -324,6 +324,7 @@ struct-type ::= "struct" "{" [ field { item-sep field } ] "}"
 enum-type   ::= "enum"   "{" [ variant { item-sep variant } ] "}"
 union-type  ::= "union"  "{" [ union-member { item-sep union-member } ] "}"
 array-type  ::= "[" type-expr [ "=" expr ] ";" expr "]"   (* [T; N] | [T = v; N]; N comptime (Type System §6.4) *)
+slice-type  ::= "[" [ "mut" ] type-expr "]"            (* [T] | [mut T] — the slice view, pointer + length (Type System §7; Stdlib appendix §3.5); `mut` = element mutability via the pointer (Memory §4.1). No collision with array-type: after "[" type-expr, a "]" ends a slice-type while ";" or "=" continues an array-type, and a leading "mut" occurs only in a slice-type *)
 tuple-type  ::= "(" [ type-expr { item-sep type-expr } ] ")"
 
 field       ::= { attribute } [ "mut" ] ident ":" type-expr [ "=" expr ]   (* a field takes any attribute (CT-10); target/kind legality is a semantic check, not a syntactic one *)
