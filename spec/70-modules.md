@@ -391,12 +391,18 @@ This tells the compiler: the symbol is **external**, call it with this **ABI and
 signature** (the result via `-> T` or named `out`; Functions §3), and **resolve it at
 link time**.
 
-`@extern <fn-sig>` is a **body-less function declaration form**, not an ordinary
-function value: it is its own grammar production (`extern-decl`, Grammar §3.11), valid
-only as the RHS of a binding, and it has **no body to evaluate or pass**. It names an
-external callable for calls and linking — it cannot itself be used as a first-class
-function value (there is nothing to project or store beyond its address, which is taken
-as for any symbol).
+`@extern <fn-sig>` is a **body-less function declaration form**, not a function-value
+expression: it is its own grammar production (`extern-decl`, Grammar §3.11), valid only as
+the RHS of a binding, and it has **no body to evaluate**. It names an external callable for
+calls and linking. The **name it binds** may be taken as a function value (Functions §1.5)
+under the one rule of FN-10, with no exception for foreign code: when its declared selector
+is the target's default convention — `@abi(c)` (on every target where `c` exists, `c` names
+that default, ABI appendix §2), no `@abi`, or the default's own prelude name — the value is
+the external symbol's code address (one word, resolved at link time like any symbol), and an
+indirect call through it uses that same convention. Any other selector on an `@extern` is
+FN-10's located Semantic diagnostic. A **C-variadic** `@extern` (a trailing `args : ...`,
+Functions §7.3) has no function-value type — a fn-type entry is a direction and a type, with
+no rest — so taking it as a value is ill-formed; it is reached by direct call only.
 
 #### 7.2 External name
 

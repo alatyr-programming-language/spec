@@ -176,7 +176,7 @@ only adds ceremony.
 ## Foreign linkage and ABI
 
 ### FN-8. FFI — importing external symbols via `@extern`
-*spec: Functions §6; ABI appendix (150)*
+*spec: Functions §1.5, §6; Modules §7.1; ABI appendix (150)*
 
 **Why.** Calling foreign code needs only the symbol's contract, not its body. So an
 `@extern` declaration (a linkage-cluster *attribute*, not a keyword) gives a signature plus
@@ -192,6 +192,16 @@ flag — and relocation/TLS
 operands appear at the asm level as per-arch UFCS decorators (`sym.plt()`, `sym.gotpcrel()`,
 …) that *lower to* the GAS spellings rather than being surface syntax — so there is no
 `@`/`:`/`%` in the source. Header/bindgen import is left to future tooling.
+
+An `@extern` binding is a function for FN-10 like any other: a non-variadic `@extern` whose
+selector is the target's default convention (`@abi(c)` — `c` names the default wherever it
+exists — or no `@abi`) may be taken as a function value, its word the external symbol's
+address; any other selector is FN-10's diagnostic, and a C-variadic `@extern` has no fn-type.
+So a C callback (a `qsort` comparator, a signal handler) is passed as a value with no wrapper.
+*Superseded:* "an `@extern` cannot be used as a first-class function value" (Modules §7.1) —
+the ban had no reason once FN-10 fixed the convention of every function value: the foreign
+symbol's address is a code address of exactly that convention. *Rejected:* a wrapper function
+around each foreign callee (a hidden extra frame for nothing, I2).
 
 ### FN-9. ABI per-target — the convention is data, total over supported targets
 *spec: Functions §6; ABI appendix (150)*

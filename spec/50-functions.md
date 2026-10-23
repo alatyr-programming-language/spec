@@ -158,6 +158,12 @@ these spellings mean one and the same lowering.
   `d`). "Taking" is every use that yields a value of a `fn(T…) -> R` type: naming the
   function in value position to bind, pass, return, store, or call it indirectly, and
   `dyn_over` over a static closure whose function carries such a selector (§1.6).
+- An **`@extern`** function (Modules §7.1) follows the same rule: `@abi(c)` (or no `@abi`)
+  names the target's default convention wherever `c` exists, so a non-variadic
+  `@extern @abi(c)` function — e.g. a C callback such as `cmp := @extern @abi(c) fn(in a :
+  ptr(u8), in b : ptr(u8)) -> i32` — may be taken as a `fn(ptr(u8), ptr(u8)) -> i32` value,
+  whose word is the external symbol's address. A C-variadic `@extern` (§7.3) has no fn-type
+  and cannot be taken as a value.
 - On a target whose default selector is **not** a convention — `Container.com`, whose
   default is `naked` (ABI appendix §2(b)) — there is no default convention, and no function
   value can be taken and no `dyn` built.
