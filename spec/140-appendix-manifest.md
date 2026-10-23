@@ -481,7 +481,8 @@ Package := struct {                            # the manifest type — one value
   limits          : [Limit]    = []            # the package limits ceiling (FND-11)
   comptime_budget : u64        = ‹impl›        # reproducible step ceiling (Comptime §2.2)
   # (no package-wide `allocator` field in v1: there is no zero-config default provider —
-  #  the region allocator needs a caller-supplied buffer (`arena_over`, an `unchecked` call,
+  #  the region allocator needs a caller-supplied buffer (`arena_over` — `unchecked` unless the
+  #  buffer is a `@static` place, Stdlib appendix §5.2.1/MEM-3),
   #  Stdlib appendix §5.2.1/MEM-3).
   #  Allocation is selected per site via `@alloc(value)`. A default-provider field is
   #  additive (I10/TOOL-4 — a field is added only once implemented), reinstated then.)

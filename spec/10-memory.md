@@ -625,8 +625,9 @@ Functions §1.4, is the language's one written address-taking sugar and is not a
 
 Temporal safety rests on three things, none of them the handle's type, plus one fact asserted
 by the author: that the storage under the arena outlives it. For an arena over a caller-supplied
-buffer that fact is invisible to the local escape rule, so constructing one (`arena_over`) is a raw
-operation that requires an enclosing `unchecked` (Stdlib appendix §5.2.1; CG-7). (1) **The arena is an owning
+buffer that fact is invisible to the local escape rule, so constructing one (`arena_over`) over such
+a buffer is a raw operation that requires an enclosing `unchecked` (Stdlib appendix §5.2.1; CG-7).
+Over a place declared `@static` the declaration supplies the fact, and the call is **checked** (§5.2.1). (1) **The arena is an owning
 value** (§5.9; Stdlib appendix §5.2.1): every `Arena` — over a caller-supplied buffer, a `@static`
 fixed pool, or OS pages — is non-copyable, so there are never two cursors over one buffer handing out
 the same address twice, and it is consumed exactly once, by `close` (or `forget`) — a `@static`
@@ -913,8 +914,9 @@ A conforming implementation MUST:
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
    check for handles, by generation trap for generational), reject
-   `manual`-mechanism reference creation/use and a call to `arena_over` outside an
-   `unchecked` grant (forbidden under `no_unchecked`), and never silently convert between mechanism representations (§5.6);
+   `manual`-mechanism reference creation/use and a call to `arena_over` over a
+   non-static buffer outside an `unchecked` grant (forbidden under `no_unchecked`; over a `@static`
+   place the call is checked), and never silently convert between mechanism representations (§5.6);
 7. classify owning values structurally (the `@owning` marker plus contagion), treat an
    `in`-pass / `return` / `out`-fill of an owning value as a **move** that invalidates the
    source, and enforce strict linearity of owning values on every normal exit path (no

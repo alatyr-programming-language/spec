@@ -184,8 +184,11 @@ address of a caller buffer inside an owning `Arena` that can be moved, returned 
 variable — so checked code could use an arena over dead storage, against I11. A call to
 `arena_over` is now a raw operation (CG-7): ill-formed in checked code and under `no_unchecked`,
 written `a := unchecked arena_over(ptr(mut buf), cap)`, the author vouching that `buf` outlives the
-arena; all later use stays checked. A checked form over a `@static` buffer is deferred, additive
-(MEM-3; Memory §5.4, §8; Stdlib appendix §5.2.1, §8; Grammar §3.7; glossary; aspects map).
+arena; all later use stays checked. **Over a place declared `@static` the call is checked**: the
+declaration supplies the fact the author would have to vouch for, the test stays syntactic (I1,
+FND-3), and PRIN-2 will not accept forcing a `freestanding` program over a static pool into
+`unchecked` just to allocate (MEM-3; Memory §5.4, §8; Stdlib appendix §5.2.1, §8; Grammar §3.7;
+CG-7; glossary; aspects map).
 
 **Normative — no call-site temporary allocator; an omitted allocator argument names an existing
 place.** Allocator shape C let a §5.1 default create a fresh allocator per call, but an `Arena` is

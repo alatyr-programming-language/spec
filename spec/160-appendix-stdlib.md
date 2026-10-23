@@ -752,18 +752,29 @@ value to bind, so `unchecked` does not drop it (the recoverable path is `a.alloc
 directly, §5.1, which already yields `Handle(T)`). `Arena.free(…)`
 is a **no-op** — storage is reclaimed in bulk by `close`.
 
-**`arena_over` is a raw operation: a call to it requires an enclosing `unchecked`** (`unchecked
-expr` or `unchecked { … }`, CG-7) and is ill-formed in checked code and under `no_unchecked`. The
-`Arena` it returns keeps the address of `buf` inside an owning value that may be moved, returned, or
-stored, while the escape rule (Memory §5.3.1) is local and unparameterized — it cannot tie the result
-to `buf`'s scope without a lifetime variable (MEM-1). So the one fact the checker cannot see —
+**`arena_over` is a raw operation over a caller buffer: a call requires an enclosing `unchecked`**
+(`unchecked expr` or `unchecked { … }`, CG-7) — **except over a static buffer, which is checked**
+(below). The `Arena` it returns keeps the address of `buf` inside an owning value that may be moved,
+returned, or stored, while the escape rule (Memory §5.3.1) is local and unparameterized — it cannot tie
+the result to `buf`'s scope without a lifetime variable (MEM-1). So the one fact the checker cannot see —
 **`buf` outlives the arena, up to its `close`** — is asserted by the author at the call, visibly:
 `a := unchecked arena_over(ptr(mut buf), cap)`. Everything after construction stays checked
-(`get`'s bounds check, the transient result, the arena's linearity). A violation (the arena used
-after `buf`'s scope ended) has **hardware-defined** behavior — it reads or writes whatever now
-occupies that storage — never UB (I11). A `@static` pool over a `@static` buffer is constructed
-the same way. The OS-backed arena calls it inside its own library code over pages it owns, so its
-users write no `unchecked`.
+(`get`'s bounds check, the transient result, the arena's linearity). A violation (the arena used after
+`buf`'s scope ended) has **hardware-defined** behavior — it reads or writes whatever now occupies that
+storage — never UB (I11).
+
+**The static-buffer exception.** A call is **well-formed in checked code** when `buf` is a pointer to
+a **static place**: the operand is `ptr(mut X)` / `ptr(X)` of a binding declared `@static`, or of a
+field or element of such a binding, at the point of the call. The check is **syntactic** — it reads the
+storage class of the named place, never a dataflow fact — so it stays local and decidable (I1, FND-3):
+a `@static` place lives for the whole program, so no handle or view derived from it can outlive its
+buffer, and the fact the author would have to vouch for is guaranteed by the declaration. Any other
+operand (a local, a parameter, a heap block) requires `unchecked`. This exception is what keeps a
+`freestanding` program over a static pool writable in checked code (PRIN-2 — v1 is complete now;
+forcing the bare-metal path into `unchecked` for basic allocation would not be).
+
+The OS-backed arena calls `arena_over` inside its own library code over pages it owns, so its users
+write no `unchecked`.
 
 **Every `Arena` is an owning value** (`@owning`, MEM-2), like an open file — including the
 caller-buffer arena from `arena_over` and a `@static` fixed-pool arena. What it owns is its

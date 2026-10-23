@@ -203,8 +203,8 @@ narrowing truncates and float→int is hardware-defined; alignment-requiring acc
 the alignment check. The scope **additionally permits the genuinely-raw operations**
 ill-formed in checked code (pointer arithmetic, `int↔ptr`, reading a raw-union member
 that is not definitely active / reading `uninit`, raw control transfer, raw `asm`, a call
-to `arena_over`, whose caller vouches that the buffer outlives the arena, Stdlib appendix
-§5.2.1, a call to `str_at`, whose caller vouches for the bytes at an integer address,
+to `arena_over` over a non-static buffer, whose caller vouches that the buffer outlives the arena
+(over a `@static` place the call is checked — the declaration supplies the fact, Stdlib appendix §5.2.1), a call to `str_at`, whose caller vouches for the bytes at an integer address,
 Stdlib appendix §3.6) — these have no checked counterpart and were a
 grant under either model — and, in an `unchecked { … }` block, **binding a `scoped` call
 result to a local** (transient-only in checked code, Memory §5.3.1; staleness is then the
@@ -225,9 +225,12 @@ re-entry and no `checked` keyword** — by symmetry with the phase axis there is
 result inside an `unchecked` scope, use the everywhere-available policy operations
 (`checked_*`, `saturating_*`, `wrapping_*`, `overflowing_*`) or move the operation out.
 Because the mode is non-transitive, a **library function whose contract rests on a fact its
-own checks cannot establish** — `arena_over` (the buffer outlives the arena) and `str_at`
-(the bytes at an integer address) — is a **raw operation at its call site**, listed above:
-an `unchecked` inside its body would otherwise let checked callers reach the hole.
+own checks cannot establish** — `arena_over` over a non-static buffer (the buffer outlives the
+arena) and `str_at` (the bytes at an integer address) — is a **raw operation at its call site**,
+listed above: an `unchecked` inside its body would otherwise let checked callers reach the hole.
+Where the fact is **supplied by a declaration** rather than needing the author's vouch — `arena_over`
+over a `@static` place, whose storage cannot die before the arena — the call stays checked: the raw
+call site exists exactly for facts nothing in the package can establish (I1, PRIN-2).
 
 **Rejected.** A raw operation **encapsulated behind a checked call** (`str_at` was documented
 as "unchecked, the unsafety encapsulated in the one function"): non-transitivity hides the
