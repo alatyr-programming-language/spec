@@ -749,8 +749,9 @@ a missing `close` are compile-time errors of the linearity checker, at no run-ti
 Allocation (`allocate`/`free`, `in out self`) and `get` (`in a : ptr(Arena)`) borrow it without
 consuming it. A **`@static`** fixed-pool arena carries **no** finalize obligation and is never
 consumed (Memory §5.9 — "own forever"): it allocates for the whole program. The scoped result of
-`get` is **transient** in checked code (Memory §5.3.1/§5.4): `deref(get(a, h)).x = 5` is
-well-formed, `p := get(a, h)` is not (it is, inside `unchecked { … }`).
+`get` is **transient** in checked code (Memory §5.3.1/§5.4): `deref(get(ptr(a), h)).x = 5` is
+well-formed, `p := get(ptr(a), h)` is not (it is, inside `unchecked { … }`). The arena is always
+an explicit argument, by address — no ambient arena, no auto-address-of in a free call (Memory §5.4).
 An **OS-backed** arena additionally holds its `mmap`'d pages, so it is a **distinct `@owning`
 type** (MEM-2) that holds an `Arena` over those pages; its release (`munmap`) **consumes** it,
 closing the inner `Arena` and unmapping the pages, so the pages are released exactly once. Mixing a handle with the wrong arena

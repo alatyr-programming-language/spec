@@ -522,7 +522,7 @@ local cannot be stored where it outlives the block, returned, assigned to an `ou
 it). Whether the local is still valid when used — its referent not ended, moved, or reclaimed in
 between — is then the **programmer's responsibility**, and a stale access has **hardware-defined**
 behavior (I11; §5.4), never UB. The `unchecked expr` form does not reach a binding written outside
-it (`p := unchecked get(a, h)` is still ill-formed): the local would outlive the mode.
+it (`p := unchecked get(ptr(a), h)` is still ill-formed): the local would outlive the mode.
 
 The `scoped` marker is **meaningful only on a function result type**. Every reference is
 already second-class by default (§5.3), so the qualifier carries information **only** where it
@@ -550,10 +550,10 @@ and the analysis composes.
 - ill-formed: `fn leak() -> ptr(u64) { x := 0 ; ptr(x) }` (returns a scoped
   reference upward); storing `ptr(local)` into a module-level `mut` global;
   capturing `ptr(local)` in a closure that is stored beyond the scope.
-- a `scoped` result (with `a : ptr(mut Arena)`, `h : Handle(Node)`, §5.4): `deref(get(a, h)).x = 5`
-  and `use(get(a, h))` are well-formed; in checked code `p := get(a, h)` is ill-formed (a named
-  result), and so is `link(get(a, h), a.allocate(Node, …))` (the arena is frozen); inside
-  `unchecked { p := get(a, h) ; deref(p).x = 5 }` the binding is well-formed.
+- a `scoped` result (with `a : Arena`, `h : Handle(Node)`, §5.4): `deref(get(ptr(a), h)).x = 5`
+  and `use(get(ptr(a), h))` are well-formed; in checked code `p := get(ptr(a), h)` is ill-formed (a
+  named result), and so is `link(get(ptr(a), h), a.allocate(Node, …))` (the arena is frozen); inside
+  `unchecked { p := get(ptr(a), h) ; deref(p).x = 5 }` the binding is well-formed.
 
 Storing a long-lived link uses a **first-class** mechanism instead (a handle or a
 generational reference) — crossing to it is **explicit** (§5.6 rule 4); escaping to a
@@ -576,7 +576,7 @@ writes `init`, and binds `x : Handle(T)`; capacity exhaustion **traps** (a defin
 failure, I11), and the recoverable path is to call `a.allocate(T, …)?` directly — its
 result is typed by the mechanism, so for a region it already yields `Handle(T)` (§5.1). A handle is
 **not** dereferenced (no `deref` on a handle; §5.6 rule 4): the value is reached by
-exchanging *handle + arena* for a **scoped reference** with `get(a, h) -> scoped ptr(mut T)`,
+exchanging *handle + arena* for a **scoped reference** with `get(ptr(a), h) -> scoped ptr(mut T)`,
 which bounds-checks the handle against the arena (out-of-range → `trap()`, never `panic`,
 exactly as a built-in index fails; Stdlib §4.1) and returns a pointer the
 caller then `deref`s. `get` is an **ordinary prelude function** (MEM-3): its result is declared a
@@ -584,7 +584,12 @@ caller then `deref`s. `get` is an **ordinary prelude function** (MEM-3): its res
 its **generic** second-class rule — in checked code the result is **transient**, used within the
 full expression of the call and never named, while the arena is frozen there — with **no**
 arena-specific compiler contract and **no** lifetime variable (the result is scoped to the **call
-site**, not tied to the arena *argument*; a user could write the same signature).
+site**, not tied to the arena *argument*; a user could write the same signature). The arena is an
+**explicit argument**, passed by its address: `get(ptr(a), h)`. There is **no** implicit or ambient
+arena for `get` — its `in a : ptr(Arena)` is not an allocator parameter (Functions §5.5), so it is
+never elided — and a free-call argument is never auto-addressed: `get(a, h)` with `a : Arena` is a
+type error, not an implicit `ptr(a)`. (The generic UFCS receiver form `a.get(h)` ≡ `get(ptr(a), h)`,
+Functions §1.4, is the language's one written address-taking sugar and is not arena-specific.)
 
 Temporal safety rests on three things, none of them the handle's type. (1) **The arena is an owning
 value** (§5.9; Stdlib appendix §5.2.1): every `Arena` — over a caller-supplied buffer, a `@static`

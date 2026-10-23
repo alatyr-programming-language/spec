@@ -116,9 +116,15 @@ distinct `@owning` type holding an `Arena` over its pages.
 arena-specific): it is used within its full expression — dereferenced, field/element-accessed,
 or passed down — never bound to a name, stored, or captured, and the call's `in out` /
 pointer-borrowed places may not be passed `in out`, `ptr(mut …)`, or consumed elsewhere in that
-expression. `deref(get(a, h)).x = 5` is well-formed, `p := get(a, h)` is not. Inside
+expression. `deref(get(ptr(a), h)).x = 5` is well-formed, `p := get(ptr(a), h)` is not. Inside
 `unchecked { … }` the result may be bound to a local, with staleness hardware-defined (CG-7;
 glossary; Grammar §3.7).
+
+**Clarified — `get` takes its arena explicitly, by address: `get(ptr(a), h)`.** There is no
+implicit or ambient arena for `get` (its `ptr(Arena)` parameter is not an elidable allocator
+parameter), and a free-call argument is never auto-addressed, so `get(a, h)` with `a : Arena` is a
+type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
+appendix §5.2.1; glossary).
 
 **Normative — a function value has the target's default calling convention.** Functions §6.2
 said a call uses "the calling convention carried by the callee's type", but the function-value
