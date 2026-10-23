@@ -214,6 +214,18 @@ as the arch's `%` lowering does:
 (`SCTLR.DZ` / `CCR.DIV_0_TRP`), the zero-divisor case faults instead — a property of the
 configured machine, outside the language.
 
+**Without a hardware divider** — an `aarch32` core without the `idiv` feature (§6.2), a
+RISC-V core without `m` (§7.2) — the `/` and `%` operators lower to a **runtime helper**, and
+inside `unchecked` that helper MUST return **exactly the values of that ISA family's
+architectural divide** in the row above: `0` / `x` / `MIN` / `0` for `aarch32`; all bits set
+(`divu`: the maximum value) / `x` / `MIN` / `0` for RISC-V — and every other quotient and
+remainder truncated toward zero, as the instruction gives them. The helper never faults (the
+architectural divide of both families does not; the configured `aarch32` zero-divisor trap of
+note ¹ is a property of a hardware divider, which this core does not have). So an unchecked
+divide has one result per ISA family, whether or not the core has the divider, and two
+conforming implementations' helpers agree (FND-3). An unchecked `*` through a helper (RISC-V
+without `m`) yields the low `N` bits — the two's-complement wrap of Concurrency §6.2.
+
 ---
 
 ### 3. `x86_64` (reference exemplar)
@@ -569,7 +581,8 @@ The high-level integer division **operator** (`/`) is distinct from the `sdiv`/`
 intrinsic: with the `idiv` feature it lowers to that intrinsic; **without** it, the
 operator lowers to a **runtime helper** (a codegen/stdlib lowering, not an instruction —
 the compiler's operation-site guards of Concurrency §6.1 apply to the operator unchanged,
-and the helper carries none of its own). The instruction intrinsic itself is
+and the helper carries none of its own; inside `unchecked` it returns the `aarch32` row of
+the §2 divide table, never faulting — likewise for `%`). The instruction intrinsic itself is
 simply **unavailable** on a core without `idiv`.
 
 Return is `bx(lr)` (there is no dedicated `ret`). Conditional execution on arbitrary
@@ -666,7 +679,9 @@ The high-level integer `*`/`/`/`%` **operators** use the `m`-extension intrinsic
 lowering, not an instruction). The compiler's operation-site guards of the operator
 (Concurrency §6.1) apply unchanged — multiplication overflow, the `MIN / -1` overflow case,
 division/remainder by zero (each a trap), and `MIN % -1` (yielding `0`) — so the result is
-exactly that of the in-hardware path; the helper carries no guard of its own. The
+exactly that of the in-hardware path; the helper carries no guard of its own. Inside
+`unchecked` the helpers return the RISC-V row of the §2 divide table (`x / 0` all bits set,
+`x % 0` = `x`, `MIN / -1` = `MIN`, `MIN % -1` = `0`, never faulting), and `*` wraps. The
 `mul`/`div`/`rem` **intrinsics** themselves are simply **unavailable** without `m`.
 Atomics (`a` extension — via the Concurrency builtins), fences (`fence`), CSR access,
 and the full vector (`v`) ISA are reached with `asm(…)` (Assembly §4). The

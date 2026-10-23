@@ -126,6 +126,14 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — an unchecked divide without a hardware divider returns the ISA family's
+architectural values.** On an `aarch32` core without `idiv` or a RISC-V core without `m`, `/`
+and `%` lower to a runtime helper whose `unchecked` result was unspecified. The helper now
+returns exactly the values of that ISA family's architectural divide (the per-arch appendix
+§2 table: `aarch32` `0` / `x` / `MIN` / `0`; RISC-V all-bits-set / `x` / `MIN` / `0`) and never
+faults, so the result is deterministic across implementations (CG-13; Concurrency §6.2;
+per-arch appendix §2, §6.2, §7.2).
+
 **Normative — a `naked` function has no Alatyr-level interface.** `@abi(naked)` meant "no
 frame, no prologue, no return sequence", but nothing said what its parameters or result were,
 or how an Alatyr call to it would place arguments. A naked function now declares **no
