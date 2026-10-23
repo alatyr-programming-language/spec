@@ -209,6 +209,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **escape to assembly** — raw assembly is available **everywhere inline** (FND-9); there is no separate
   `snippet` construct (removed in CF-6). A function/named raw region without a frame/ABI/return = `@abi(naked) fn`
+  — no parameters, no result, not callable from Alatyr code, not a function value; reached by raw `call`/`jmp` only
   (FN-5/CF-6; the entry form wherever no platform entry contract exists — `Os.none`,
   `Container.com`, and under `no_abstractions` — see **Entry point**).
 

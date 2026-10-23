@@ -428,7 +428,9 @@ programmer did not write is forbidden. This resolves the boundary construct-by-c
 - **The function frame** (§2.2): a `fn` — `@abi(naked)` **or** ordinary ABI-framed — over
   **local variable bindings** that materialize operand values (`mut out : u64 = a`), the
   instruction mutating its destination local, and that destination **returned by the
-  enclosing function** (`return <local>`). The prologue/epilogue and slot placement are the
+  enclosing function** (`return <local>`) when it is ABI-framed; a naked `fn` has no
+  parameters, no result and no stack slots (its locals `@reg(name)`-pinned), and is entered
+  only by raw transfer (Functions §6.4). The prologue/epilogue and slot placement are the
   *fixed, spec-defined* frame (Memory §2.5 / Codegen §3.4), fully determined by the source —
   not a compiler-chosen abstraction. A binding's initializer must itself be a surface
   expression (an intrinsic result / register / immediate / local / data constructor).
