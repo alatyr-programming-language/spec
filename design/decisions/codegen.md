@@ -519,7 +519,12 @@ uniform. **`MIN % -1`** is the one divide case that is guarded without being a f
 checked code the compiler compares the divisor with `-1` (the compare the `MIN / -1` guard
 already makes) and yields `0`, the correct remainder, without executing the divide (CG-8);
 under `unchecked` it is hardware-defined (`x86_64`/`i386` `idiv` faults, `#DE`; `aarch64`,
-`aarch32` `sdiv` and RISC-V yield `0`).
+`aarch32` `sdiv` and RISC-V yield `0`). On a core **without a hardware divider** (`aarch32`
+without `idiv`, RISC-V without `m`) the operator's runtime helper returns, under `unchecked`,
+exactly the values of that ISA family's architectural divide (per-arch appendix §2) and never
+faults — so "hardware-defined" names one result per ISA family, not a per-helper choice
+(FND-3). *Rejected:* leaving the helper's unchecked result to the implementation (two
+conforming helpers would disagree on `x / 0`).
 
 **Library-defined numeric types fail through `trap()`.** The guard family above is the
 compiler's for the built-in interpretations; a library-defined numeric type — `uint(N)`

@@ -278,7 +278,8 @@ uniform: **division by zero**, an **over-width shift**, **`MIN ÷ -1`** and **`M
 do whatever the target does — `x86_64` faults on `MIN ÷ -1`, on `MIN % -1` and on a zero
 divisor (`#DE`), `aarch64` yields `MIN`, `0` and `0` respectively, and an over-width shift
 is masked on some ISAs and not others (per-arch appendix §2 lists the divide behaviour per
-architecture). Writing them under `unchecked` is therefore target-specific by construction (I11:
+architecture; on a core without a hardware divider the runtime helper returns that ISA
+family's architectural values, so the result does not depend on the divider's presence). Writing them under `unchecked` is therefore target-specific by construction (I11:
 hardware-defined, never UB — but never portable either). The whole
 scope is affected (not a single operation), and the choice of granularity — one line or
 a block — is the programmer's; correctness inside the scope is the author's
