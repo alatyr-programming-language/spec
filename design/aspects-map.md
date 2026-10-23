@@ -26,7 +26,7 @@ and **deferred (additive) growth**.
   (MEM-7), pointers (MEM-8), keystone "storage+lifetime" — **one language reference (scoped) + a library
   allocator-provider menu over first-class reference tokens** via `@alloc(value)` (MEM-1/STD-1, reframed by MEM-3; `get` ordinary via a
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
-  `arena_over` over a caller buffer an `unchecked` call),
+  `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
   closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-12
   (`bitsN` core + interpretations u/i/f,
