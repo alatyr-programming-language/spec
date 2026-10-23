@@ -222,7 +222,7 @@ OSes being additive.
 ## Function-value types and type erasure
 
 ### FN-10. The function-value type — `fn(T…) -> R` (a code-pointer type)
-*spec: Functions §1.5; Grammar §3.3, §3.6*
+*spec: Functions §1.5, §6.2; Grammar §3.3, §3.6*
 
 **Why.** FN-6 graded function values into three representations — bare code-pointer,
 static closure, `dyn` — and Functions §1.2 fixed the non-capturing case as a pointer-width
@@ -260,8 +260,34 @@ Sub-choices (resolved the Alatyr-consistent way — FND-3, no guessing):
   code-pointer *type*; the generic-`callable` predicate (FN-6) is a comptime structural
   check that also admits **static closures** for monomorphization. The two coexist — the
   fn-type stores a homogeneous code pointer, the predicate abstracts over any callable.
+- **A function value has the target's default convention.** The type carries no calling
+  convention (`@abi` on a type is forbidden, TYP-7), so an indirect call through a value
+  taken of an `@abi(naked)` / `@abi(entry)` / `@abi(syscall)` / user-`Abi(...)` function
+  was undefined. A function value — of `fn(T…)->R`, and the `code` of a `dyn` (FN-11) — may
+  therefore be taken **only** of a function whose selector is the target's default
+  convention (ABI appendix §2, the one `c` names): no `@abi`, `@abi(c)`, or `@abi(name)`
+  with the prelude name of that same convention on that target. Any other selector — the
+  sentinels, `syscall`, a user `Abi(...)` (by name, never by field comparison), a
+  non-default prelude convention such as `sysv` on Windows — is a located Semantic
+  diagnostic; on `Container.com` (default `naked`) no function value exists at all. So every
+  indirect call uses the default convention by construction, and Functions §6.2 reads: a
+  direct call uses the callee's declared convention, an indirect call the default. The
+  default convention lowers Alatyr's own passing modes (`out`, `in out`, slices) against
+  the same `Abi` value whatever the spelling, so "default" and `c` never diverge where both
+  exist. A callable specialized through the generic callable constraint (a `@require`
+  predicate, TYP-12) is called directly and is unaffected. Low-level code reaches a
+  non-default function through the existing raw surface — its symbol as an instruction
+  operand and a raw `call` / `jmp` (Assembly §2; Control Flow §2.3).
+- **Deferred, additive:** the convention **in the type** (e.g. `@abi(X) fn(T…)->R`). It
+  passes the PRIN-2/FND-6 test — added later, every existing function type keeps meaning
+  "default convention", so no v1 program changes meaning or stops compiling.
 
-**Rejected.** Reusing the named `fn-sig` (with parameter *names*) as the type — a type has
+**Rejected.** The convention in the type **now** — new syntax, lifting the type-target
+`@abi` ban, and a wider type identity, all for a rare case the raw surface already serves
+(PRIN-1); it stays available as additive growth. Calling a non-default function through a
+value **silently with the default convention** — hidden wrong behaviour that compiles (I1/
+I11); the diagnostic makes the limit visible instead.
+Reusing the named `fn-sig` (with parameter *names*) as the type — a type has
 no use for names, and printing them invites the reader to think they are significant. An
 `@`-attribute spelling — `@` is **compile-time attributes only** and never denotes a
 runtime representation (the code-pointer word *is* a representation), so a keyword-headed
@@ -315,7 +341,9 @@ flows from the `ptr(mut …)` / `ptr(…)` form.
 **Call — `d(args)`.** The ordinary postfix call (Grammar §3.4), no new form: for a
 `dyn`-typed callee it lowers to an **indirect call through `code`**, passing `env` as the
 leading environment pointer to the adapter — two-word cost, one indirect call, nothing
-hidden (I3).
+hidden (I3). The adapter has the target's **default convention**, and `dyn_over` over a
+static closure whose function carries any other selector is the FN-10 diagnostic — the
+same rule for the same reason: the type names no convention.
 
 Fits: I3 (explicit storage, no hidden box), one language (an ordinary type, no tier),
 visible cost. **Resolves the §6.3 SPEC-BLOCKED gap** (representation was decided, surface was

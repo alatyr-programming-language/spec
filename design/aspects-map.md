@@ -38,7 +38,8 @@ and **deferred (additive) growth**.
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,
   no `const` (FN-2).
 - `[x]` **6. Functions / parameters / ABI.** Result via one output-place model: anonymous projected `-> T` or named `out`, with `in`/`in out` directions + projection (FN-4),
-  function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10) + the type-erased **`dyn fn(T…)->R`**
+  function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
+  default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
   overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
@@ -93,7 +94,9 @@ verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
 - Instruction sets/arches (CG-2), additional stdlib types/functions beyond the closed v1 surfaces (STD-1), refcount mechanism
   (MEM-1), **`uint(N)` at non-multiple-of-64 widths** (a partial top word + its mask/carry/overflow rules),
   **sub-native** widths (byte-plus-mask), and **signed** multiword `int(N)` (v1 pins `uint(N)` at multiples of
-  64 only, TYP-10), per-function effects/effect polymorphism (FND-11), sugar keywords `fn`/`struct` (FN-1), bindgen
+  64 only, TYP-10), per-function effects/effect polymorphism (FND-11), sugar keywords `fn`/`struct` (FN-1),
+  a **calling convention in the function-value type** (`@abi(X) fn(T…)->R`; v1 function values have the
+  target's default convention, FN-10), bindgen
   (FN-8), dependency **version constraints + a registry/resolver** (v1 selects by path / git ref only, MOD-7),
   **multi-package workspaces** (no `members` field in v1 — several packages in one repository are wired by
   ordinary path dependencies, TOOL-9),

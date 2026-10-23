@@ -341,6 +341,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   this type is bound / passed / returned / **stored** (struct/array/tuple field) and **called** `f(args)` (one
   indirect call, no environment, no allocation). Distinct from the `fn(…){…}` value-expression (which has a
   block) and from the generic *callable* constraint (a comptime predicate that also admits static closures).
+  The type names **no calling convention**: a function value (and a `dyn`'s `code`) can be taken only of a
+  function with the **target's default convention** (no `@abi`, `@abi(c)`, or that convention's own prelude
+  name), so an indirect call always uses the default; any other selector is a Semantic diagnostic (Functions
+  §1.5/§6.2). A convention in the type is deferred, additive (FN-10).
 
 - **`dyn` closure surface / `dyn_over`** — `dyn fn(T0, T1, …) -> R` (FN-11): the **type-erased** closure type
   — the `dyn` **keyword** prefixing a function-value type — a **two-word `{code, env}` fat pair** (a code
