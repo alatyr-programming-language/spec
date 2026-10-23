@@ -34,27 +34,34 @@ guardrail 3) evaporate because there is only one reference plus library handles.
 *spec: Memory §5.9, §3; Types §8.1*
 
 **Why.** Ordinary values copy by value (visible cost, I1); there is no implicit move and
-no RAII. But a *resource* (an OS-backed arena, a file) must be released exactly once — so
-an **owning** value is **linear**: non-copyable, consumed exactly once, contagious. Two
-mechanisms had to be pinned to make this implementable without guessing: how a type is
-*classified* owning (the **`@owning`** marker — the same `Arena` type was otherwise used
-both as a borrowed bump-view and as an owning OS arena, so no implementation could decide
-which values are linear) and what *consumes* one (passing it **`in`** is the move). Release
-is explicit (`defer`/`close`), never hidden (I3).
+no RAII. But a *resource* (a file, an arena) must be released exactly once — so an
+**owning** value is **linear**: non-copyable, consumed exactly once, contagious. A resource
+is an OS object **or an exclusive right over storage**: an arena owns its right to allocate
+from and reclaim its buffer, so even an arena over a caller's buffer is owning — a copy would
+be a second cursor handing out the same addresses (MEM-3). Two mechanisms had to be pinned to
+make this implementable without guessing: how a type is *classified* owning (the **`@owning`**
+marker — the same `Arena` type was otherwise used both as a borrowed bump-view and as an
+owning OS arena, so no implementation could decide which values are linear) and what
+*consumes* one (passing it **`in`** is the move). Release is explicit (`defer`/`close`), never
+hidden (I3). A `@static` owning value has no finalize obligation and is never consumed (its
+extent is the program's; a release reachable from every function could not be tracked
+locally).
 
 Consequently TYP-12 rejects an owning immediate underlying `U` for `@require`: checked
 construction must preserve the result and also supply an ordinary by-value `in U`
 predicate argument, which would require an impossible copy or would consume the result.
 
 **Rejected.** Implicit move for copyable types (no double-drop motive without RAII);
-inferring owning-ness from use (ambiguous — the dual-role `Arena` proved it); a dedicated
+inferring owning-ness from use (ambiguous — the dual-role `Arena` proved it); "owning" meaning
+only "behind a releasable OS resource" (**superseded** — it left the caller-buffer arena
+copyable and its `close` non-consuming, so temporal safety had nothing to rest on); a dedicated
 `move`/`consume` parameter direction or marker (a new grammar axis for what `in` +
 non-copyability already express — OP-1); consume **only** via recognized prelude intrinsics
 (too narrow — a user could not write an ownership-taking function, and `Vec`/`HashMap` could
 not express their own drop).
 
 ### MEM-3. The region/arena surface; `get` is an ordinary function
-*spec: Memory §5.2.1, §5.3.1, §5.4*
+*spec: Memory §5.2.1, §5.3.1, §5.4, §5.9; Stdlib appendix §5.2.1*
 
 **Why.** MEM-1's menu deferred each mechanism's concrete surface to "stdlib, additively",
 which left the region/handle mechanism with no implementable v1 form. The region surface
@@ -63,7 +70,25 @@ code**, and `get(a, h)` is de-privileged from a compiler-recognized intrinsic to
 **ordinary function** with a **second-class (`scoped`) return** — a result the caller may
 use at the call site but not store or re-escape. Temporal safety then rests on three
 already-present things, no new reference type: the arena's **linearity** (MEM-2), `get`'s
-**bounds check**, and the **second-class** result. The `scoped` marker carries information
+**bounds check**, and the **second-class** result. Two refinements make that real:
+
+- **Every `Arena` is an owning value** (`@owning`), like an open file — the caller-buffer
+  arena of `arena_over` and the `@static` fixed pool included. It cannot be copied, and it is
+  consumed exactly once, by `close(in self : Arena)` (a consuming parameter) or `forget`; a
+  `@static` arena is never consumed. Use after `close` and a missing `close` are then errors
+  of the existing linearity checker, at no run-time cost. Allocation (`in out`) and `get`
+  (a `ptr(Arena)` borrow) do not consume it. The OS-backed arena stays a distinct `@owning`
+  type holding an `Arena` over `mmap`'d pages, whose release closes it and unmaps the pages.
+- **A `scoped` result is transient in checked code** (Memory §5.3.1): it is used within the
+  full expression of the call — dereferenced, field/element-accessed, or passed down — and
+  never bound, stored, or captured; the call's `in out` / pointer-borrowed places are frozen
+  in that full expression (no other `in out`, `ptr(mut …)`, or consuming use). So a get-result
+  cannot outlive a growth, reallocation, or close: excluded statically, not "a residual
+  hazard". The rule is **generic** to `scoped` returns, so `get` still has no arena-specific
+  compiler contract and a user could write the same signature. Inside `unchecked { … }` the
+  result may be bound to a local; its staleness is then hardware-defined (I11).
+
+The `scoped` marker carries information
 **only on a result type** (every reference is second-class by default, so the qualifier means
 something only where it overrides the escaping default — the return); a `scoped` written in any
 other type position (parameter / field / local / nested arg) is **ill-formed**, not silently
@@ -73,8 +98,14 @@ ignored (I3), with a diagnostic to drop it.
 dangles on arena growth); tying the result's scope to the arena *argument* (a lifetime
 variable, which the one-reference model forbids); a handle **typed by its enclosing region's
 name** (taking the region into the type — reintroduces lifetime variables and creeps toward a
-borrow-checker). The second-class return de-privileges `get` *and* keeps store-safety *and*
-introduces no lifetime variable.
+borrow-checker); a caller-buffer `Arena` that is **not owning** (superseded — `b := a` gave two
+cursors over one buffer, and a non-consuming `close(in out self)` let a handle used after
+`close` silently reach a newer object); treating a get-result held across growth as a
+"residual hardware-defined hazard" in checked code (superseded — it contradicted I11 and
+Memory §5.1); a **stored** get-result with a non-mutation rule while it lives (a local borrow
+check, against Memory §5.7 — no borrow checker); a **runtime generation check** on `get` (a
+cost per access and a fat handle, and it does not stop arena copies). The second-class return
+de-privileges `get` *and* keeps store-safety *and* introduces no lifetime variable.
 
 ### MEM-4. The allocator protocol `alloc`
 *spec: Stdlib §160 §5.1*

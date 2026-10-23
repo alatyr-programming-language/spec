@@ -497,6 +497,33 @@ allocator-managed storage live across the call); the call site treats the result
 own** activation. This is exactly the surface by which `get` (§5.4) is an ordinary function, not a
 privileged intrinsic.
 
+**A `scoped` result is transient in checked code.** In checked code the result of a call whose
+result type is `scoped` lives only within the **full expression** containing the call — the
+outermost expression that is not an operand of another expression (an expression statement, the
+right-hand side of an assignment or binding, a `return` operand, a condition). There it may only be
+**dereferenced** (read or written through, subject to §3), **field- or element-accessed**, or
+**passed as an argument** to a callee (which receives it as a scoped parameter, below). It is
+**not** a value that can be named: binding it to a name, storing it into a field or aggregate, and
+capturing it are ill-formed, even into a place of the same scope — the "store into a binding of the
+same or an inner scope" permission above does not apply to it. Further, the call's **borrowed
+places** — each place it takes by `in out`, and each place whose address it receives through a
+`ptr` argument (`x` for an argument `ptr(x)` or an auto-ref of `x`, `deref(p)` for a pointer `p`)
+— are **frozen** throughout that full expression, whatever the evaluation order: no other operand
+of it may pass such a place (or a place containing it or contained in it) by `in out`, by
+`ptr(mut …)` (including an elided allocator argument that resolves to it, Functions §5.5), or
+consume it (§5.9). Both checks are syntactic over the one full expression — no
+lifetime variable, no flow analysis beyond it. With the borrowed places frozen and the result
+unnamed, nothing can end, move, or reclaim the referent while the result is live, so a stale result
+is **excluded statically**. The rule is generic: it knows nothing of arenas (§5.4).
+
+Inside an **`unchecked { … }` block** (CG-7) a `scoped` result **MAY be bound to a local** declared
+in that block, and the borrowed places are not frozen; the escape rule above still applies (the
+local cannot be stored where it outlives the block, returned, assigned to an `out`, or captured past
+it). Whether the local is still valid when used — its referent not ended, moved, or reclaimed in
+between — is then the **programmer's responsibility**, and a stale access has **hardware-defined**
+behavior (I11; §5.4), never UB. The `unchecked expr` form does not reach a binding written outside
+it (`p := unchecked get(a, h)` is still ill-formed): the local would outlive the mode.
+
 The `scoped` marker is **meaningful only on a function result type**. Every reference is
 already second-class by default (§5.3), so the qualifier carries information **only** where it
 overrides the would-be-escaping default — the return. A `scoped` qualifier written in **any
@@ -523,6 +550,10 @@ and the analysis composes.
 - ill-formed: `fn leak() -> ptr(u64) { x := 0 ; ptr(x) }` (returns a scoped
   reference upward); storing `ptr(local)` into a module-level `mut` global;
   capturing `ptr(local)` in a closure that is stored beyond the scope.
+- a `scoped` result (with `a : ptr(mut Arena)`, `h : Handle(Node)`, §5.4): `deref(get(a, h)).x = 5`
+  and `use(get(a, h))` are well-formed; in checked code `p := get(a, h)` is ill-formed (a named
+  result), and so is `link(get(a, h), a.allocate(Node, …))` (the arena is frozen); inside
+  `unchecked { p := get(a, h) ; deref(p).x = 5 }` the binding is well-formed.
 
 Storing a long-lived link uses a **first-class** mechanism instead (a handle or a
 generational reference) — crossing to it is **explicit** (§5.6 rule 4); escaping to a
@@ -550,14 +581,27 @@ which bounds-checks the handle against the arena (out-of-range → `trap()`, nev
 exactly as a built-in index fails; Stdlib §4.1) and returns a pointer the
 caller then `deref`s. `get` is an **ordinary prelude function** (MEM-3): its result is declared a
 **second-class scoped reference** (the `scoped` return marker, §5.3.1), so the escape checker applies
-its **generic** second-class rule — the result cannot be stored or returned past the call site — with
-**no** arena-specific compiler contract and **no** lifetime variable (the result is scoped to the
-**call site**, not tied to the arena *argument*; a user could write the same signature). Temporal
-safety rests on the arena's **linearity** (§5.9 — the arena is consumed by close, so `get` cannot be
-called after it, and a get-result cannot be stored to outlive the call) plus that bounds check, not on
-the handle's type. A get-result held across an arena **growth/realloc** within the same scope is the
-residual unchecked-flavoured hazard (a logic error, hardware-defined under §4.5, never UB) — the
-handle is the safe long-lived form; the get-result is transient, used at once.
+its **generic** second-class rule — in checked code the result is **transient**, used within the
+full expression of the call and never named, while the arena is frozen there — with **no**
+arena-specific compiler contract and **no** lifetime variable (the result is scoped to the **call
+site**, not tied to the arena *argument*; a user could write the same signature).
+
+Temporal safety rests on three things, none of them the handle's type. (1) **The arena is an owning
+value** (§5.9; Stdlib appendix §5.2.1): every `Arena` — over a caller-supplied buffer, a `@static`
+fixed pool, or OS pages — is non-copyable, so there are never two cursors over one buffer handing out
+the same address twice, and it is consumed exactly once, by `close` (or `forget`) — a `@static`
+arena excepted, which is never consumed (§5.9); a `get` or an allocation after `close`, and a
+missing `close`, are compile-time errors of the linearity checker, with no run-time cost.
+(2) **The bounds check** in `get`. (3) **The transient result** (§5.3.1): in
+checked code a get-result can be neither kept past its full expression nor outlived inside it by a
+`close` or an allocation, so a get-result held across a growth, a reallocation, or a close is
+**excluded statically**. The handle is the safe long-lived form; the get-result is used at once.
+
+Inside an **`unchecked { … }` block** a get-result MAY be bound to a local (§5.3.1); keeping it valid
+is then the programmer's responsibility, with **hardware-defined** behavior (I11), never UB: the
+storage of a live arena stays mapped, so a stale local reads or writes whatever now occupies that
+storage; after the `close` of an OS-backed arena the access reaches unmapped memory and takes the
+hardware's fault (or, if the pages were since re-mapped, whatever now occupies them).
 
 #### 5.5 Generational references
 
@@ -628,8 +672,10 @@ copy, reinterpret, or partially move an owning resource.
 **What makes a value owning — the `@owning` marker (MEM-2).** A value is **owning**
 iff its type is owning, and a type is owning iff **either** it is a type declaration
 carrying the **`@owning`** attribute — the **root** marker that says "a value of this
-type stands behind a real resource" — **or** it is an aggregate one of whose fields is
-of an owning type (linearity is **contagious**, below). `@owning` is a **semantic marker
+type stands behind a real resource" (an OS object, or an **exclusive right** over storage, such as
+an arena's right to allocate from and reclaim its buffer — duplicating the value would duplicate the
+right, even when the buffer itself belongs to someone else) — **or** it is an aggregate one of
+whose fields is of an owning type (linearity is **contagious**, below). `@owning` is a **semantic marker
 only**: it changes **no** layout, size, or alignment (I2 — it is not a machine lever,
 Type System §8) and adds **no** run-time data (I3); it is local and visible at the type's
 declaration, so an implementation classifies owning-ness **structurally** with no
@@ -640,7 +686,8 @@ declaration; applying it elsewhere is a Semantic diagnostic — Declarations §2
 
 **Owning values** (a resource: a file handle, a region, an allocation — each an
 `@owning` type) obey stricter rules, because copying a resource handle would permit a
-double free (UB, forbidden by I11):
+double free (UB, forbidden by I11) — or, for an arena, two cursors handing out one address
+twice:
 
 - an owning value is **non-copyable**;
 - it is **transferred** (moved); after a transfer the source is invalid, and using
@@ -657,7 +704,11 @@ double free (UB, forbidden by I11):
   function which **never returns** (result `-> Never`, the bottom type — Stdlib appendix §3.7), carries **no** finalize
   obligation: its extent has no normal exit — it ends only with the program — so there is nothing to
   discharge (the same reasoning as termination). This is the bare-metal "own a peripheral forever" idiom,
-  with no `forget` noise.
+  with no `forget` noise. It is still non-copyable, and a `@static` owning place is **never
+  consumed** (not passed `in`, released, or `forget`-ed): it is reachable from every function, so a
+  release there could not be tracked locally — it is borrowed only (`in out`, `ptr`). A `@static`
+  fixed-pool `Arena` (Stdlib appendix §5.2.1) is this case: it allocates for the whole program and
+  is never closed.
 
 **Moves are whole-value.** An owning value is moved or consumed **as a whole**; there
 is no **partial move** of an individual field out of an owning aggregate (it would
@@ -693,7 +744,9 @@ A **read accessor** on an owning value is therefore written as a function taking
 **`ptr([mut] R)`** scoped reference (not `in R`, which would move it); the UFCS
 **auto-ref** form (Type System §4.5 / MOD-3) supplies the address, so `a.len()` ≡
 `len(ptr(a))` reads `a` without consuming it. A container's `free`/`close` takes the
-value `in` (the consume); its inspectors and element accessors borrow by scoped reference.
+value `in` (the consume); its inspectors and element accessors borrow by scoped reference — the
+arena's `close(in self : Arena)` consumes it, its `get(in a : ptr(Arena), …)` borrows it, and its
+`allocate` takes it `in out` (Stdlib appendix §5.2.1).
 
 The **dual** coercion, **auto-deref** (Type System §4.5 / OP-5), reads *through* a pointer: when
 the receiver/base is already a scoped reference `ptr([mut] R)` and the position wants the
@@ -817,13 +870,15 @@ A conforming implementation MUST:
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
    pointer arithmetic and integer→pointer to an `unchecked` grant / assembly (§4);
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
-   scoped, by access check for handles, by generation trap for generational), reject
+   scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
+   check for handles, by generation trap for generational), reject
    `manual`-mechanism reference creation/use outside an `unchecked` grant (forbidden
    under `no_unchecked`), and never silently convert between mechanism representations (§5.6);
 7. classify owning values structurally (the `@owning` marker plus contagion), treat an
    `in`-pass / `return` / `out`-fill of an owning value as a **move** that invalidates the
    source, and enforce strict linearity of owning values on every normal exit path (no
-   leak, no double-consume, no use-after-move; `@static` / `-> Never` carry no obligation),
+   leak, no double-consume, no use-after-move; `@static` / `-> Never` carry no obligation, and
+   a `@static` owning place is never consumed),
    running `defer` actions LIFO on normal exits and not on abort, and provide `forget`
    (§5.8–5.9); reject an owning immediate underlying `U` for `@require`, whose predicate
    needs a by-value copy while preserving the result (Type System §8.1);

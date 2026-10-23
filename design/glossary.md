@@ -33,7 +33,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   indexing skips the bounds check, narrowing truncates, float→int and div0/shift/alignment faults are
   hardware-defined; never UB, I11) **and** the genuinely-raw operations (pointer arithmetic,
   int→ptr, a raw-union member read not proven definitely active / an `uninit` read, raw
-  transfer, `asm`) become writeable. Granularity is the author's choice (one line or a
+  transfer, `asm`) become writeable; in an `unchecked { … }` block a `scoped` call result may
+  also be bound to a local (Memory §5.3.1). Granularity is the author's choice (one line or a
   block); the scope is always lexically visible. **No re-entry / no `checked` keyword**
   (symmetry with phase: no
   `runtime` from inside `comptime`). **`no_unchecked`** — a limit
@@ -289,7 +290,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   reference family.
 
 - **Region** (*region*, arena) — a named unit of allocation-and-lifetime; references into it
-  do not outlive it; freed in bulk.
+  do not outlive it; freed in bulk. Every v1 `Arena` (caller-buffer, `@static` pool, OS-backed)
+  is an **owning value** (MEM-2/MEM-3): it owns the exclusive right to allocate from and reclaim
+  its storage, so it is non-copyable and consumed exactly once by `close(in self)` or `forget`
+  (a `@static` arena never).
 
 - **Ambient allocator** (*ambient*, `alloc::with`) — the allocator in effect for elided allocator
   arguments in a region (MEM-5). Established/overridden by the prelude form `alloc::with(ar) { … }`
@@ -309,13 +313,17 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   surface (MEM-3): the ordinary library type `Handle(T)` (a number, no region name; distinct per `T` because a
   type-function result is nominal by (function, args), Type System §4.1); `@alloc(a) x := init`
   binds it; the value is read by `get(a, h)` — an **ordinary function** with a `scoped` (second-class)
-  return (MEM-3), bounds-checked → a scoped pointer — never by dereferencing the handle itself.
+  return (MEM-3), bounds-checked → a scoped pointer, **transient** in checked code (used within its full
+  expression, never named) — never by dereferencing the handle itself.
 
 - **Second-class reference** (*scoped*) — a reference that cannot be stored beyond, or returned upward
   past, its scope/region; zero-cost, checked statically (the escape rule, Memory §5.3.1). May appear as a
   **parameter** (a scoped borrow the callee cannot leak) and, via the **`scoped` result qualifier**
   (MEM-3), as a **second-class return** — a result the *caller* may use at the call site but not store or
-  re-escape (how `get` is an ordinary function, not a privileged intrinsic). The marker is local and
+  re-escape (how `get` is an ordinary function, not a privileged intrinsic). In checked code such a result
+  is **transient**: used within the full expression of the call (deref, field/element access, pass down),
+  never bound to a name, stored, or captured, and the call's `in out` / pointer-borrowed places are frozen
+  in that expression; inside `unchecked { … }` it may be bound to a local (Memory §5.3.1). The marker is local and
   unparameterized (it never binds the result's scope to a particular argument), so there are no lifetime
   variables (MEM-1).
 
@@ -344,7 +352,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   a static closure (Memory §6.2). **Call:** `d(args)` — indirect through `code`, passing `env`. Visible cost:
   two words + one indirect call. Deliberately unlike a `Box<dyn>` (no hidden allocation).
 
-- **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap).
+- **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap) — an OS
+  object or an exclusive right over storage (an arena's right to allocate and reclaim, MEM-2).
   A type is owning iff it carries the **`@owning`** marker or is an aggregate transitively
   containing an owning field (contagion); a bare pointer/handle is **not** owning (MEM-2).
   Non-copyable; passed (move, the source is invalidated); a borrow via `ptr` does not consume.
@@ -474,7 +483,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   reference does not outlive its scope (Memory §5.3.1; MEM-1/MEM-3): a `scoped ptr` (e.g. a `get`
   result, or a scoped parameter) may be dereferenced and passed further down, but **not** stored
   where it outlives the call, returned (unless the result is itself `scoped`), assigned to an
-  `out`, or captured in an outliving closure. Local and unparameterized — no lifetime variable, no
+  `out`, or captured in an outliving closure; a `scoped` **result** is moreover transient in checked
+  code (never named; its call's borrowed places frozen in the full expression). Local and unparameterized — no lifetime variable, no
   cross-function inference.
 
 - **Data race** — two unsynchronized accesses to the same location with at least one a write
