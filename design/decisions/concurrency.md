@@ -21,7 +21,8 @@ lightweight threads) is built additively on top of these primitives as ordinary
 libraries, keeping the language minimal and its cost transparent (I1/I2).
 
 ### CC-2. Atomics, fences, and `volatile` are operation modules, not new types
-*spec: Concurrency §2, §3, §4*
+*provenance: operand types, alignment and RMW overflow pinned by the v1 built-in catalogue ·
+spec: Concurrency §2, §3, §4; Stdlib appendix §4.4*
 
 **Why.** Correct concurrency needs atomic load/store/RMW (CAS, fetch-add, …) with the
 standard **memory orderings** (`relaxed`/`acquire`/`release`/`acq_rel`/`seq_cst`), plus
@@ -32,6 +33,22 @@ not a new pointer family or runtime abstraction. Per-operation ordering legality
 enforced at compile time (load ∈ relaxed/acquire/seq_cst; store ∈ relaxed/release/seq_cst;
 RMW any; CAS-failure ∈ {relaxed,acquire,seq_cst} and ≤ success), matching C11/Rust, so
 nonsensical orderings are rejected rather than silently accepted.
+
+**The operands.** Every atomic operation, `load` included, takes a `ptr(mut T)` — the
+location is shared mutable state, and the widest atomic load is a read-modify-write on some
+targets (`CMPXCHG16B`). `T` is an integer type (`uN`/`iN`, `usize`/`isize`, the multiword
+`uint(N)`) or a pointer type of an atomic-capable width (the per-arch width table); the
+`fetch_*` set — `fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor` — takes an
+integer only. The address must be naturally aligned (a multiple of `T.size()`): the compiler
+emits the alignment guard in checked code unless the pointer type's alignment already proves
+it, and a misaligned access inside `unchecked` is hardware-defined (I11). **`fetch_add` /
+`fetch_sub` wrap** (two's-complement) in both modes: an atomic RMW is one indivisible
+instruction or LL/SC loop with no point to place a guard before the store, and an
+overflow-checked atomic add is already expressible as a `cas_weak` loop over `checked_add`.
+*Rejected:* an `atomic::load` on a read-only `ptr(T)` (it cannot be lowered on targets whose
+wide atomic load writes); admitting `bool`, `bitsN`, floats or `Option(ptr(T))` in v1 — each
+is additive and none is required by the text; a trapping `fetch_add` — it would need a hidden
+CAS loop (I3) to make the check before the store.
 
 **Rejected.** Allowing a **`relaxed` fence** — C++ permits it as a no-op, but a relaxed
 fence has no effect, so (like Rust) it is a compile error to avoid a meaningless form.

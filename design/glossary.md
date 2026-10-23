@@ -498,8 +498,24 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   (single-threaded by default; sharing only via the synchronized surface).
 
 - **Memory ordering** — the `Ordering` comptime prelude enum (`relaxed`/`acquire`/`release`/…) that
-  parameterizes an atomic operation (Concurrency §3): atomicity is a property of the **operation**,
+  parameterizes an atomic operation (Concurrency §2): atomicity is a property of the **operation**,
   not the type. (The atomic surface beyond the v1 primitives is additive, CC-2.)
+
+- **Atomic operation** (CC-2) — a prelude intrinsic of the `atomic` module (`load`/`store`/`swap`/
+  `cas_strong`/`cas_weak`/`fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor`; Stdlib appendix §4.4)
+  on a `ptr(mut T)`, `T` an integer or pointer type of an atomic-capable width (per-arch appendix §2). The
+  address must be naturally aligned (guarded in checked code); `fetch_add`/`fetch_sub` wrap, never trap.
+
+- **Overflow policy operation** (CG-8) — one of the 20 prelude functions `<policy>_<op>`: policy ∈
+  `wrapping` (→ `T`, two's-complement) / `saturating` (→ `T`, clamped) / `checked` (→ `Option(T)`) /
+  `overflowing` (→ `(T, bool)`); op ∈ `add`/`sub`/`mul` on `uN`/`iN`, `neg`/`div` on `iN` — exactly the
+  checked-overflow set (Concurrency §6.3; Stdlib appendix §4.4). Mode-opaque: the same result in checked code
+  and inside `unchecked`; a zero divisor still traps.
+
+- **`fma` / `saturating_convert`** (CG-9) — `fma(a, b, c)`: the fused multiply-add on `f32`/`f64`, rounded
+  once; a correctly-rounded software routine where the target has no fused instruction (Concurrency §7.3).
+  `saturating_convert(T, f)`: float→integer rounding toward zero, clamped to `T`'s range, `NaN` → `0`, never
+  trapping (Concurrency §7.7). Both in the Stdlib appendix §4.4.
 
 - **`v1` (the language version)** — the **first version of the language**: the feature set this
   document defines — the six architectures, the closed supported-target set, the enumerated

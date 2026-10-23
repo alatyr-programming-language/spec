@@ -102,10 +102,12 @@ kinds**:
 - **Compiler intrinsics** — cannot be written in the language; the compiler provides
   them: `typeinfo`, `bitcast`, `T.size()` / `T.align()` (Memory-model
   §4.3; field offsets via `typeinfo(T).fields`), `ptr` / `deref`, `resolves` / `compiles` (Comptime §6.1), `embed`
-  (Comptime §2.4), `forget` (Memory §5.9), `trap` (§4.1), and the instruction intrinsics
-  (Assembly chapter).
+  (Comptime §2.4), `forget` (Memory §5.9), `trap` (§4.1), the `atomic` / `volatile`
+  operations, `fence` and `fma` (Concurrency chapter; Stdlib appendix §4.4), and the
+  instruction intrinsics (Assembly chapter).
 - **Ordinary prelude functions** — could be written in the language but are provided:
-  `panic`, `exit`, `assert` (§4), and the library operations.
+  `panic`, `exit`, `assert` (§4), the overflow policy functions and `saturating_convert`
+  (Stdlib appendix §4.4), and the library operations.
 
 The built-in **catalog** is **v1 content** (§6): fully specified for v1, additive for
 future growth (FND-6) — not left unspecified.
