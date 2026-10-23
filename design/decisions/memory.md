@@ -156,10 +156,24 @@ to establish), a **compile error** under `no_alloc` (allocation is forbidden the
 **nesting is lexical shadowing** (inner overrides, outer restored on exit — no combining).
 Shapes: **A** no allocator parameter
 (self-contained) / **B** required, ambient-elidable (escaping producers) / **C** B with a
-call-site default (scratch-only — a create-fresh default is a call-site temporary, sound
-only for non-escaping allocations; the escape checker enforces it).
+§5.1 default naming a **static** allocator place.
 
-**Rejected.** A manifest/process-static global default (invisible in source, static state);
+**An omitted allocator argument names an existing place that outlives the call** — the
+ambient (a binding in scope) or, for a §5.1 default, `ptr(mut P)` with `P` of static storage
+reached without a pointer step. A default that *creates* an allocator is ill-formed: under
+owning arenas (MEM-3) a fresh `Arena` must be `close`d, and nothing in the source would close
+it. Temporary memory is therefore explicit — a local arena, `defer close(a)`, then pass it or
+`alloc::with(a) { … }` (Memory §5.2.1 shows the idiom). The elided argument is a use of the
+ambient place, so `alloc::with(a) { close(a) ; f() }` is a linearity error, as the written
+`f(ptr(mut a))` after `close(a)` is.
+
+**Rejected.** A fresh temporary allocator with **no closer** (the former "create-fresh
+default"): linearity cannot hold for an owning `Arena` that nothing consumes. *Rejected (for
+now):* a call-site temporary arena **closed by a compiler-inserted `close` at the end of the
+full expression**. It could be admissible under CG-11 as a specified language convention,
+since the explicit form stays available; it is not adopted in 1.1 because it is a hidden
+allocation plus a hidden call, both of which I3 lists, and it is additive if wanted later
+(FND-6). A manifest/process-static global default (invisible in source, static state);
 a compiler-*derived* implicit allocator parameter threaded by call-graph fixpoint
 (caller-context-dependent codegen, derived ABI) — replaced by a *declared* parameter +
 call-site elision; a general "ambient value by type" (implicit-resolution footgun) — kept

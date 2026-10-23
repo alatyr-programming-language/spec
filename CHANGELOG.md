@@ -187,6 +187,16 @@ written `a := unchecked arena_over(ptr(mut buf), cap)`, the author vouching that
 arena; all later use stays checked. A checked form over a `@static` buffer is deferred, additive
 (MEM-3; Memory §5.4, §8; Stdlib appendix §5.2.1, §8; Grammar §3.7; glossary; aspects map).
 
+**Normative — no call-site temporary allocator; an omitted allocator argument names an existing
+place.** Allocator shape C let a §5.1 default create a fresh allocator per call, but an `Arena` is
+owning and nothing would `close` it. An omitted allocator argument now always names a place that
+outlives the call: the ambient (a binding in scope), or a §5.1 default `ptr(mut P)` with `P` of
+static storage reached without a pointer step; a default that creates an allocator is ill-formed.
+Temporary memory is a local arena, `defer close(a)`, then an explicit argument or
+`alloc::with(a) { … }`. An elided argument is a use of the ambient place, so
+`alloc::with(a) { close(a) ; f() }` is a linearity error. A compiler-closed call-site temporary is
+recorded as rejected for now, additive later (MEM-5; Memory §5.2.1; Functions §5.5; glossary).
+
 **Normative — a function value has the target's default calling convention.** Functions §6.2
 said a call uses "the calling convention carried by the callee's type", but the function-value
 type `fn(T…) -> R` carries no convention and `@abi` on a type is forbidden, so an indirect call
