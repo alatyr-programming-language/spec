@@ -125,12 +125,17 @@ emits exactly the per-architecture checked-failure instruction (per-arch appendi
 the **same** instruction a failed built-in checked guard executes (Concurrency §6.1;
 CG-13) — with no message, no hook, no OS exit and no unwinding, identically in every
 context (hosted, `freestanding`, bare). It is a compiler intrinsic (§3): its one
-instruction is the target's, not a library choice. Its use is fixed for library-defined
-numeric types: a check that mirrors a member of the built-in guard family (overflow,
-division or remainder by zero) — e.g. in `uint(N)` (Type System §7) — MUST fail through
-`trap()` under `comptime if verify.checked` (Comptime §7.5), never through `panic`, so
-such a failure is indistinguishable from the built-in guard's. `panic` (§4.2) stays the
-failure of ordinary library logic — a container precondition, an `Option` unwrap.
+instruction is the target's, not a library choice. Its use is fixed for a library check
+that mirrors a member of the built-in guard family: a library-defined numeric type's
+overflow or division/remainder by zero (e.g. in `uint(N)`, Type System §7), and a library
+container's bounds, alignment or narrowing check — `Vec` indexing and `at`, a
+library-implemented `str` / `String` byte access, the arena's `get` (Stdlib appendix §3,
+§5.2.1, §6). Such a check MUST be made under `comptime if verify.checked` (Comptime §7.5)
+and fail through `trap()`, never through `panic`, so the failure is indistinguishable from
+the built-in guard's: `xs[10]` fails identically for an array and a `Vec`, in every
+context, and the check drops under `unchecked` as the built-in one does (CG-13). `panic`
+(§4.2) stays the failure of ordinary library logic — an explicit assertion, an `Option`
+`unwrap`, a precondition that mirrors no guard-family member.
 
 #### 4.2 Hosted versus freestanding
 

@@ -241,7 +241,8 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
 
 - a scalar index `a[i]` ≡ `at(a, i)` — the **bounds-checked element access**
   (out of range traps, I11; for arrays and slices the compiler emits the bounds guard,
-  below; a library aggregate's `at` makes its own check);
+  below; a library aggregate's `at` makes its own check, failing through `trap()` exactly
+  as the built-in guard does — Stdlib §4.1);
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
 - a range index `a[lo..hi]` ≡ `index_range(a, lo, hi)` — the **sub-slice** view.
 
@@ -264,10 +265,12 @@ by reading the verification mode as a comptime fact — `comptime if verify.chec
 }` (Comptime §7.5 / CT-11). Such a function is **mode-polymorphic**: instantiated per the
 call site's verification mode, so the check is present in a checked use and comptime-absent
 in an `unchecked` one. This is how a **library-defined** numeric type (`uint(N)`, §7) or
-checked conversion (`char(n)`'s code-point check, §4.2) satisfies both "trap by default"
-and "wrap/raw under `unchecked`" **without** the compiler recognizing the check; a check
-that mirrors a member of the built-in family fails through the prelude `trap()` (Stdlib
-§4.1), the built-in guard's own instruction. `unchecked` itself stays non-transitive for
+checked conversion (`char(n)`'s code-point check, §4.2) or library container (`Vec`'s
+`at`, above) satisfies both "trap by default" and "wrap/raw under `unchecked`"
+**without** the compiler recognizing the check; a check that mirrors a member of the
+built-in family — overflow, division by zero, bounds, narrowing — fails through the prelude
+`trap()` (Stdlib §4.1), the built-in guard's own instruction, never `panic`, so `xs[10]`
+fails identically for an array and a `Vec` (CG-13). `unchecked` itself stays non-transitive for
 any function that does **not** read the mode (CG-7).
 
 **Receiver/access coercion — auto-ref and auto-deref (MOD-3 / OP-5).** A value-access

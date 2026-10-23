@@ -76,6 +76,19 @@ integer-divide behaviour for all six architectures. CG-7 no longer says `MIN ÷ 
 under `unchecked` — only `+ − *` and unary `−` wrap; division and shifts are
 hardware-defined (Concurrency §6.2; CG-7/CG-8/CG-13; CT-12).
 
+**Normative — a library container's checked access fails through `trap()`.** The text
+contradicted itself: the Stdlib appendix said `Vec` indexing and the arena's `get` *trap*,
+while CG-13, Concurrency §6.1 and the Stdlib appendix §3 called a container's own bounds
+check an ordinary `panic`. A library check that mirrors a member of the built-in guard
+family — bounds, alignment, narrowing — now fails through `trap()`, never `panic`, and is
+made under `comptime if verify.checked` so it drops under `unchecked`: `Vec`'s `at` /
+`index_set` / `index_range` / `set`, a library-implemented `str` / `String` byte access,
+the arena's `get`, and every such guard in the prelude/stdlib catalogue. So `xs[10]` fails
+identically for an array, a slice and a `Vec`, in every context including `freestanding`.
+`panic` / `assert` stay for program logic — an explicit assertion, `unwrap` on `None` /
+`Err` (CG-13; CT-11; OP-3; Stdlib §4.1; Stdlib appendix §3, §3.6, §4.2, §5.2.1, §6, §8;
+Types §4.5; Memory §5.4; Concurrency §6.1).
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could

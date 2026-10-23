@@ -221,7 +221,8 @@ unprivileges `Option` (the enum niche-fold is one general compiler layout rule),
 the "how libraries configure types in comptime" thread.
 
 ### CT-11. Verification mode is an observable comptime fact — `comptime if verify.checked`
-*provenance: scope narrowed to library code by CG-13 · spec: Comptime §7, §8, §9*
+*provenance: scope narrowed to library code by CG-13; a library check mirroring the family
+fails through `trap()` (CG-13) · spec: Comptime §7, §8, §9*
 
 **Why.** The built-in guard family is the compiler's: it emits each guard at the operation
 site and drops it inside `unchecked` (CG-13). **Library code** has checks of its own — a
@@ -240,12 +241,14 @@ mode; `verify.checked` *reads* it (distinct — still no `checked` keyword, no r
 function that **observes** the mode (`comptime if verify.checked { <guard> }`) is
 **mode-polymorphic** — instantiated per the call site's mode (≤ 2 variants, the unused one
 DCE'd, zero-cost I2, the choice visible I1/I3): a library operator is written **once** and
-describes both modes. A library-defined numeric type's check that mirrors a member of the
-built-in family (overflow, division or remainder by zero) fails through `trap()`, the
-built-in guard's own instruction (CG-13); ordinary library logic (a container precondition)
-may `panic`. A function that does **not** observe it is **mode-opaque** — fixed at
-definition, a caller's `unchecked` does not alter it (CG-7 non-transitivity preserved as the
-default). The mode reaches **only** explicitly-observing functions, and only one level — no
+describes both modes. A library check that mirrors a member of the built-in family — a
+library-defined numeric type's overflow or division/remainder by zero, a container's bounds
+check (`Vec` indexing, `str` byte access, the arena's `get`) — fails through `trap()`, the
+built-in guard's own instruction (CG-13), so `unchecked xs[i]` drops it and a checked
+`xs[10]` fails alike for an array and a `Vec`; ordinary library logic (an explicit
+assertion, `unwrap` on `None`) may `panic`. A function that does **not** observe it is
+**mode-opaque** — fixed at definition, a caller's `unchecked` does not alter it (CG-7
+non-transitivity preserved as the default). The mode reaches **only** explicitly-observing functions, and only one level — no
 hidden deep propagation (I3). This works uniformly for inlinable and non-inlinable
 operators (a multi-word `u128 +`, a `Matrix +` still selects its mode-correct
 instantiation).

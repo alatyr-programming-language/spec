@@ -233,11 +233,13 @@ nothing here: the compiler emits the family's guard at the **operation site** wh
 not the operator is routed, and a routed operator body carries **no guard of its own**.
 Otherwise the same expression would fail one way with the prelude operator in scope and
 another way without it, which is exactly the implementation fork CG-13 removes. `panic` and
-`assert` inside ordinary **library logic** — a container's own bounds check, an explicit
-precondition — are untouched: that is library behaviour, not a checked guard of the
-language. A **library-defined numeric type** (`uint(N)`, Type System §7) has no compiler
-guard; its operators make the checks that mirror this family (overflow, division or
-remainder by zero) under `comptime if verify.checked` (Comptime §7.5) and fail through the
+`assert` inside ordinary **library logic** — an explicit assertion, `unwrap` on `None` —
+are untouched: that is library behaviour, not a checked guard of the language. A library
+**container's** bounds check (`Vec` indexing, the arena's `get`) is not such logic: it
+mirrors the bounds guard and fails through `trap()` (below), so `xs[10]` fails identically
+for an array and a `Vec`. A **library-defined numeric type** (`uint(N)`, Type System §7)
+has no compiler guard; its operators make the checks that mirror this family (overflow,
+division or remainder by zero) under `comptime if verify.checked` (Comptime §7.5) and fail through the
 prelude **`trap()`** — this same instruction (Stdlib §4.1) — never through `panic`, so `x / 0`
 fails identically for `u64` and `uint(256)`.
 
