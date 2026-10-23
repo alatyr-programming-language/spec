@@ -724,7 +724,8 @@ mechanism(in self : ptr(Arena)) -> Mechanism { return Mechanism.region }   # the
 allocate(in out self : Arena, comptime T : type, in size : usize, in align : usize) -> Result(Handle(T), AllocError)
 free(in out self : Arena, comptime T : type, in h : Handle(T), in size : usize, in align : usize)   # no-op; bulk close
 
-# construct over a caller-supplied buffer (freestanding; no OS):
+# construct over a caller-supplied buffer (freestanding; no OS) — a raw operation: the call
+# requires an enclosing `unchecked` (the caller vouches that `buf` outlives the arena), below:
 arena_over(in buf : ptr(mut bits8), in cap : usize) -> Arena
 # access: exchange handle + arena for a scoped pointer, bounds-checked (out-of-range → trap(), §4.1):
 # `get` is an ordinary prelude function with a second-class return (Memory §5.3.1);
@@ -738,6 +739,19 @@ close(in self : Arena)
 `OutOfMemory` **traps** (the recoverable path is `a.allocate(T, …)?` directly, §5.1, which
 already yields `Handle(T)`). `Arena.free(…)`
 is a **no-op** — storage is reclaimed in bulk by `close`.
+
+**`arena_over` is a raw operation: a call to it requires an enclosing `unchecked`** (`unchecked
+expr` or `unchecked { … }`, CG-7) and is ill-formed in checked code and under `no_unchecked`. The
+`Arena` it returns keeps the address of `buf` inside an owning value that may be moved, returned, or
+stored, while the escape rule (Memory §5.3.1) is local and unparameterized — it cannot tie the result
+to `buf`'s scope without a lifetime variable (MEM-1). So the one fact the checker cannot see —
+**`buf` outlives the arena, up to its `close`** — is asserted by the author at the call, visibly:
+`a := unchecked arena_over(ptr(mut buf), cap)`. Everything after construction stays checked
+(`get`'s bounds check, the transient result, the arena's linearity). A violation (the arena used
+after `buf`'s scope ended) has **hardware-defined** behavior — it reads or writes whatever now
+occupies that storage — never UB (I11). A `@static` pool over a `@static` buffer is constructed
+the same way. The OS-backed arena calls it inside its own library code over pages it owns, so its
+users write no `unchecked`.
 
 **Every `Arena` is an owning value** (`@owning`, MEM-2), like an open file — including the
 caller-buffer arena from `arena_over` and a `@static` fixed-pool arena. What it owns is its
@@ -874,8 +888,8 @@ A conforming implementation MUST:
    duplicated;
 4. accept any value satisfying the **allocator protocol** of §5 as `@alloc(value)`,
    represent references per its declared lifetime mechanism (region/generational/manual),
-   require an `unchecked` grant for `manual`-mechanism allocation/reference use (rejected
-   under `no_unchecked`), keep `scoped` non-allocating, and forbid `@alloc` under `no_alloc`;
+   require an `unchecked` grant for `manual`-mechanism allocation/reference use and for a call
+   to `arena_over` (§5.2.1) (each rejected under `no_unchecked`), keep `scoped` non-allocating, and forbid `@alloc` under `no_alloc`;
 5. provide the **alloc-tier** types of §6 only given an allocator (forbidden under
    `no_alloc`), their bounds checks failing through `trap()` (§6), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std

@@ -33,7 +33,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   indexing skips the bounds check, narrowing truncates, float→int and div0/shift/alignment faults are
   hardware-defined; never UB, I11) **and** the genuinely-raw operations (pointer arithmetic,
   int→ptr, a raw-union member read not proven definitely active / an `uninit` read, raw
-  transfer, `asm`) become writeable; in an `unchecked { … }` block a `scoped` call result may
+  transfer, `asm`, a call to `arena_over`) become writeable; in an `unchecked { … }` block a `scoped` call result may
   also be bound to a local (Memory §5.3.1). Granularity is the author's choice (one line or a
   block); the scope is always lexically visible. **No re-entry / no `checked` keyword**
   (symmetry with phase: no
