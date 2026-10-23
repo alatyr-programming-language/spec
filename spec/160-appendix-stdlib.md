@@ -149,8 +149,12 @@ on that type. Derivation is **comptime + monomorphized** → zero-cost and fully
 
 - **`min`** / **`max`** — `min(in a : T, in b : T) -> T` / `max(…) -> T` (base); a tie
   returns the **first** argument.
-- **`clamp`** — `clamp(in x : T, in lo : T, in hi : T) -> T` (base); requires `lo <= hi`,
-  a **checked precondition** (a violation traps, I11).
+- **`clamp`** — `clamp(in x : T, in lo : T, in hi : T) -> T` (base); requires `lo <= hi`.
+  That check is an operand-domain check like division by zero, not program logic: it is made
+  under `comptime if verify.checked` and a violation (`lt(hi, lo)`) fails through **`trap()`**
+  (§4.1; CG-13), never `panic`. The result is `lo` if `lt(x, lo)`, else `hi` if `lt(hi, x)`,
+  else `x` — so inside `unchecked`, where the check is dropped, a `lo > hi` call still has
+  this one defined result.
 - in-place **`sort`** on a mutable slice `[mut T]` (§3.5).
 
 Broader structural derives (`clone`, a three-way total-order `compare`, a streaming
@@ -736,8 +740,10 @@ close(in self : Arena)
 ```
 
 `@alloc(a) x := init` (Memory §2.4) bumps `a`, writes `init`, and binds `x : Handle(T)`;
-`OutOfMemory` **traps** (the recoverable path is `a.allocate(T, …)?` directly, §5.1, which
-already yields `Handle(T)`). `Arena.free(…)`
+`OutOfMemory` (any `AllocError` from the underlying `allocate`) fails through the direct inline
+trap — exactly `trap()` (§4.1; CG-13), never `panic`, in every verification mode: there is no
+value to bind, so `unchecked` does not drop it (the recoverable path is `a.allocate(T, …)?`
+directly, §5.1, which already yields `Handle(T)`). `Arena.free(…)`
 is a **no-op** — storage is reclaimed in bulk by `close`.
 
 **`arena_over` is a raw operation: a call to it requires an enclosing `unchecked`** (`unchecked

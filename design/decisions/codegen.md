@@ -484,8 +484,8 @@ property.
 
 ### CG-13. One failure mechanism for the whole checked-guard family — the direct inline trap
 *provenance: refines CG-2/CG-8; narrows CT-11 to library code · spec: Concurrency §6.1;
-Assembly §3; Codegen §3.5; Types §4.5, §7; Memory §5.4; Stdlib §4.1; Stdlib appendix §3,
-§3.6, §4.1, §4.2, §5.2.1, §6, §8; per-arch appendix §2, §3.2*
+Assembly §3; Codegen §3.5; Types §4.5, §7; Memory §2.4, §5.4; Stdlib §4.1; Stdlib appendix
+§2.6, §3, §3.6, §4.1, §4.2, §5.2.1, §6, §8; per-arch appendix §2, §3.2*
 
 **Why.** The guard family was specified failure-by-failure: overflow traps "via an inline
 check", division by zero and the over-width shift "also trap", and the per-arch appendix
@@ -550,6 +550,19 @@ library operations for program **logic**: an explicit user assertion, `unwrap` o
 member. *Superseded:* the earlier text of this entry that called "a container's own bounds
 check" an ordinary `panic` — it contradicted the Stdlib appendix's trapping `Vec` indexing
 and `get`, and it would make `xs[10]` fail by two mechanisms depending on the type of `xs`.
+
+**`clamp`'s ordering check and `@alloc`'s exhaustion fail through `trap()` too.** Both
+were written "traps" with no named mechanism. `clamp(x, lo, hi)` with `lo > hi` is an
+**operand-domain** check of a value primitive — arguments for which the operation has no
+meaningful result, the kind division by zero is — not logic the user wrote, so it is made
+under `comptime if verify.checked` and fails through `trap()`; under `unchecked` it drops and
+`clamp`'s specified body gives one defined result (Stdlib appendix §2.6). `@alloc` failing to
+obtain storage (its `allocate` returning `OutOfMemory`, or any `AllocError`) is the failure of a
+**language construct**, emitted by the compiler: it fails through the direct inline trap in
+**every** verification mode — `unchecked` cannot drop it, because there is no value to bind and
+no hardware behaviour to fall back to (I11). The recoverable path stays `allocate(…)?`
+(MEM-4). *Rejected:* `panic` for either — the failure would then depend on the target's
+`panic` behaviour (a hook, stderr + exit), two mechanisms for one class of failure.
 
 **Routed operators.** Operators are library functions (TYP-5), so an implementation may
 lower `a / b` into a prelude operator body. The guard attaches to the **operation**, not to
