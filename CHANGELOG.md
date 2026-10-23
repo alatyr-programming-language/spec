@@ -64,7 +64,7 @@ per-arch guard column describes the guard the compiler emits for that operator f
 
 **Normative — `trap() -> Never`.** A new prelude intrinsic emitting exactly the per-arch
 checked-failure instruction — no message, hook, OS exit or unwinding, valid in every
-context. A library-defined numeric type (`uint(N)`, and so `u128`) MUST fail a check that
+context (hosted, `freestanding`, bare; not under `no_abstractions`). A library-defined numeric type (`uint(N)`, and so `u128`) MUST fail a check that
 mirrors the built-in family (overflow, division or remainder by zero) through `trap()`,
 never `panic`, so `x / 0` fails identically for `u64` and `uint(256)`. `panic` stays the
 failure of ordinary library logic (Stdlib §4.1; Stdlib appendix §4.1; CG-13).
@@ -125,6 +125,12 @@ implicit or ambient arena for `get` (its `ptr(Arena)` parameter is not an elidab
 parameter), and a free-call argument is never auto-addressed, so `get(a, h)` with `a : Arena` is a
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
+
+**Normative — `trap()` is not admitted under `no_abstractions`.** `trap()` emits one
+instruction, but one the target chooses, not one the source names, so it fails the
+`no_abstractions` allow-list ("emits exactly the instruction(s) it names"): a `no_abstractions`
+unit writes the per-arch checked-failure instruction itself (`ud2` / `brk #0` / `udf #0` /
+`ebreak`) (CG-12; CG-13; Assembly §1.1; Stdlib §4.1; Stdlib appendix §4.1; glossary).
 
 **Normative — an unchecked divide without a hardware divider returns the ISA family's
 architectural values.** On an `aarch32` core without `idiv` or a RISC-V core without `m`, `/`

@@ -54,7 +54,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   built-in checked-guard family, which the compiler emits at the operation site and drops itself (CG-13).
 - **`trap()`** (CG-13) — the prelude intrinsic `trap() -> Never`: exactly the language's **direct inline trap** (the per-arch
   checked-failure instruction, per-arch appendix §2), the same instruction a failed built-in guard executes; no message, no
-  hook, no OS exit, no unwinding, identical in every context. A library check that mirrors the built-in family fails through
+  hook, no OS exit, no unwinding, identical in every context — but **not** admitted under `no_abstractions`, where the
+  instruction (`ud2` / `brk #0` / `udf #0` / `ebreak`) is written directly (CG-12). A library check that mirrors the built-in family fails through
   it, never through `panic` — a library-defined numeric type's overflow or division by zero, and a library container's
   bounds check (`Vec` indexing, `str`/`String` byte access, the arena's `get`), so `xs[10]` fails alike for an array and a
   `Vec`; `clamp` with `lo > hi`; and, in every mode, an `@alloc` that cannot allocate. `panic` is the failure of

@@ -455,6 +455,12 @@ programmer did not write is forbidden. This resolves the boundary construct-by-c
 - **Calls to non-instruction functions** — an out-of-line `call` to an ordinary function is a
   multi-instruction ABI sequence the programmer did not write; functions are a structured
   construct (Overview §3). Only instruction intrinsics and `asm(…)` are the admitted "calls".
+  This includes the prelude intrinsic **`trap()`** (CG-13): it emits one instruction, but one
+  the *target* chooses (per-arch appendix §2), not one the source names, so a `no_abstractions`
+  unit writes that instruction itself (`ud2` / `brk #0` / `udf #0` / `ebreak`). *Rejected:*
+  admitting `trap()` as "one instruction" — the allow-list admits a construct that emits
+  exactly the instruction **it names**; `trap()` names none, and admitting it would make the
+  byte-exact prediction of the unit depend on the per-arch table rather than the source.
 - **Structured data access** — struct/enum **field access `s.f`**, enum construction and
   pattern `match`, tuple projection, array/slice index `a[i]`, and range-slices. `struct`/`enum`
   are structured data (Overview §3); the raw equivalent is an `at(base=, index=, scale=, disp=)`
@@ -533,7 +539,8 @@ operators in library code, where the compiler emits no guard. Such an operator w
 mirrors a family member (division or remainder by zero, overflow) MUST make the check under
 `comptime if verify.checked` (CT-11) and fail through the prelude **`trap() -> Never`** —
 the same direct inline trap instruction (per-arch appendix §2), with no message, no hook, no
-OS exit and no unwinding, valid in every context including `freestanding` and bare — never
+OS exit and no unwinding, valid in every context including `freestanding` and bare (but not
+admitted under `no_abstractions`, CG-12, where the instruction is written directly) — never
 through `panic`. So `x / 0` fails identically for `u64` and for `uint(256)`. `trap` passes
 PRIN-1: it is not a second name for `panic` but a capability `panic` cannot give — a library
 failing by **exactly** the mechanism of a built-in guard, in every context; `panic`'s

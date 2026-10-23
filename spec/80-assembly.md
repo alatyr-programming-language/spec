@@ -69,7 +69,10 @@ MUST forbid exactly:
 - **Forbidden** (a compile error) — the library value-operators as surface syntax
   (`+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`not`: a guarded operation is not
   1:1, §3); structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);
-  the `?` tryable; calls to non-instruction functions; structured data access (`s.f`, enum
+  the `?` tryable; calls to non-instruction functions — including the prelude intrinsic
+  **`trap()`**, which emits a target-chosen instruction the programmer did not name (write the
+  per-arch checked-failure instruction itself — `ud2` / `brk #0` / `udf #0` / `ebreak`, per-arch
+  appendix §2 — as an instruction intrinsic or through `asm(…)`); structured data access (`s.f`, enum
   construction/`match`, tuple projection, `a[i]`, range-slices); and the pointer word-functions
   `ptr`/`deref` and pointer arithmetic. The raw substitutes are the instruction intrinsics,
   labels + raw transfer, and the `at(…)` memory operand.

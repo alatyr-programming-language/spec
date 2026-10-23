@@ -396,7 +396,7 @@ lives on the arch surface (Assembly §4). Two kinds.
 | `embed`     | `embed(comptime path : str) -> [u8; N]`              | reproducible file embed → byte array (Comptime §2.4) |
 | `forget`    | `forget(in v : T)`                                    | discharge linearity without release (Memory §5.9) |
 | `typeof`    | `typeof(in v : T) -> type`                            | comptime: the **static type** of `v` as a `type` value (no RTTI; distinct from `typeinfo`, which is introspection *data*) |
-| `trap`      | `trap() -> Never`                                     | the language's **direct inline trap**: emits exactly the per-arch checked-failure instruction (per-arch appendix §2) — the **same** instruction as a failed built-in checked guard (CG-13); no message, no hook, no OS exit, no unwinding; identical in every context (hosted, `freestanding`, bare). The failure a library-defined numeric type uses for a check that mirrors the built-in family (Stdlib §4.1) |
+| `trap`      | `trap() -> Never`                                     | the language's **direct inline trap**: emits exactly the per-arch checked-failure instruction (per-arch appendix §2) — the **same** instruction as a failed built-in checked guard (CG-13); no message, no hook, no OS exit, no unwinding; identical in every context (hosted, `freestanding`, bare); **not** admitted under `no_abstractions` (Assembly §1.1 — write the instruction itself). The failure a library-defined numeric type uses for a check that mirrors the built-in family (Stdlib §4.1) |
 
 (The per-arch **instruction** intrinsics are also compiler intrinsics, but belong to the
 Assembly per-domain family of §4.3, and the `atomic` / `volatile` operations, `fence` and
