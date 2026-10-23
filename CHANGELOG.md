@@ -49,6 +49,13 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.1.0 — 2026-10-23
+
+The 2026-10-23 coherence audit: the checked-guard family, region/arena temporal safety, the
+function-value ABI, the built-in catalogue, per-OS syscall availability and the grammar gaps.
+Every entry below is normative; none removes a construct the v1 language enumerated, so the
+MAJOR digit stands still (I10).
+
 **Normative — one checked-guard model: the compiler's inline trap.** The text placed the
 guard of the checked-guard family in three incompatible places: at the operation site,
 emitted by the compiler (CG-13, Concurrency §6.1); in the prelude operator body under

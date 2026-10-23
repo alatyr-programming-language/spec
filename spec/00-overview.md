@@ -13,7 +13,7 @@
 > not yet accepted — and the conformance requirements in §6 describe the *completed*
 > specification's intent.
 >
-> **Version — `1.0.0`.** The specification is living and versioned. The MAJOR digit is
+> **Version — `1.1.0`.** The specification is living and versioned. The MAJOR digit is
 > the version of the *language* this document specifies (Alatyr v1); MINOR marks a
 > normative revision of the text, PATCH an editorial one. The number is not a maturity
 > claim — whether the document is accepted is what the Status above states, and it is not
