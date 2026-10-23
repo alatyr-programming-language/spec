@@ -112,7 +112,9 @@ regardless of `os`/`env` (so `Os.none`/`Env.none`/`musl`/`freebsd` all get a def
   The default selector is therefore **`naked`** (`AbiSelector.Naked`, §3.1): the
   programmer supplies the frame/return directly (assembly-correspondence; entry points
   and far-call conventions are hand-written). `@abi(c)` / `@abi(sysv32)` on a
-  `Container.com` target is a **diagnostic** (there is no C ABI to select).
+  `Container.com` target is a **diagnostic** (there is no C ABI to select). A function
+  without `@abi` there is therefore naked — no parameters, no result, not callable from
+  Alatyr code (Functions §6.4); one called from Alatyr code declares a user `Abi(...)`.
 
 No other `os`/`env`/`container` selects a different base convention.
 
@@ -167,7 +169,10 @@ AbiSelector := enum { Conv( Abi ), Naked, Entry }   # a convention, "no lowering
 - **`naked`** is **not** an `Abi`: it is a **sentinel** meaning *no compiler-generated
   frame/prologue/epilogue/return* (Functions §6.4). It carries **no** register/stack/
   varargs schema and is never read field-by-field; it is a lowering **mode**, not a
-  convention. `@abi(naked)` selects it.
+  convention. `@abi(naked)` selects it. Having no convention, a naked function declares **no
+  parameters and no result** (`fn() { … }`), is **not callable** from Alatyr code and **not**
+  a function value; it is reached only by a raw `call` / `jmp`, as the entry, or by the
+  hardware (Functions §6.4).
 - **`entry`** is likewise a sentinel, not an `Abi`: it marks **the process entry** and
   selects the **per-target entry prologue/epilogue** of §3.3 (FN-12). The function is
   written as an ordinary function but declares **no parameters** (`fn()` / `fn() -> i32`,

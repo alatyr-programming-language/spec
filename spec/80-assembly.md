@@ -62,8 +62,10 @@ MUST forbid exactly:
   decorations (§8); **raw control transfer** (`jmp`/branch/indirect), which is **native**
   here and needs no `unchecked` grant (Control Flow §2.3); data definitions (§9); the
   **function frame** of §2.2 — `@abi(naked)` **or** ABI-framed — over local operand bindings
-  whose initializers are surface expressions, with the destination `return`ed by the
-  enclosing function; and **comptime** in full (permitted and erased, I7 / FND-10).
+  whose initializers are surface expressions, with the destination `return`ed by an
+  ABI-framed enclosing function (a naked function has no parameters, no result and no stack
+  slots — its locals are `@reg(name)`-pinned — and is entered by raw transfer only,
+  Functions §6.4); and **comptime** in full (permitted and erased, I7 / FND-10).
 - **Forbidden** (a compile error) — the library value-operators as surface syntax
   (`+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`not`: a guarded operation is not
   1:1, §3); structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);

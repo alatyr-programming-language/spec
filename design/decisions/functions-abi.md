@@ -217,7 +217,14 @@ targets** (the canonical triples), not the whole Cartesian product: an unsupport
 combination is a Config diagnostic, never an improvised convention. `@abi(…)` takes an ABI
 *value by name* — **string shortcuts are rejected** (strings remain only for external/linker
 symbol names like `@extern("…")`/`@export("…")`), and the selector is `Conv(Abi) | Naked`,
-where `naked` is a *sentinel* "no-lowering" mode (not a convention, fills no schema). The
+where `naked` is a *sentinel* "no-lowering" mode (not a convention, fills no schema). A
+naked function therefore has no Alatyr-level interface: it declares **no parameters and no
+result**, is **not callable** from Alatyr code, and is **not** a function value (FN-10); it is
+reached only by a raw `call` / `jmp` (its symbol as an instruction operand), as the entry, or
+by the hardware, and its frameless body has no stack slots (locals `@reg(name)`-pinned).
+*Rejected:* parameters or a result on a naked function, or an Alatyr call to one — with no
+convention, the compiler could only guess where the arguments go (FND-3), or the text would
+promise a lowering that "no lowering" denies (I1). The
 schema carries defaults so per-target tables list only differences. The **syscall ABI** is a
 bodyless declaration (the trap is the implementation, like `@extern`, and only under
 `unchecked`) with a fixed positional parameter→register mapping and register-width

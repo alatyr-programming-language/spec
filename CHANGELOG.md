@@ -126,6 +126,16 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — a `naked` function has no Alatyr-level interface.** `@abi(naked)` meant "no
+frame, no prologue, no return sequence", but nothing said what its parameters or result were,
+or how an Alatyr call to it would place arguments. A naked function now declares **no
+parameters and no result** (`fn() { … }`), is **not callable** from Alatyr code (a located
+Semantic diagnostic), and is **not** a function value; it is reached only by a raw `call` /
+`jmp` from assembly, as the entry, or by the hardware. Its frameless body has no stack slots,
+so its locals are `@reg(name)`-pinned. On `Container.com` (default `naked`) a function called
+from Alatyr code declares a user `Abi(...)` (FN-9, FN-10, CG-12; Functions §6.4, §10; ABI
+appendix §2(b), §3.1; Assembly §1.1; glossary).
+
 **Normative — an `@extern @abi(c)` function may be taken as a function value.** Modules §7.1
 said an `@extern` "cannot itself be used as a first-class function value", which left C
 callbacks (a `qsort` comparator) without a form. Under FN-10's one rule a function value has the

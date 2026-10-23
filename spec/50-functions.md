@@ -490,6 +490,27 @@ points, interrupt handlers, and trampolines, where the programmer supplies the
 machine-level frame/return directly (typically with assembly-correspondence
 constructs).
 
+Because no convention places anything, a naked function has **no Alatyr-level interface**:
+
+- it declares **no parameters and no result** — its form is exactly `fn() { … }` (no `-> T`,
+  no `out`); whatever it receives or leaves in registers or memory is its body's business,
+  written with the assembly surface;
+- it is **not callable from Alatyr code**: a call `f(…)` (direct, or by UFCS) to an
+  `@abi(naked)` function is a located **Semantic** diagnostic — there is no convention by
+  which to place arguments or find a return;
+- it **cannot be taken as a function value** (§1.5; FN-10) or as a `dyn`'s code (§1.6);
+- it is reached **only by a raw transfer**: its symbol as the operand of a raw `call` /
+  `jmp` instruction or of an address-forming instruction, from an assembly-surface body
+  (Assembly §2; Control Flow §2.3), by the linker as the entry (`Target.entry`, ABI appendix
+  §3.3), or by the hardware (a vector table, an interrupt) — and the contract at that
+  transfer is the programmer's.
+- having no frame, its body has **no stack slots**: a local binding in it must be pinned to a
+  named register (`@reg(name)`, Memory §2.6) or be comptime (erased).
+
+On `Container.com`, whose default selector is `naked` (ABI appendix §2(b)), these rules apply
+to every function declared without `@abi`; a function meant to be called from Alatyr code
+there declares a user-defined `Abi(...)` convention (§6.3).
+
 **`@abi(entry)`** is the third selector alongside a convention and `naked` (ABI appendix
 §3.1; FN-12): it marks **the process entry** and emits the **per-target entry
 prologue/epilogue** (ABI appendix §3.3) — capture the platform's entry state, record it
@@ -679,8 +700,9 @@ A conforming implementation MUST:
    rejecting an argument given both positionally and by name (§5);
 7. treat an ABI as a comptime value, default it from the target, allow per-site
    `@abi(value)` selecting the calling convention on a function, provide the prelude
-   ABI values and accept a user-defined `Abi(...)` value, and support `@abi(naked)` and
-   `@abi(entry)`; lower a direct call by the callee's declared convention and an indirect
+   ABI values and accept a user-defined `Abi(...)` value, and support `@abi(naked)` —
+   declaring no parameters and no result, rejecting a call to it from Alatyr code and its
+   use as a function value (§6.4) — and `@abi(entry)`; lower a direct call by the callee's declared convention and an indirect
    call through a function value by the target's default convention (§6; ABI appendix
    §3.1, §3.3);
 8. provide comptime-tuple variadics (primary), slice variadics (homogeneous), and
