@@ -126,6 +126,15 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — a call to `arena_over` requires `unchecked`.** `arena_over(buf, cap)` keeps the
+address of a caller buffer inside an owning `Arena` that can be moved, returned or stored past
+`buf`'s scope, and the local escape rule cannot tie the result to `buf` without a lifetime
+variable — so checked code could use an arena over dead storage, against I11. A call to
+`arena_over` is now a raw operation (CG-7): ill-formed in checked code and under `no_unchecked`,
+written `a := unchecked arena_over(ptr(mut buf), cap)`, the author vouching that `buf` outlives the
+arena; all later use stays checked. A checked form over a `@static` buffer is deferred, additive
+(MEM-3; Memory §5.4, §8; Stdlib appendix §5.2.1, §8; Grammar §3.7; glossary; aspects map).
+
 **Normative — a function value has the target's default calling convention.** Functions §6.2
 said a call uses "the calling convention carried by the callee's type", but the function-value
 type `fn(T…) -> R` carries no convention and `@abi` on a type is forbidden, so an indirect call

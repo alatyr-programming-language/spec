@@ -202,8 +202,9 @@ indexing skips the bounds check;
 narrowing truncates and float→int is hardware-defined; alignment-requiring access skips
 the alignment check. The scope **additionally permits the genuinely-raw operations**
 ill-formed in checked code (pointer arithmetic, `int↔ptr`, reading a raw-union member
-that is not definitely active / reading `uninit`, raw control transfer, raw `asm`) — these
-have no checked counterpart and were a
+that is not definitely active / reading `uninit`, raw control transfer, raw `asm`, a call
+to `arena_over`, whose caller vouches that the buffer outlives the arena, Stdlib appendix
+§5.2.1) — these have no checked counterpart and were a
 grant under either model — and, in an `unchecked { … }` block, **binding a `scoped` call
 result to a local** (transient-only in checked code, Memory §5.3.1; staleness is then the
 author's, hardware-defined). **Granularity is the programmer's choice** (one line or a

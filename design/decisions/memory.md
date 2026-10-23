@@ -87,6 +87,12 @@ already-present things, no new reference type: the arena's **linearity** (MEM-2)
   hazard". The rule is **generic** to `scoped` returns, so `get` still has no arena-specific
   compiler contract and a user could write the same signature. Inside `unchecked { … }` the
   result may be bound to a local; its staleness is then hardware-defined (I11).
+- **`arena_over` requires `unchecked`.** The arena over a caller buffer keeps `buf`'s
+  address inside an owning value that can be moved, returned, or stored past `buf`'s scope,
+  and the local, unparameterized escape rule cannot tie it to `buf`. So a call to
+  `arena_over` is a raw operation (CG-7): the author asserts "`buf` outlives the arena" at a
+  visible `unchecked`, and everything after construction stays checked. A violation is
+  hardware-defined, never UB (I11).
 - **The arena is an explicit argument**, by address: `get(ptr(a), h)`. `get`'s
   `in a : ptr(Arena)` is not an allocator parameter, so no ambient fills it (MEM-5), and a
   free-call argument is never auto-addressed — only the generic UFCS receiver form
@@ -109,7 +115,11 @@ cursors over one buffer, and a non-consuming `close(in out self)` let a handle u
 Memory §5.1); a **stored** get-result with a non-mutation rule while it lives (a local borrow
 check, against Memory §5.7 — no borrow checker); a **runtime generation check** on `get` (a
 cost per access and a fat handle, and it does not stop arena copies); an **implicit or ambient
-arena** for `get`, or an auto-address-of on its free-call argument (hidden data flow into an
+arena** for `get`, or an auto-address-of on its free-call argument; for the `arena_over`
+escape, a result **scoped to `buf`** (a lifetime variable tying a result to an argument — the
+same alternative rejected above), a `scoped Arena` result (a transient value cannot be bound, so
+the arena would be unusable), or a checked `arena_over` restricted to a `@static` buffer (an
+arena-specific argument check — deferred: admitting it later only accepts more programs, FND-6) (hidden data flow into an
 access that the reader must see, I3 — the arena is named at every `get`). The second-class return
 de-privileges `get` *and* keeps store-safety *and* introduces no lifetime variable.
 
