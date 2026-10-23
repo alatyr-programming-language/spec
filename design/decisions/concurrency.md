@@ -21,7 +21,8 @@ lightweight threads) is built additively on top of these primitives as ordinary
 libraries, keeping the language minimal and its cost transparent (I1/I2).
 
 ### CC-2. Atomics, fences, and `volatile` are operation modules, not new types
-*provenance: operand types, alignment and RMW overflow pinned by the v1 built-in catalogue ·
+*provenance: operand types, alignment and RMW overflow pinned by the v1 built-in catalogue;
+`Option(ptr(T))` admitted as an operand ·
 spec: Concurrency §2, §3, §4; Stdlib appendix §4.4*
 
 **Why.** Correct concurrency needs atomic load/store/RMW (CAS, fetch-add, …) with the
@@ -37,8 +38,13 @@ nonsensical orderings are rejected rather than silently accepted.
 **The operands.** Every atomic operation, `load` included, takes a `ptr(mut T)` — the
 location is shared mutable state, and the widest atomic load is a read-modify-write on some
 targets (`CMPXCHG16B`). `T` is an integer type (`uN`/`iN`, `usize`/`isize`, the multiword
-`uint(N)`) or a pointer type of an atomic-capable width (the per-arch width table); the
-`fetch_*` set — `fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor` — takes an
+`uint(N)`), a pointer type, or an optional pointer `Option(ptr(U))` / `Option(ptr(mut U))`,
+of an atomic-capable width (the per-arch width table). The optional pointer costs nothing:
+its `None` is the all-zero niche, so it has exactly the pointer's representation (Memory
+§4.2, Types §6.2; I2), and the atomic access is the pointer's. Without it a lock-free
+structure in checked code would have to store a raw pointer and test "no node" by `ptr ==
+0`, an untyped null check the typed-forms discipline forbids (absence is `Option`, MEM-8).
+The `fetch_*` set — `fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor` — takes an
 integer only. The address must be naturally aligned (a multiple of `T.size()`): the compiler
 emits the alignment guard in checked code unless the pointer type's alignment already proves
 it, and a misaligned access inside `unchecked` is hardware-defined (I11). **`fetch_add` /
@@ -46,8 +52,9 @@ it, and a misaligned access inside `unchecked` is hardware-defined (I11). **`fet
 instruction or LL/SC loop with no point to place a guard before the store, and an
 overflow-checked atomic add is already expressible as a `cas_weak` loop over `checked_add`.
 *Rejected:* an `atomic::load` on a read-only `ptr(T)` (it cannot be lowered on targets whose
-wide atomic load writes); admitting `bool`, `bitsN`, floats or `Option(ptr(T))` in v1 — each
-is additive and none is required by the text; a trapping `fetch_add` — it would need a hidden
+wide atomic load writes); integers and raw pointers only — it forces untyped null checks in
+lock-free code; admitting `bool`, `bitsN` or floats in v1 — each is additive and none is
+required by the text; `fetch_*` on `Option(ptr(T))` — a pointer has no atomic arithmetic; a trapping `fetch_add` — it would need a hidden
 CAS loop (I3) to make the check before the store.
 
 **Rejected.** Allowing a **`relaxed` fence** — C++ permits it as a no-op, but a relaxed

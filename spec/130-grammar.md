@@ -172,7 +172,8 @@ escape     ::= "\" ( "n" | "t" | "r" | "0" | "\\" | "'" | '"'
   `array-ctor`). The `\xNN` form is an **escape inside a `char`/`string` literal**, not
   a byte literal of its own (SYN-3; Assembly §11). Byte data is thus a value, not a
   lexical token.
-- `NaN` / `Infinity` are float **prelude constants** (not literals; SYN-3).
+- `NaN` / `Infinity` are float **prelude constants** (not literals; SYN-3), typed as an
+  untyped float literal is; their bit patterns are in the Stdlib appendix §4.4.
 
 #### 2.5 Comments
 

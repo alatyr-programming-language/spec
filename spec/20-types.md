@@ -981,7 +981,8 @@ compile errors — an integral *value* does not make a float *literal* an intege
 decimal literal to the nearest value of the binary format is **representation**, not loss
 (`0.1 : f64` denotes the nearest `f64`), while a literal outside the format's finite range
 is a compile error, never a silent infinity. With **no** context, a floating-point literal
-takes the documented default `f64`.
+takes the documented default `f64`. The prelude constants `NaN` and `Infinity` (Grammar
+§2.4) are typed by this same rule; their bit patterns are in the Stdlib appendix §4.4.
 
 An **integer** literal in a floating-point context is accepted exactly when the value is
 **exactly** representable in that float type (`x : f64 = 1`); one that is not

@@ -503,19 +503,27 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Atomic operation** (CC-2) — a prelude intrinsic of the `atomic` module (`load`/`store`/`swap`/
   `cas_strong`/`cas_weak`/`fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor`; Stdlib appendix §4.4)
-  on a `ptr(mut T)`, `T` an integer or pointer type of an atomic-capable width (per-arch appendix §2). The
+  on a `ptr(mut T)`, `T` an integer, pointer or `Option(ptr(U))` type of an atomic-capable width (per-arch
+  appendix §2; `fetch_*`: integers only). The
   address must be naturally aligned (guarded in checked code); `fetch_add`/`fetch_sub` wrap, never trap.
 
 - **Overflow policy operation** (CG-8) — one of the 20 prelude functions `<policy>_<op>`: policy ∈
   `wrapping` (→ `T`, two's-complement) / `saturating` (→ `T`, clamped) / `checked` (→ `Option(T)`) /
   `overflowing` (→ `(T, bool)`); op ∈ `add`/`sub`/`mul` on `uN`/`iN`, `neg`/`div` on `iN` — exactly the
   checked-overflow set (Concurrency §6.3; Stdlib appendix §4.4). Mode-opaque: the same result in checked code
-  and inside `unchecked`; a zero divisor still traps.
+  and inside `unchecked`. The `checked_` family never traps: `checked_div(a, 0)` is `None`; the other `*_div`
+  trap on a zero divisor.
 
 - **`fma` / `saturating_convert`** (CG-9) — `fma(a, b, c)`: the fused multiply-add on `f32`/`f64`, rounded
   once; a correctly-rounded software routine where the target has no fused instruction (Concurrency §7.3).
   `saturating_convert(T, f)`: float→integer rounding toward zero, clamped to `T`'s range, `NaN` → `0`, never
   trapping (Concurrency §7.7). Both in the Stdlib appendix §4.4.
+
+- **`NaN` / `Infinity`** — the float prelude constants (Grammar §2.4; not literals, not keywords), typed
+  as an untyped float literal (context, else `f64`; Types §9.1). `NaN` is the canonical quiet NaN (positive,
+  zero payload: `f32` `0x7FC00000`, `f64` `0x7FF8000000000000`); `Infinity` is +∞ (`0x7F800000` /
+  `0x7FF0000000000000`), `-Infinity` its unary minus. `NaN == NaN` is `false` (Concurrency §7.5). Stdlib
+  appendix §4.4.
 
 - **`v1` (the language version)** — the **first version of the language**: the feature set this
   document defines — the six architectures, the closed supported-target set, the enumerated

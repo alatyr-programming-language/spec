@@ -150,18 +150,32 @@ the decision and the rejected alternative.
 catalogue the complete v1 set while naming families only by pattern. It now enumerates
 them (Stdlib appendix §4.4). **Atomics:** `load`/`store`/`swap`/`cas_strong`/`cas_weak`/
 `fetch_add`/`fetch_sub`/`fetch_and`/`fetch_or`/`fetch_xor`, all on `ptr(mut T)`, `load`
-included; `T` an integer or pointer type of an atomic-capable width (`fetch_*`: integers
+included; `T` an integer, pointer or `Option(ptr(U))` type of an atomic-capable width (`fetch_*`: integers
 only); natural alignment is required, guarded in checked code and hardware-defined under
 `unchecked`; `fetch_add`/`fetch_sub` wrap and never trap. `fence`, `Ordering` and the
 `volatile` operations get signatures. **Overflow policies:** exactly 20 functions,
 `wrapping_`/`saturating_`/`checked_`/`overflowing_` × `add`/`sub`/`mul` (on `uN`/`iN`) and
-`neg`/`div` (on `iN`). They are mode-opaque, and a zero divisor still traps. **Float:**
+`neg`/`div` (on `iN`). They are mode-opaque; on a zero divisor `checked_div` is `None`
+and the other `*_div` trap (below). **Float:**
 `fma(a, b, c)` on `f32`/`f64` is rounded once; with no fused instruction it is a
 correctly-rounded software routine. The saturating float→int conversion is named
 `saturating_convert(T, f)`: NaN → 0, ±∞ clamped. `dyn_over` joins the catalogue partition.
 The conformance list no longer names a nonexistent `mem` module (CG-8; CG-9; CC-2; STD-1;
 Concurrency §2, §4, §6.3, §7.3, §7.7, §8; Types §4.2, §10; Stdlib appendix §4.1, §4.3,
 §4.4, §8; glossary).
+
+**Normative — atomics admit `Option(ptr(T))`, `checked_div` reports a zero divisor as
+`None`, and `NaN` / `Infinity` join the catalogue.** **Atomics:** `load`/`store`/`swap`/
+`cas_strong`/`cas_weak` accept `Option(ptr(U))` / `Option(ptr(mut U))` as `T` — it has the
+pointer's representation (the all-zero niche, Memory §4.2), and without it lock-free code
+needs an untyped `ptr == 0` test; `fetch_*` stays integer-only. **`checked_div`:**
+`checked_div(a, 0)` is `None`, like `checked_div(MIN, -1)` — the `checked_` family never
+traps; `wrapping_div`/`saturating_div`/`overflowing_div` still trap on a zero divisor.
+**`NaN` / `Infinity`:** the Grammar §2.4 prelude constants are typed as an untyped float
+literal (a float context, else `f64`); `NaN` is the canonical quiet NaN (`f32`
+`0x7FC00000`, `f64` `0x7FF8000000000000`), `Infinity` is +∞ (`0x7F800000`,
+`0x7FF0000000000000`), `-Infinity` is unary minus (CC-2; CG-8; CG-9; TYP-13; Concurrency
+§2, §6.3, §8; Types §9.1; Grammar §2.4; Stdlib appendix §4.4, §8; glossary; aspects map).
 
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said

@@ -384,7 +384,9 @@ case: an integer literal in a float context is accepted when it is **exactly**
 representable in that format, and is a diagnostic when it is not (`x : f32 = 16777217`),
 which is the same representability check §9.1 already applies to integers. Rounding a
 decimal float literal to the nearest binary value is representation, not loss; a literal
-outside the format's finite range is an error rather than a silent infinity.
+outside the format's finite range is an error rather than a silent infinity. The prelude
+constants `NaN` and `Infinity` are typed by this same rule — a floating-point context, else
+`f64` — and `Infinity` is a named value, not an out-of-range literal (CG-9).
 
 **Rejected.** Accepting an integral-valued float literal in an integer context — one
 character (`.0`) then decides nothing, the spelling stops carrying information, and the
