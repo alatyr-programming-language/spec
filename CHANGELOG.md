@@ -126,6 +126,14 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — an `@extern @abi(c)` function may be taken as a function value.** Modules §7.1
+said an `@extern` "cannot itself be used as a first-class function value", which left C
+callbacks (a `qsort` comparator) without a form. Under FN-10's one rule a function value has the
+target's default convention, and `c` names that default wherever it exists, so a non-variadic
+`@extern` with `@abi(c)` (or no `@abi`) may now be taken as a value — the external symbol's
+address; any other selector is FN-10's diagnostic, and a C-variadic `@extern` has no fn-type
+(FN-8, FN-10; Functions §1.5; Modules §7.1; glossary).
+
 **Normative — `clamp` with `lo > hi` and an `@alloc` that cannot allocate fail through
 `trap()`.** Both said only "traps". `clamp`'s `lo <= hi` is an operand-domain check (like
 division by zero), made under `comptime if verify.checked`, failing through `trap()`, never
