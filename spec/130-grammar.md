@@ -120,6 +120,10 @@ struct  enum  union  fn  type  mod  abi  dyn
   so it is a **keyword**, not an `@`-attribute (which is compile-time only). It is **not** an
   introducer: construction is the prelude word-function `dyn_over` (below), not a `dyn{…}`
   literal.
+- **`scoped` is a contextual keyword** (MEM-1): it is a keyword **only** in a type
+  position immediately before `ptr` (`scoped ptr(T)`, §3.3); elsewhere it is an ordinary
+  identifier, and the attribute `@scoped` (§3.6) is unaffected. Two juxtaposed type atoms
+  are never otherwise grammatical, so the contextual reading is unambiguous.
 
 **Reserved for additive growth** (semantics deferred; CC-6): `async`, `await`. They are
 reserved now so adding the feature later does not break programs.
@@ -127,7 +131,8 @@ reserved now so adding the feature later does not break programs.
 **Not keywords:** built-ins are **prelude identifiers** (OP-1) — flat word-functions
 (`typeinfo`, `bitcast`, `compiles`, `resolves`, `embed`, `forget`, `panic`, `exit`, `trap`, `assert`,
 `asm`, the pointer ops `ptr`/`deref`, the layout words `size`/`align`, the dyn-closure builder
-`dyn_over` (FN-11), instruction names, …)
+`dyn_over` (FN-11), the brand constructor `brand` (TYP-4; a type-returning call `brand(T)`,
+§3.3), instruction names, …)
 and members of the **prelude modules** `atomic` / `volatile` (`atomic::load`, …, reached by
 `::`). The constants `true`, `false`, `NaN`, `Infinity` — and the no-initializer marker `uninit` (Type System §9.4) — likewise. `extern` is **not** a keyword — it is the
 attribute `@extern` (§3.11). `use` does not exist (import is a declaration; MOD-4).
@@ -317,9 +322,10 @@ type-atom   ::= ident                                  (* bitsN, uN/iN/fN, usize
               | struct-type | enum-type | union-type | array-type | slice-type | tuple-type
               | type-atom "(" arg-list ")"             (* generic instantiation: Vec(T), Option(T), Result(T,E) *)
               | [ "scoped" ] "ptr" "(" [ "mut" ] type-expr ")"  (* pointer type (Memory §4.1); the `scoped` qualifier marks a **second-class return** — meaningful only as a result type; a `scoped` in any other type position is **ill-formed** (a Semantic error, not silently ignored — Memory §5.3.1 / MEM-1) *)
-              | "brand" "(" type-expr ")"              (* nominal brand over a layout (Type System §5.4) *)
+              (* a nominal brand `brand(T)` (Type System §5.4) is NOT a production: `brand` is a prelude identifier and
+                 `brand(u64)` derives through the instantiation/call form above — a comptime call returning a type (§3.8) *)
               | fn-type                                (* function-value type: a non-capturing function value = one code-address word (Functions §1.5, FN-10; §3.6) *)
-              | "dyn" fn-type                          (* type-erased closure type: `dyn fn(T…)->R` = a {code, env} fat pair, env in explicit storage (Functions §1.6, FN-11; §3.6) *)
+              | dyn-type                               (* type-erased closure type: `dyn fn(T…)->R` = a {code, env} fat pair, env in explicit storage (Functions §1.6, FN-11; §3.6) *)
 
 struct-type ::= "struct" "{" [ field { item-sep field } ] "}"
 enum-type   ::= "enum"   "{" [ variant { item-sep variant } ] "}"
@@ -365,7 +371,8 @@ Expressions are layered by precedence (the full table is §4). The layered gramm
 
 ```ebnf
 expr        ::= range-expr
-range-expr  ::= or-expr [ ( ".." | "..=" ) [ or-expr ] ]   (* half-open [a,b) | inclusive [a,b]; an open-ended `lo..` (upper bound omitted) is the slice-to-end form, valid only in index position `a[lo..]` (Control Flow §5.4) *)
+range-expr  ::= or-expr [ ".." [ or-expr ] | "..=" or-expr ]  (* half-open [a,b) | inclusive [a,b]; an open-ended `lo..` (upper bound omitted) is the slice-to-end form, valid only in index position `a[lo..]` (Control Flow §5.4) *)
+              | ".." [ or-expr ]                         (* lower bound omitted = 0: `a[..hi]` ≡ `a[0..hi]`, `a[..]` ≡ `a[0..]`; half-open only, index position only (Control Flow §5.4) *)
 or-expr     ::= and-expr  { "or"  and-expr }            (* short-circuit (OP-2) *)
 and-expr    ::= cmp-expr  { "and" cmp-expr }            (* short-circuit (OP-2) *)
 cmp-expr    ::= bitor-expr [ cmp-op bitor-expr ]        (* comparisons are non-associative *)
@@ -421,9 +428,25 @@ variant-ctor ::= type-expr "." ident [ "(" [ call-args ] ")" ] (* Color.Red | Op
 
 call-args    ::= arg { item-sep arg }
 arg          ::= expr                                          (* positional *)
+               | type-expr                                     (* a type argument to a `T : type` parameter: size([mut u8]) — bracket rule below *)
                | ident "=" expr                                (* named — same `=` as struct ctor (Functions §5.2) *)
-arg-list     ::= [ expr { item-sep expr } ]                    (* generic-instantiation arguments *)
+arg-list     ::= [ gen-arg { item-sep gen-arg } ]              (* generic-instantiation / attribute arguments *)
+gen-arg      ::= expr | type-expr                              (* a type argument: Option([u8]), Vec([mut u8]), Option(fn(u8) -> u8) *)
 ```
+
+**Bracket forms: type or value.** `[ … ]` begins a `slice-type`/`array-type` (§3.3) or an
+`array-ctor`, and in an argument (`Option([u8])`, `size([u8; 4])`) or any other expression
+position the tokens alone do not decide which. The rule is **semantic and by the kind of the
+first component** (like the `variant-ctor` overlap, §3.4): a bracket form whose element —
+the first component — **denotes a type** is a **type** (`[T]` / `[mut T]` a slice-type,
+`[T; N]` / `[T = v; N]` an array-type); otherwise it is an `array-ctor`. A leading `mut`
+always makes a slice-type, and a listed form with two or more elements (`[a, b]`) has no type
+reading, so it is always an `array-ctor`. Hence `Option([u8])` is the option of a byte
+slice, never the option of a one-element array holding the type `u8`. A one-element or
+replicated **array of type values** is written through the array-type constructor:
+`[type = u8; 1]()` or `[type; 1](u8)` (§3.4 value construction). The classification is
+fixed by the element alone — never by the expected type — so a reader decides it from the
+text (I1).
 
 Bit shifts and rotations are **operations**, not glyph operators (OP-2 assigns glyphs
 only to `&` `|` `^` `~`); they are written in call or UFCS form (prelude operations) as
@@ -468,7 +491,7 @@ pattern-arg  ::= pattern
 range-pattern ::= literal ".." literal | literal "..=" literal   (* scalar ranges (Control Flow §5.4) *)
 ```
 
-A `match` **arm list** MAY contain a `comptime for x in <comptime collection> { <arm> … }` that **unrolls** to one arm
+A `match` **arm list** MAY contain a `comptime for x in <comptime collection> { <arm> … }` (`comptime-for-arm`, §3.7) that **unrolls** to one copy of its arms
 per iteration (the arm-position analog of statement-position `comptime for`, §8.3; CT-9) — the form that makes a `match`
 over a **generic enum** exhaustive in a structural derive (Comptime §5.5).
 
@@ -511,6 +534,8 @@ every entry is `name : type`. There is **no** anonymous `out T` form.
 if-expr       ::= "if" expr block [ "else" ( if-expr | block ) ]
 match-expr    ::= "match" expr "{" match-arm { sep match-arm } "}"
 match-arm     ::= pattern { "|" pattern } "=>" ( expr | block )   (* OR-pattern: alternatives share one body (Control Flow §5.4) *)
+                | comptime-for-arm
+comptime-for-arm ::= "comptime" "for" ident "in" expr "{" match-arm { sep match-arm } "}"  (* unrolls to one copy of its arms per iteration; the collection is comptime (§3.5; Comptime §5.5; CT-9) *)
 loop-expr     ::= "loop" block                          (* + break value → loop is an expression *)
 while-stmt    ::= "while" expr block
 for-stmt      ::= "for" ident "in" expr block

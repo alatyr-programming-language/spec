@@ -430,6 +430,8 @@ labeled-block ::= label-attr block                     (* structured: break name
 if-expr       ::= "if" expr block [ "else" ( if-expr | block ) ]
 match-expr    ::= "match" expr "{" match-arm { (";" | newline) match-arm } "}"
 match-arm     ::= pattern { "|" pattern } "=>" ( expr | block )   (* OR-pattern: alternatives share one body (§5.4) *)
+                | comptime-for-arm                                 (* comptime for x in <comptime collection> { arms } — unrolled, one copy per iteration (Comptime §5.5) *)
+comptime-for-arm ::= "comptime" "for" ident "in" expr "{" match-arm { (";" | newline) match-arm } "}"
 loop-expr     ::= "loop" block
 while-stmt    ::= "while" expr block
 for-stmt      ::= "for" ident "in" expr block
@@ -444,7 +446,7 @@ logical-expr  ::= expr ( "and" | "or" ) expr | "not" expr   (* short-circuit *)
 try-expr      ::= expr "?"                                  (* postfix unwrap-or-propagate *)
 
 (* ranges — used both as iterators (§6) and as scalar match patterns (§5.4) *)
-range-expr    ::= [ expr ] ".." [ expr ] | [ expr ] "..=" expr   (* half-open [a,b) | inclusive [a,b]; in index position an omitted lower bound = 0 and an omitted upper = the base's length (`a[lo..]`/`a[..hi]`/`a[..]`, §5.4) *)
+range-expr    ::= [ expr ] ".." [ expr ] | expr "..=" expr   (* half-open [a,b) | inclusive [a,b]; in index position an omitted lower bound = 0 and an omitted upper = the base's length (`a[lo..]`/`a[..hi]`/`a[..]`, §5.4); an omitted bound is half-open only — there is no `..=hi` *)
 ```
 
 Normative notes:
@@ -465,7 +467,8 @@ Normative notes:
 - An **open-ended** lower bound `a[..hi]`, and the fully-open `a[..]`, are the dual: an
   omitted lower bound is **0** (`a[..hi]` ≡ `a[0..hi]`, `a[..]` ≡ `a[0..]` — to the end).
   Both are **index position only** (a standalone range still needs its lower bound);
-  half-open like `a[lo..hi]`.
+  half-open like `a[lo..hi]`. A range with an omitted bound is **half-open only**: there is
+  no `a[..=hi]` (write `a[..hi + 1]`).
 - `..` / `..=` build the same **range** in iteration (§6) and in patterns (§5.4) —
   half-open and inclusive respectively.
 - a label is the `@label(name)` attribute (§2.1), **not** an introducer. A

@@ -1094,11 +1094,14 @@ tuple-type    ::= "(" [ type-expr { "," type-expr } ] ")"
 type-expr     ::= { attribute } type-atom              (* prefix attributes decorate a type: @align(N) T, @require(pred) T, @nonzero u32 (§8/§8.1) *)
 type-atom     ::= ident                                (* bitsN, uN/iN/fN, usize, char, str, bool, … *)
                 | struct-type | enum-type | union-type | array-type | slice-type | tuple-type
-                | type-atom "(" arg-list ")"           (* generic instantiation: Vec(T), Option(T), Result(T,E) *)
+                | type-atom "(" arg-list ")"           (* generic instantiation: Vec(T), Option(T), Result(T,E);
+                                                          a bracket argument whose element denotes a type is a type —
+                                                          Option([u8]) is an option of a slice (Grammar §3.4) *)
                 | fn-type                              (* function-value type — a non-capturing code-pointer, one word (Functions §1.5, FN-10) *)
-                | "dyn" fn-type                        (* type-erased closure type — a {code, env} fat pair, env in explicit storage (Functions §1.6, FN-11) *)
+                | dyn-type                             (* type-erased closure type — a {code, env} fat pair, env in explicit storage (Functions §1.6, FN-11) *)
 fn-type       ::= "fn" "(" [ fn-type-param { "," fn-type-param } ] ")" [ "->" type-expr ]  (* bodyless signature in type position; no names, no block *)
 fn-type-param ::= [ "in" | "out" | "in" "out" ] type-expr
+dyn-type      ::= "dyn" fn-type
 
 (* a struct field carries optional attributes (any attribute, CT-10 — `layout-attr`
    is the closed lever subset, not the whole space; legality is semantic), optional
@@ -1107,6 +1110,8 @@ field         ::= { attribute } [ "mut" ] ident ":" type-expr [ "=" expr ]
 union-member  ::= ident [ "(" type-expr { item-sep type-expr } ")" ]  (* zero components omit parentheses (§6.3) *)
 
 (* branding — a builtin yielding a distinct nominal type over a layout (§5.4) *)
+(* `brand` is a prelude identifier, not a keyword (Grammar §2.3): `brand(u64)` is an ordinary comptime call
+   returning a type, derived through `type-atom "(" arg-list ")"` — this line names the form, it adds no syntax *)
 brand-expr    ::= "brand" "(" type-expr ")"            (* Meters := brand(u64) *)
 
 (* conversions (§4.4) — value conversion vs bit reinterpretation are distinct *)

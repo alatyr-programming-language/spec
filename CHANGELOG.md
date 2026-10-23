@@ -126,6 +126,17 @@ parameter), and a free-call argument is never auto-addressed, so `get(a, h)` wit
 type error; the examples now all write `get(ptr(a), h)` (MEM-3; Memory §5.3.1, §5.4; Stdlib
 appendix §5.2.1; glossary).
 
+**Normative — the grammar catches up with the chapters.** The consolidated EBNF lacked five
+forms the chapters already used. A `match` arm list now derives `comptime-for-arm` (`comptime
+for x in <comptime collection> { arms }`, unrolled), which was prose only. `type-atom` names
+`dyn-type` instead of repeating it. A range may omit its lower bound — `a[..hi]`, `a[..]`,
+index position only, half-open only (there is no `..=hi`). `scoped` is a contextual keyword,
+only before `ptr` in a type position, and `brand` is a prelude identifier whose `brand(T)` is an
+ordinary call, so the dedicated `brand` type production is gone. A bracket form in an argument
+or expression is a type when its first component denotes a type, so `Option([u8])` is an
+option of a byte slice; an array of type values is written `[type; 1](u8)` (SYN-2; Grammar
+§2.3, §3.3, §3.4, §3.5, §3.7; Types §11; Control Flow §5.4, §11).
+
 **Normative — `trap()` is not admitted under `no_abstractions`.** `trap()` emits one
 instruction, but one the target chooses, not one the source names, so it fails the
 `no_abstractions` allow-list ("emits exactly the instruction(s) it names"): a `no_abstractions`
