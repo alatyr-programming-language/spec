@@ -25,7 +25,8 @@ and **deferred (additive) growth**.
 - `[x]` **3. Execution and memory model.** Subnodes: vocabulary (MEM-6), storage classes (MEM-7), mutability
   (MEM-7), pointers (MEM-8), keystone "storage+lifetime" — **one language reference (scoped) + a library
   allocator-provider menu over first-class reference tokens** via `@alloc(value)` (MEM-1/STD-1, reframed by MEM-3; `get` ordinary via a
-  `scoped` second-class return), closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
+  `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`),
+  closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-12
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned

@@ -204,7 +204,9 @@ the alignment check. The scope **additionally permits the genuinely-raw operatio
 ill-formed in checked code (pointer arithmetic, `int↔ptr`, reading a raw-union member
 that is not definitely active / reading `uninit`, raw control transfer, raw `asm`) — these
 have no checked counterpart and were a
-grant under either model. **Granularity is the programmer's choice** (one line or a
+grant under either model — and, in an `unchecked { … }` block, **binding a `scoped` call
+result to a local** (transient-only in checked code, Memory §5.3.1; staleness is then the
+author's, hardware-defined). **Granularity is the programmer's choice** (one line or a
 region); inside it, correctness is the author's responsibility — the trade for terseness
 over per-operation visibility — and action-at-a-distance is bounded by I11. The mode is
 **non-transitive by default** (a call encapsulates its own value/trap) but **observable

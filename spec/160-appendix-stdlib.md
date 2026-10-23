@@ -447,7 +447,7 @@ exactly `{ name, type, offset, mutable }`.
 | `panic`  | `panic(in msg : str) -> Never` | defined failure (never UB); no unwinding; hosted = stderr + exit, freestanding = hook or trap (Stdlib §4) |
 | `exit`   | `exit(in code : usize) -> Never` | hosted = OS exit; freestanding = trap/hook (Stdlib §4); code per §100 (the chapter governs the appendix) |
 | `assert` | `assert(in cond : bool)`        | runtime → `panic` when false; in a comptime context → **compile error** (Stdlib §4.3); always emitted at runtime |
-| `get`    | `get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)` | region-handle access: bounds-checks `h` against `a` under `comptime if verify.checked` (out-of-range → `trap()`, §4.1, never `panic`; CG-13); the result is a **`scoped` second-class return** (Memory §5.3.1) — the escape checker's generic rule, **no** built-in arena contract, **no** lifetime variable. An ordinary prelude function, not a compiler intrinsic (MEM-3). Stdlib §5.2.1; Memory §5.4 |
+| `get`    | `get(in a : ptr(Arena), in h : Handle(T)) -> scoped ptr(mut T)` | region-handle access: bounds-checks `h` against `a` under `comptime if verify.checked` (out-of-range → `trap()`, §4.1, never `panic`; CG-13); borrows the arena, does not consume it; the result is a **`scoped` second-class return** (Memory §5.3.1), **transient** in checked code (used within its full expression, never named) — the escape checker's generic rule, **no** built-in arena contract, **no** lifetime variable. An ordinary prelude function, not a compiler intrinsic (MEM-3). Stdlib §5.2.1; Memory §5.4 |
 
 `panic` and `exit` — and the intrinsic `trap` (§4.1) — **diverge**: their result type is **`Never`** (§3.7), the bottom
 type, which has no value — so control does not return and a call is a **terminator** for
@@ -532,7 +532,10 @@ waits until the manual provider is built (OP-1 — not introduced before needed)
 The comptime accessor `mechanism` is how the allocator **declares the lifetime mechanism**
 it supplies — a UFCS function returning a comptime-known value, alongside `allocate`/`free`
 (the UFCS model has no member-constant slot); `@alloc(self)` evaluates it to pick the
-reference representation (MEM-4), so a new mechanism is additive (FND-6). The mechanism fixes
+reference representation (MEM-4), so a new mechanism is additive (FND-6). An **owning** allocator
+(every `Arena`, §5.2.1) takes `self` of `mechanism` by scoped reference (`in self : ptr(A)`), since
+passing an owning value `in` consumes it (Memory §5.9); UFCS auto-ref makes `a.mechanism()` read the
+same either way. The mechanism fixes
 the **reference representation and per-access cost** of `@alloc(self)` allocations (Memory §5.2):
 
 | Mechanism      | Reference representation | Temporal safety                    | Per-access cost |
@@ -600,8 +603,8 @@ language adds only the meaning of `@alloc` (Memory §2.4 / §5.4):
 Handle := fn(T : type) -> type { ... }   # an index into its arena; copyable, not owning. Distinct per T because a
                                          # type-function result is nominal by (function, args) (Type System §4.1),
                                          # though the layout (usize) does not mention T.
-Arena  := struct { ... }                 # the bump allocator
-mechanism(in self : Arena) -> Mechanism { return Mechanism.region }   # the comptime accessor (§5.1)
+Arena  := @owning struct { ... }         # the bump allocator: an owning (linear) value, Memory §5.9
+mechanism(in self : ptr(Arena)) -> Mechanism { return Mechanism.region }   # the comptime accessor (§5.1)
 # the protocol allocate/free (§5.1), typed by the region mechanism → Handle(T):
 allocate(in out self : Arena, comptime T : type, in size : usize, in align : usize) -> Result(Handle(T), AllocError)
 free(in out self : Arena, comptime T : type, in h : Handle(T), in size : usize, in align : usize)   # no-op; bulk close
@@ -611,21 +614,31 @@ arena_over(in buf : ptr(mut bits8), in cap : usize) -> Arena
 # access: exchange handle + arena for a scoped pointer, bounds-checked (out-of-range → trap(), §4.1):
 # `get` is an ordinary prelude function with a second-class return (Memory §5.3.1);
 # the result is scoped to the call site, with no arena-specific compiler contract.
-get(in a : Arena, in h : Handle(T)) -> scoped ptr(mut T)
-# bulk reclamation:
-close(in out self : Arena)
+get(in a : ptr(Arena), in h : Handle(T)) -> scoped ptr(mut T)
+# bulk reclamation; consumes the arena (Memory §5.9):
+close(in self : Arena)
 ```
 
 `@alloc(a) x := init` (Memory §2.4) bumps `a`, writes `init`, and binds `x : Handle(T)`;
 `OutOfMemory` **traps** (the recoverable path is `a.allocate(T, …)?` directly, §5.1, which
 already yields `Handle(T)`). `Arena.free(…)`
-is a **no-op** — storage is reclaimed in bulk by `close`. The caller-buffer `Arena` is
-**not owning** (it borrows the buffer); a **`@static`** fixed-pool arena likewise holds no
-releasable resource and carries **no** finalize obligation (Memory §5.9 — "own forever").
-An **OS-backed** arena holds a releasable resource (its `mmap`'d pages), so it is a
-**distinct `@owning` type** (MEM-2) — not the same `Arena` — that wraps/holds an `Arena` over
-those pages; its release (`munmap`) **consumes** it, so it is a linear owning value
-enforced by the linearity checker (Memory §5.9 / MEM-2). Mixing a handle with the wrong arena
+is a **no-op** — storage is reclaimed in bulk by `close`.
+
+**Every `Arena` is an owning value** (`@owning`, MEM-2), like an open file — including the
+caller-buffer arena from `arena_over` and a `@static` fixed-pool arena. What it owns is its
+**exclusive right** to allocate from and reclaim its storage, not the buffer: copying the cursor
+would duplicate that right (two cursors handing out one address), even though the buffer belongs
+to the caller. So an `Arena` cannot be implicitly copied (`b := a` moves it), and it is **consumed
+exactly once** — by `close(in self : Arena)` or by `forget` (Memory §5.9); a use after `close` and
+a missing `close` are compile-time errors of the linearity checker, at no run-time cost.
+Allocation (`allocate`/`free`, `in out self`) and `get` (`in a : ptr(Arena)`) borrow it without
+consuming it. A **`@static`** fixed-pool arena carries **no** finalize obligation and is never
+consumed (Memory §5.9 — "own forever"): it allocates for the whole program. The scoped result of
+`get` is **transient** in checked code (Memory §5.3.1/§5.4): `deref(get(a, h)).x = 5` is
+well-formed, `p := get(a, h)` is not (it is, inside `unchecked { … }`).
+An **OS-backed** arena additionally holds its `mmap`'d pages, so it is a **distinct `@owning`
+type** (MEM-2) that holds an `Arena` over those pages; its release (`munmap`) **consumes** it,
+closing the inner `Arena` and unmapping the pages, so the pages are released exactly once. Mixing a handle with the wrong arena
 is a logic error, not UB (the access stays in-bounds of a live arena); an arena MAY carry
 an identity tag to promote it to a trap (additive). The `generational` and `manual`
 **mechanisms** are v1 protocol cases of the fixed menu (the `Mechanism` enum, §5.1; Memory

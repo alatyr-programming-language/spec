@@ -97,6 +97,29 @@ normative grammar rejected every such program. `slice-type ::= "[" [ "mut" ] typ
 `array-type`: after `"[" type-expr` a `"]"` ends a slice type, while `";"` or `"="`
 continues an array type, and a leading `mut` occurs only in a slice type.
 
+**Normative — arenas are owning values; a `scoped` result is used at once in checked code.**
+Memory §5.1 requires temporal safety in checked code (I11), and §5.4 rested it on the arena's
+linearity — but `close(in out self : Arena)` did not consume, the caller-buffer `Arena` was
+declared not owning (so `b := a` gave two cursors over one buffer), and a get-result held across
+growth was called a "residual hardware-defined hazard" even in checked code.
+
+**Every `Arena` is now `@owning`** (MEM-2/MEM-3; Memory §5.9, Stdlib appendix §5.2.1) — the
+`arena_over` caller-buffer arena and the `@static` fixed pool included: what it owns is the
+exclusive right to allocate from and reclaim its storage. It is non-copyable and consumed exactly
+once, by `close(in self : Arena)` (now consuming) or `forget`; use after `close` and a missing
+`close` are linearity errors. `get` now borrows the arena as `in a : ptr(Arena)` and `mechanism`
+as `in self : ptr(Arena)` (an `in` owning value would be consumed); allocation keeps `in out`. A
+`@static` owning place carries no obligation and is never consumed. The OS-backed arena remains a
+distinct `@owning` type holding an `Arena` over its pages.
+
+**A `scoped` call result is transient in checked code** (Memory §5.3.1, generic, not
+arena-specific): it is used within its full expression — dereferenced, field/element-accessed,
+or passed down — never bound to a name, stored, or captured, and the call's `in out` /
+pointer-borrowed places may not be passed `in out`, `ptr(mut …)`, or consumed elsewhere in that
+expression. `deref(get(a, h)).x = 5` is well-formed, `p := get(a, h)` is not. Inside
+`unchecked { … }` the result may be bound to a local, with staleness hardware-defined (CG-7;
+glossary; Grammar §3.7).
+
 **Normative — the CLI gains `help`, `version`, and a verbosity contract.** Tooling §4 specified
 the command set, discovery, target and profile selection, and artifact placement, but said
 nothing about how a toolchain reports on *itself*. Two conforming implementations could
