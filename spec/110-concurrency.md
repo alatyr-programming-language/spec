@@ -54,8 +54,28 @@ atomic::store(p, v, ord)
 atomic::swap(p, v, ord)                                    # → old T
 atomic::cas_strong(p, expected, new, ok_ord, fail_ord)     # → (T, bool): (current value, succeeded?)
 atomic::cas_weak(p, expected, new, ok_ord, fail_ord)       # → (T, bool); MAY fail spuriously
-atomic::fetch_add(p, v, ord)                               # likewise sub / and / or / xor → old T
+atomic::fetch_add(p, v, ord)                               # likewise fetch_sub / fetch_and / fetch_or / fetch_xor → old T
 ```
+
+The enumerated signatures are in the Stdlib appendix §4.4. Every operation, `atomic::load`
+included, takes a **`ptr(mut T)`**: an atomic location is shared mutable state, and on
+some targets the widest atomic load is itself a read-modify-write (`CMPXCHG16B`).
+
+- **Admissible `T`.** An integer type (`uN` / `iN`, `usize` / `isize`, the multiword
+  `uint(N)`) or a pointer type, of an atomic-capable width (below). The `fetch_*`
+  operations take an **integer** `T` only.
+- **RMW arithmetic wraps.** `atomic::fetch_add` / `atomic::fetch_sub` store `old ± v`
+  modulo `2^N` (two's-complement) and **never trap**, in checked code and inside
+  `unchecked` alike: an atomic read-modify-write is one indivisible instruction (or LL/SC
+  loop), which has no point to place an overflow guard before the store. An overflow-checked
+  atomic add is written as a `cas_weak` loop over `checked_add` (§6.3).
+- **Alignment.** The address MUST be a multiple of `T.size()` (natural atomic alignment;
+  it can exceed `T.align()` where the machine model aligns a type below its size, and a
+  pointer's alignment can be lowered per site with `@align(N)`). When the pointer type's
+  alignment (Memory §4.1) already guarantees it, no check is emitted; otherwise, in checked
+  code the compiler emits the **alignment guard** before the access — a failure is the
+  direct inline trap (§6.1, CG-13) — and inside `unchecked` a misaligned atomic access is
+  hardware-defined (I11).
 
 - **Orderings** are a comptime prelude enum `Ordering`: `relaxed`, `acquire`,
   `release`, `acq_rel`, `seq_cst`. The value MUST be comptime-known (it selects the
@@ -91,7 +111,8 @@ Fences are **explicit** (no implicit barriers are inserted). **Legal orderings**
 The **prelude module `volatile`** provides `volatile::load(p)` / `volatile::store(p, v)`
 for **MMIO**: each access is emitted
 **exactly once** and is **not** eliminated or reordered relative to other volatile
-accesses. **`volatile` is NOT `atomic`** — it provides **no** inter-thread ordering
+accesses. `T` is a scalar or pointer type of a native load/store width, so each call is
+one access (signatures: Stdlib appendix §4.4). **`volatile` is NOT `atomic`** — it provides **no** inter-thread ordering
 or atomicity, only "do not optimize away, do not reorder." (A common confusion: use
 atomics for synchronization, `volatile` for device memory.)
 
@@ -270,6 +291,14 @@ ordinary functions (Type System §4.5):
 - **`checked_*`** — `→ Option(T)` (`None` on overflow);
 - **`overflowing_*`** — `→ (T, bool)` (the wrapped value and an overflow flag).
 
+Each family covers exactly the **checked-overflow set** (§6.1): `add`, `sub`, `mul` on
+`uN` / `iN`, and `neg` and `div` on `iN` (an unsigned negation or division has no
+overflow member in that set) — the 20 names `wrapping_add` … `overflowing_div`, enumerated
+with their signatures in the Stdlib appendix §4.4. A policy operation **does not read the
+verification mode** (mode-opaque, CG-7): its result is the same in checked code and inside
+`unchecked`. Division by zero is not overflow, so a `*_div` with a zero divisor **traps**
+(the division-by-zero guard, §6.1) in both modes.
+
 #### 6.4 Kernel has no arithmetic
 
 `bitsN` has **no** arithmetic — only bit operations (Type System §2.2); overflow
@@ -299,7 +328,13 @@ implicitly** (they are non-IEEE and target-dependent, and would break reproducib
 #### 7.3 FMA is explicit
 
 A fused multiply-add is **only** the explicit builtin **`fma(a, b, c)`**; `a * b + c`
-does **not** auto-contract to an FMA.
+does **not** auto-contract to an FMA. `fma(a, b, c)` on `f32` / `f64` (Stdlib appendix
+§4.4) is `a × b + c` computed exactly and **rounded once** (round-to-nearest-even), so its
+result is bit-identical on every target and at comptime. It lowers to the target's fused
+multiply-add instruction where the selected features provide one (per-arch appendix, e.g.
+`x86_64` under `fma`); otherwise to a **correctly-rounded software routine** — the
+soft-float provision of Type System §3.3, with its visible call cost — and **never** to a
+separately rounded `a * b + c`, which would give a different result.
 
 #### 7.4 IEEE exceptions — and the integer contrast
 
@@ -329,9 +364,10 @@ where the target has hardware, else soft-float; Type System §3.3); `f16` / `bf1
 Converting a float to an integer (`i64(f)`, `u32(f)`, …) **rounds toward zero**
 (truncates the fractional part: `3.9 → 3`, `-3.9 → -3`). The conversion is **checked by
 default**: a result outside the integer's range, or a NaN, **traps** (I11 — the same
-checked-default as narrowing, Type System §4.2). A **`saturating`** conversion (prelude,
-available everywhere) instead **clamps** to the integer's minimum/maximum and maps
-**NaN → 0**, never trapping. **Inside an `unchecked` scope** the conversion is
+checked-default as narrowing, Type System §4.2). The **saturating** conversion
+`saturating_convert(T, f)` (prelude, available everywhere, mode-opaque; Stdlib appendix
+§4.4) instead rounds toward zero, then **clamps** to the integer's minimum/maximum
+(`±Infinity` included) and maps **NaN → 0**, never trapping. **Inside an `unchecked` scope** the conversion is
 **hardware-defined** (§6.2; the out-of-range result depends on the ISA).
 
 ---
@@ -346,8 +382,10 @@ A conforming implementation MUST:
 2. provide atomics as **operation builtins** on a `ptr(mut T)` (`atomic::load`/
    `atomic::store`/`atomic::swap`/`atomic::cas_strong`/`atomic::cas_weak` (each → `(T,
    bool)`)/`atomic::fetch_*`) with a comptime `Ordering` argument and **no** `Atomic(T)`
-   type, atomic-capable widths as per-arch data, lowering to atomic instructions +
-   barriers, zero-cost (§2; I1/I2);
+   type, atomic-capable widths as per-arch data, every operation on a `ptr(mut T)` of an
+   admissible `T`, natural atomic alignment guarded in checked code, `fetch_add`/`fetch_sub`
+   wrapping, lowering to atomic instructions + barriers, zero-cost — with exactly the
+   names and signatures of the Stdlib appendix §4.4 (§2; I1/I2);
 3. provide explicit `fence(ord)` and `volatile::load`/`volatile::store` (each access
    emitted exactly once, not reordered w.r.t. other volatile; **not** atomic) (§3, §4);
 4. treat data races as **hardware-defined, never UB**, provide the three by-construction
@@ -360,9 +398,11 @@ A conforming implementation MUST:
    checked `MIN % -1` yield `0` without trapping or faulting; inside an `unchecked` scope
    **wrap** `+ − * unary−` while `MIN/-1`, `MIN % -1`, div-by-0 and an over-width shift take their target's hardware
    behaviour (CG-7), and provide `wrapping_*`/`saturating_*`/`checked_*`(→
-   Option)/`overflowing_*`(→(T,bool)) everywhere; `bitsN` has no arithmetic (§6; I11/CG-8);
+   Option)/`overflowing_*`(→(T,bool)) everywhere — exactly the 20 mode-opaque members of
+   the Stdlib appendix §4.4; `bitsN` has no arithmetic (§6; I11/CG-8);
 6. make comptime float **strict, host-independent IEEE-754 (RNE)** and runtime float
    the **target IEEE-754 with no hidden contraction/reassociation**, provide FMA only
-   via explicit `fma`, follow IEEE non-trapping exceptions (float div-by-0 → ±∞, not a
+   via explicit `fma` (rounded once; a correctly-rounded software routine where the target
+   has no fused instruction), provide `saturating_convert` (§7.7), follow IEEE non-trapping exceptions (float div-by-0 → ±∞, not a
    trap — unlike integer), unordered NaN comparisons, RNE rounding with no implicit
    mode state, and `f32`/`f64` as the v1 types (§7; I1/CG-9).

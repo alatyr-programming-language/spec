@@ -60,7 +60,9 @@ and **deferred (additive) growth**.
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
   determinism; centralized emission; containers by target (CG-1).
 - `[x]` **12. Standard library / built-ins.** Prelude tiering (base/alloc/std) + auto-DCE;
-  intrinsics vs builtins; panic/exit/assert, `trap()` (CG-13); allocators `@alloc(value)` (STD-1).
+  intrinsics vs builtins; panic/exit/assert, `trap()` (CG-13); allocators `@alloc(value)` (STD-1); the
+  Concurrency families (atomics, `volatile`, the 20 overflow policy functions, `fma`, `saturating_convert`)
+  enumerated by name and signature in the appendix (STD-1/CC-2/CG-8/CG-9).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),
   per-module compilation + the output-neutral content-addressable cache / incremental build (TOOL-6).
@@ -95,7 +97,8 @@ Cross-cutting decisions — concurrency (`decisions/concurrency.md`), overflow /
 verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
 
 ## Deferred (additive future, FND-6) — NOT design gaps, but content/growth
-- Instruction sets/arches (CG-2), additional stdlib types/functions beyond the closed v1 surfaces (STD-1), refcount mechanism
+- Instruction sets/arches (CG-2), additional stdlib types/functions beyond the closed v1 surfaces (STD-1), further atomic
+  operand types (`bool`, `bitsN`, floats, `Option(ptr(T))`) and policy functions for `uint(N)` (CC-2/CG-8), refcount mechanism
   (MEM-1), **`uint(N)` at non-multiple-of-64 widths** (a partial top word + its mask/carry/overflow rules),
   **sub-native** widths (byte-plus-mask), and **signed** multiword `int(N)` (v1 pins `uint(N)` at multiples of
   64 only, TYP-10), per-function effects/effect polymorphism (FND-11), sugar keywords `fn`/`struct` (FN-1),

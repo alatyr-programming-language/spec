@@ -12,7 +12,8 @@ renumbered. The `provenance:` line records what an entry refines and where it la
 ## Definitions, tiers, built-ins
 
 ### STD-1. Chapter sets the framework; the appendix is normative v1 content
-*spec: Stdlib §1–§4 (tiering, DCE, built-in catalog), Overview §6*
+*provenance: the per-domain Concurrency families enumerated in the appendix · spec: Stdlib
+§1–§4 (tiering, DCE, built-in catalog), Overview §6; Stdlib appendix §4.3, §4.4*
 
 **Why.** The standard library is **not** a place to defer decisions under the banner of
 "additive". The Stdlib *chapter* fixes the **framework** — the tier ordering (base <
@@ -40,8 +41,13 @@ be generous without penalising the freestanding target.
 The **built-in catalog** is partitioned, not duplicated: compiler **intrinsics** that
 cannot be written by hand (`typeinfo`/`bitcast`/`ptr`/`deref`/`size`/`align`/`resolves`/`compiles`/`embed`/
 `forget`/`trap`/instructions) versus ordinary prelude functions (`panic`/`exit`/`assert`). The
-catalog core lives in the appendix; the per-domain families (Assembly, Concurrency) are
-normative in their feature chapters, and the full catalog is the union. `assert` is an
+catalog core lives in the appendix; the per-domain families (Assembly, Concurrency,
+Functions' `dyn_over`) are normative in their feature chapters, and the full catalog is the
+union. The Concurrency families — `atomic::*`, `fence`, `volatile::*`, the 20 overflow policy
+functions, `fma`, `saturating_convert` — have their semantics in that chapter but their
+**names and signatures enumerated** in the appendix (§4.4): a family named only by a pattern
+(`wrapping_*`, `fetch_*`, "…") is not an enumeration, and two implementations would guess
+different sets. `assert` is an
 **ordinary function** whose phase comes from context (a comptime context turns a false
 assert into a compile error) — there is no separate `comptime assert` keyword (OP-1:
 nothing new where context already decides).

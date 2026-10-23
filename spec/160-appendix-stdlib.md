@@ -395,8 +395,9 @@ lives on the arch surface (Assembly §4). Two kinds.
 | `trap`      | `trap() -> Never`                                     | the language's **direct inline trap**: emits exactly the per-arch checked-failure instruction (per-arch appendix §2) — the **same** instruction as a failed built-in checked guard (CG-13); no message, no hook, no OS exit, no unwinding; identical in every context (hosted, `freestanding`, bare). The failure a library-defined numeric type uses for a check that mirrors the built-in family (Stdlib §4.1) |
 
 (The per-arch **instruction** intrinsics are also compiler intrinsics, but belong to the
-Assembly per-domain family of §4.3 — they are not relisted here, so the partition stays
-exact.)
+Assembly per-domain family of §4.3, and the `atomic` / `volatile` operations, `fence` and
+`fma` are enumerated with their family in §4.4 — none is relisted here, so the partition
+stays exact.)
 
 `typeinfo`'s result type **`TypeInfo`** is a base-prelude type — a comptime-only tagged
 enum (no RTTI is emitted; Comptime §5.1/§5.2):
@@ -467,22 +468,21 @@ compile error, §4.3).
 #### 4.3 Per-domain built-ins (defined in their feature chapters)
 
 The **full built-in catalog** (Stdlib §6) is the core built-ins above **plus** the
-per-domain families whose signatures and contracts are **normative in their feature
-chapters** — they are listed here for completeness, not redefined:
+per-domain families whose contracts are **normative in their feature chapters** — they
+are listed here for completeness, not redefined (the Concurrency families' names and
+signatures are the one enumeration held here, §4.4):
 
 - **Assembly** (Assembly §4, §7): `asm(template : str, operands…)` (raw GAS escape,
   requires an `unchecked` grant) and `at(base=, index=, scale=, disp=, offset=)` (the
   addressing operand on the **arch surface** — in scope for the chosen target, qualified
   `<arch>::at(…)` outside an arch gate); the per-arch **instruction** intrinsics and
   **operand decorators** (per-arch appendix).
-- **Concurrency** (Concurrency §2): the **atomic** family on `ptr` —
-  `atomic::load` / `atomic::store` / the fetch-RMW ops (`atomic::fetch_add`,
-  `atomic::fetch_sub`, …) / `atomic::cas_strong` / `atomic::cas_weak` (→ `(T, bool)`), each
-  taking an `Ordering` (comptime enum); **`fence(Ordering)`**; the **`volatile`** access
-  ops (`volatile::load` / `volatile::store`).
-- **Overflow** (Concurrency §6): the per-operation variants
-  `wrapping_*` / `saturating_*` / `checked_*` (→ `Option`) / `overflowing_*`
-  (→ `(T, bool)`) on the integer interpretations.
+- **Concurrency, overflow and float** (Concurrency §2–§4, §6.3, §7.3, §7.7): the
+  `atomic` module, `fence`, the `volatile` module, the overflow policy families, `fma` and
+  `saturating_convert`. Their **semantics** are normative in the Concurrency chapter; their
+  **enumerated v1 names and signatures** are §4.4 below — the data, as for any family.
+- **Functions** (Functions §1.6; FN-11): **`dyn_over(ptr([mut] store)) -> dyn fn(…) -> R`** —
+  erases a static closure held in a named place into the `{code, env}` fat pair.
 - **Bit shift / rotate** (Types §2.2, §3.2; OP-6): the **named** operation-functions
   `shl` / `shr` / `rotl` / `rotr`, each `op(in v : T, in n : usize) -> T` for `T` a
   `bitsN`/`uN`/`iN` — call/UFCS form (no glyph). `shr` selects logical (`uN`/`bitsN`) vs
@@ -491,8 +491,98 @@ chapters** — they are listed here for completeness, not redefined:
   `+ - * / % & | ^ ~` and the comparisons stay covered by Types §4.5/§5.3 (not relisted).
 
 So the catalog is **partitioned**, not duplicated: §4.1/§4.2 here are normative; the
-families above are normative in the cited chapters; together they are the complete v1
+families above are normative in the cited chapters, and §4.4 enumerates the names and
+signatures of the Concurrency-chapter families; together they are the complete v1
 built-in set.
+
+#### 4.4 Concurrency, overflow and float built-ins (the enumerated v1 set)
+
+The meaning of each operation is the Concurrency chapter's (cited per group); this
+section fixes **which** operations exist, their **names**, and their **signatures**. A
+name not listed here is not part of v1 (additive, FND-6). All are base-tier.
+
+**Atomics** (Concurrency §2) — compiler intrinsics in the prelude module `atomic`
+(qualified UFCS `p.atomic::load(ord)`). `T` is an **atomic-capable type**: an integer
+type — an interpretation `uN` / `iN` (with `usize` / `isize`) or the multiword `uint(N)`
+(so `u128`) — or a pointer type `ptr(U)` / `ptr(mut U)`, whose width `T.size() × 8` is an
+atomic-capable width of the selected target's features (per-arch appendix §2,
+atomic-widths); any other `T`, or an unavailable width, is a compile error. `I` is an
+atomic-capable **integer** type (a pointer has no atomic arithmetic). Every `ord` is
+`comptime`; its legal values per operation are Concurrency §2.
+
+```
+atomic::load(in p : ptr(mut T), comptime ord : Ordering) -> T
+atomic::store(in p : ptr(mut T), in v : T, comptime ord : Ordering)
+atomic::swap(in p : ptr(mut T), in v : T, comptime ord : Ordering) -> T            # the old value
+atomic::cas_strong(in p : ptr(mut T), in expected : T, in new : T,
+                   comptime ok_ord : Ordering, comptime fail_ord : Ordering) -> (T, bool)
+atomic::cas_weak(in p : ptr(mut T), in expected : T, in new : T,
+                 comptime ok_ord : Ordering, comptime fail_ord : Ordering) -> (T, bool)
+atomic::fetch_add(in p : ptr(mut I), in v : I, comptime ord : Ordering) -> I       # the old value
+atomic::fetch_sub(in p : ptr(mut I), in v : I, comptime ord : Ordering) -> I
+atomic::fetch_and(in p : ptr(mut I), in v : I, comptime ord : Ordering) -> I
+atomic::fetch_or(in p : ptr(mut I), in v : I, comptime ord : Ordering) -> I
+atomic::fetch_xor(in p : ptr(mut I), in v : I, comptime ord : Ordering) -> I
+fence(comptime ord : Ordering)                                                     # a flat prelude intrinsic, not in `atomic`
+Ordering                                                                           # the comptime prelude enum; its five values and their legality: Concurrency §2
+```
+
+CAS compares `deref(p)` with `expected` by **bit-equality** and returns the value it read
+with whether the exchange happened. `fetch_add` / `fetch_sub` **wrap** (two's-complement,
+the stored value is `old ± v` modulo `2^N`) and never trap, in checked code and inside
+`unchecked` alike; `fetch_and` / `fetch_or` / `fetch_xor` are bitwise. The access requires
+**natural atomic alignment** — the address a multiple of `T.size()` — per Concurrency §2.
+
+**`volatile`** (Concurrency §4) — compiler intrinsics in the prelude module `volatile`. `T`
+is a scalar (`bitsN`, `uN` / `iN` / `fN`, `usize` / `isize`, `bool`, `char`) or pointer type
+of a native load/store width of the target, so each call is exactly one access:
+
+```
+volatile::load(in p : ptr(T)) -> T             # a ptr(mut T) coerces (Memory §4.4)
+volatile::store(in p : ptr(mut T), in v : T)
+```
+
+**Overflow policy families** (Concurrency §6.3) — ordinary prelude functions. Each family
+member is `<policy>_<op>`, for exactly the operations of the checked-overflow set
+(Concurrency §6.1), on the operand types that can overflow:
+
+| `<op>` | Operands | Defined for | Overflows when |
+|--------|----------|-------------|----------------|
+| `add` | `(in a : T, in b : T)` | `uN`, `iN` | the mathematical `a + b` is outside `T` |
+| `sub` | `(in a : T, in b : T)` | `uN`, `iN` | the mathematical `a − b` is outside `T` |
+| `mul` | `(in a : T, in b : T)` | `uN`, `iN` | the mathematical `a × b` is outside `T` |
+| `neg` | `(in a : T)`           | `iN`       | `a == MIN` |
+| `div` | `(in a : T, in b : T)` | `iN`       | `a == MIN` and `b == -1` |
+
+Here `uN` / `iN` are the built-in interpretations at every width the target provides
+(with `usize` / `isize`). The four policies fix the result type and the result on
+overflow; without overflow every member returns the exact result:
+
+| Policy | Result type | On overflow |
+|--------|-------------|-------------|
+| `wrapping_<op>`    | `T`            | the two's-complement result modulo `2^N` (`wrapping_neg(MIN)` and `wrapping_div(MIN, -1)` are `MIN`) |
+| `saturating_<op>`  | `T`            | the nearest bound, `T`'s `MIN` or `MAX` (`saturating_neg(MIN)` and `saturating_div(MIN, -1)` are `MAX`) |
+| `checked_<op>`     | `Option(T)`    | `None` (otherwise `Some(result)`) |
+| `overflowing_<op>` | `(T, bool)`    | `(the wrapping result, true)` (otherwise `(result, false)`) |
+
+So the v1 set is exactly 4 × 5 names — `wrapping_add` … `overflowing_div` — with `neg` and
+`div` absent for `uN`. A division by zero is **not** overflow: each `*_div` fails it by the
+division-by-zero guard, a trap (Concurrency §6.3). `%`, shifts and rotations have no policy
+members (`MIN % -1` yields `0` and cannot overflow; an over-width shift is its own guard,
+OP-6).
+
+**Float** (Concurrency §7.3, §7.7):
+
+```
+fma(in a : F, in b : F, in c : F) -> F                       # compiler intrinsic; F ∈ { f32, f64 }
+saturating_convert(comptime T : type, in v : F) -> T         # ordinary prelude function; F ∈ { f32, f64 }, T a uN / iN (usize / isize)
+```
+
+`fma` is `a × b + c` computed exactly and **rounded once** (round-to-nearest-even).
+`saturating_convert(T, v)` (UFCS `v.saturating_convert(T)`, the argument order of
+`bitcast`) rounds toward zero like `T(v)`, then clamps to `T`'s `MIN` / `MAX`; `NaN` maps
+to `0`, `±Infinity` to `MAX` / `MIN`; it never traps and is mode-opaque. It shares the
+`saturating` prefix but is a conversion, not one of the 20 overflow-policy members above.
 
 ---
 
@@ -750,9 +840,11 @@ A conforming implementation MUST:
    returning **`Never`**, `trap` emitting exactly the per-arch checked-failure instruction
    (CG-13), and `assert` per Stdlib §4.3 (always emitted at runtime;
    compile error in a comptime context) — and honor the **per-domain families** (§4.3)
-   normative in their feature chapters (Assembly `asm`/`mem`/instructions; Concurrency
-   atomics/fence/`volatile`/overflow ops), the catalog being **partitioned** between
-   this appendix and those chapters, not duplicated;
+   normative in their feature chapters (Assembly `asm`/`at`/instructions; Functions
+   `dyn_over`), and exactly the enumerated Concurrency families of §4.4 — `atomic::*`,
+   `fence`, `volatile::*`, the 20 overflow policy functions, `fma`, `saturating_convert` —
+   the catalog being **partitioned** between this appendix and those chapters, not
+   duplicated;
 4. accept any value satisfying the **allocator protocol** of §5 as `@alloc(value)`,
    represent references per its declared lifetime mechanism (region/generational/manual),
    require an `unchecked` grant for `manual`-mechanism allocation/reference use (rejected

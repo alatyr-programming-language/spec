@@ -236,7 +236,8 @@ completeness and symmetry (precedent: Zig's `@setRuntimeSafety(false)`).
 ## Overflow and float
 
 ### CG-8. Integer overflow is defined — trap by default, wrap under `unchecked`
-*spec: Codegen §3 (spec/90)*
+*provenance: the policy families enumerated by the v1 built-in catalogue · spec: Codegen §3
+(spec/90); Concurrency §6.3; Stdlib appendix §4.4*
 
 **Why.** Per I11 overflow is **defined, not UB**, extending the checked guards (CG-2) to
 arithmetic. **By default (checked) it traps** — everywhere except inside an `unchecked`
@@ -264,11 +265,23 @@ and an over-width shift then take the target's hardware-defined behaviour (CG-13
 appendix §2). **Explicit policy operations** exist everywhere without a grant —
 `wrapping_*` (wrap), `saturating_*` (clamp), `checked_*` (→ `Option`), `overflowing_*`
 (→ `(T, bool)`) — as ordinary prelude functions (OP-1), so wrap is available even outside
-an `unchecked` scope. `bitsN` has no arithmetic (only bit-operations); overflow concerns
+an `unchecked` scope. **Each family covers exactly the checked-overflow set**: `add`, `sub`,
+`mul` on `uN`/`iN`, `neg` and `div` on `iN` — 20 names, `wrapping_add` … `overflowing_div`
+(Stdlib appendix §4.4). A policy operation is **mode-opaque** (it does not read
+`verify.checked`, CG-7), so its result is the same in both modes, and a `*_div` with a zero
+divisor traps in both — division by zero is a separate guard, not overflow. *Rejected:*
+policy members for `%` (`MIN % -1` yields `0`, nothing overflows), for shifts (an over-width
+count is its own guard and OP-6 rejected a wrapping/saturating count), for unsigned `neg`
+and `div` (no member of the checked-overflow set), and for `uint(N)` (a library type; its
+`unchecked` wrap already exists via CT-11) — each a name with no overflow to give a policy
+to, or one more obligation for a library type, against PRIN-1. A `checked_div` returning
+`None` on a zero divisor — it would make a policy family also absorb a non-overflow guard.
+`bitsN` has no arithmetic (only bit-operations); overflow concerns
 the numeric interpretations `u`/`i`.
 
 ### CG-9. Float determinism — strict at comptime, no hidden contraction at runtime
-*spec: Codegen §3 (spec/90)*
+*provenance: `fma` and the saturating conversion pinned by the v1 built-in catalogue ·
+spec: Codegen §3 (spec/90); Concurrency §7.3, §7.7; Stdlib appendix §4.4*
 
 **Why.** Reproducibility (CT-1/CT-2) and predictability (I1) constrain floats.
 **Comptime-float is strict IEEE-754**, round-to-nearest-even, **host-independent** (soft
@@ -279,8 +292,16 @@ semantically-preserving optimizer (CG-5) never applies them silently; FMA only o
 request; **subnormals preserved** (flush-to-zero / denormals-are-zero are non-IEEE and
 target-dependent, so never enabled implicitly — they would break reproducibility).
 **Float→int rounds toward zero**; out-of-range or NaN **traps** by default (checked, like
-narrowing), `saturating_*` clamps (NaN→0) everywhere, and inside an `unchecked` scope the
-conversion is hardware-defined (no range/NaN trap).
+narrowing), `saturating_convert(T, f)` — the `saturating_*` family's conversion, in
+`bitcast`'s argument order — rounds toward zero and clamps (NaN→0, ±∞→MAX/MIN) everywhere,
+mode-opaque, and inside an `unchecked` scope `T(f)` is hardware-defined (no range/NaN trap).
+**`fma(a, b, c)`** on `f32`/`f64` rounds once; where the selected features have no fused
+instruction it lowers to a correctly-rounded software routine (the soft-float provision,
+TYP-2/Types §3.3), never to `a * b + c` rounded twice — the result is bit-identical on every
+target, which is the point of determinism. *Rejected:* a located compile error on a target
+without a fused instruction — it would make `fma` unusable on the baseline `x86_64` and on
+`i386` although a correct result is computable, and soft-float already sets the precedent of
+visible-cost software arithmetic; a double-rounded fallback — it silently changes results.
 
 ---
 

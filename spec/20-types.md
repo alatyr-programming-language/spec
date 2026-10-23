@@ -188,7 +188,7 @@ class fixes whether the conversion may be implicit and what it costs:
 |-------|---------|------|------|----------|
 | **widen** | lossless size increase within one numeric domain (`u8`→`u64`) | extended | sign/zero-extend instruction | `T(v)`; **implicit** outside `no_abstractions` |
 | **narrow** | size decrease, possibly lossy (`u64`→`u8`) | truncated | checked by default (traps if out of range); inside an `unchecked` scope narrowing truncates (CG-7) | `T(v)`; always explicit |
-| **numeric** | domain change (`int`↔`float`, signed↔unsigned value) | changed | conversion instruction (`float`→`int`: toward-zero, range/NaN checked — Concurrency §7.7) | `T(v)`; always explicit |
+| **numeric** | domain change (`int`↔`float`, signed↔unsigned value) | changed | conversion instruction (`float`→`int`: toward-zero, range/NaN checked — Concurrency §7.7; the clamping form is the prelude `saturating_convert(T, f)`, Stdlib appendix §4.4) | `T(v)`; always explicit |
 | **brand** | add/remove a brand over **the type it directly brands**, same numeric domain (`Meters`↔`u64`) | unchanged | zero | `T(v)`; always explicit |
 | **reinterpret** | same-size bit reinterpretation | unchanged | zero | `bitcast`; always explicit |
 
@@ -1056,11 +1056,13 @@ system fixes only that they are **defined** (I11):
   an `unchecked` scope it **wraps** (CG-7), and explicit
   policy operations select wrap/saturate/checked/overflowing. The **full set** — which
   operations trap, which guards are separate (division by zero, over-width shift), and
-  the explicit-operation families — is enumerated in the Concurrency-Overflow-Float
-  chapter §6; it is **not** restated here.
+  the explicit-operation families — is specified in the Concurrency-Overflow-Float
+  chapter §6, and the policy functions' names and signatures are enumerated in the Stdlib
+  appendix §4.4; neither is restated here.
 - **Floating point** is deterministic: compile-time evaluation is strict IEEE-754
   independent of the host; run-time evaluation is the target's IEEE-754 with **no**
-  hidden contraction (e.g. no implicit fused multiply-add).
+  hidden contraction (e.g. no implicit fused multiply-add — only the explicit `fma`,
+  Concurrency §7.3 / Stdlib appendix §4.4).
 - **Operators**: bitwise `&` `|` `^` `~` and comparisons are greedy overloadable
   functions yielding their result; the logical `and` / `or` / `not` are
   short-circuiting **control flow** (keywords), so their laziness is visible (I3).
