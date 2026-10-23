@@ -312,7 +312,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   validity is checked on access against the owning arena. For long-lived links (graphs and the like). v1
   surface (MEM-3): the ordinary library type `Handle(T)` (a number, no region name; distinct per `T` because a
   type-function result is nominal by (function, args), Type System §4.1); `@alloc(a) x := init`
-  binds it; the value is read by `get(a, h)` — an **ordinary function** with a `scoped` (second-class)
+  binds it; the value is read by `get(ptr(a), h)` (the arena an explicit argument, by address) — an **ordinary function** with a `scoped` (second-class)
   return (MEM-3), bounds-checked → a scoped pointer, **transient** in checked code (used within its full
   expression, never named) — never by dereferencing the handle itself.
 

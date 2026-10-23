@@ -66,7 +66,7 @@ not express their own drop).
 **Why.** MEM-1's menu deferred each mechanism's concrete surface to "stdlib, additively",
 which left the region/handle mechanism with no implementable v1 form. The region surface
 (`Arena` / `Handle(T)` / `arena_over` / `get` / `close`) is fixed as **ordinary library
-code**, and `get(a, h)` is de-privileged from a compiler-recognized intrinsic to an
+code**, and `get(ptr(a), h)` is de-privileged from a compiler-recognized intrinsic to an
 **ordinary function** with a **second-class (`scoped`) return** — a result the caller may
 use at the call site but not store or re-escape. Temporal safety then rests on three
 already-present things, no new reference type: the arena's **linearity** (MEM-2), `get`'s
@@ -87,6 +87,10 @@ already-present things, no new reference type: the arena's **linearity** (MEM-2)
   hazard". The rule is **generic** to `scoped` returns, so `get` still has no arena-specific
   compiler contract and a user could write the same signature. Inside `unchecked { … }` the
   result may be bound to a local; its staleness is then hardware-defined (I11).
+- **The arena is an explicit argument**, by address: `get(ptr(a), h)`. `get`'s
+  `in a : ptr(Arena)` is not an allocator parameter, so no ambient fills it (MEM-5), and a
+  free-call argument is never auto-addressed — only the generic UFCS receiver form
+  `a.get(h)` takes the address, as for any method (MOD-3).
 
 The `scoped` marker carries information
 **only on a result type** (every reference is second-class by default, so the qualifier means
@@ -104,7 +108,9 @@ cursors over one buffer, and a non-consuming `close(in out self)` let a handle u
 "residual hardware-defined hazard" in checked code (superseded — it contradicted I11 and
 Memory §5.1); a **stored** get-result with a non-mutation rule while it lives (a local borrow
 check, against Memory §5.7 — no borrow checker); a **runtime generation check** on `get` (a
-cost per access and a fat handle, and it does not stop arena copies). The second-class return
+cost per access and a fat handle, and it does not stop arena copies); an **implicit or ambient
+arena** for `get`, or an auto-address-of on its free-call argument (hidden data flow into an
+access that the reader must see, I3 — the arena is named at every `get`). The second-class return
 de-privileges `get` *and* keeps store-safety *and* introduces no lifetime variable.
 
 ### MEM-4. The allocator protocol `alloc`
