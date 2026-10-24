@@ -89,14 +89,17 @@ of the cross-cutting pass whenever a norm or the repository's status changes.
   process here changes, change it there in the same commit; `AGENTS.md` governs.
 - **`CHANGELOG.md`** — the versioning policy and release history. A **normative** change
   gets an entry under *Unreleased*; an editorial one does not.
-- **The version** — `1.0.0`, stated in `spec/00-overview.md` (the Status block),
-  `README.md`, and `CHANGELOG.md`. Those three must agree. MAJOR is the *language*
-  version (pinned at `1` by `I10`/`PRIN-2`), MINOR a normative revision of the text,
-  PATCH an editorial one. Maturity is **not** in the version string: it lives in the
-  per-chapter `Status` lines, and acceptance flips those, not the number. Versions are
-  **cut as revisions, not per commit** — normative entries accumulate under *Unreleased*,
-  and a release bumps those places, renames the section, and is tagged `v<version>`
-  (procedure in `CONTRIBUTING.md`). Do not cut or tag a revision unasked.
+- **The version** — stated in four places that must agree: the Status block in
+  `spec/00-overview.md`, `README.md`, `CHANGELOG.md`, and the citation example in
+  `LICENSE` §4 (the list is in `CONTRIBUTING.md`, "How to cut one"). This file names
+  no number, so it cannot go stale; read the current one from `spec/00-overview.md`.
+  MAJOR is the *language* version (pinned at `1` by `I10`/`PRIN-2`), MINOR a
+  normative revision of the text, PATCH an editorial one. Maturity is **not** in the
+  version string: it lives in the per-chapter `Status` lines, and acceptance flips
+  those, not the number. Versions are **cut as revisions, not per commit** — normative
+  entries accumulate under *Unreleased*, and a release bumps those places, renames the
+  section, and is tagged `v<version>` (procedure in `CONTRIBUTING.md`). Do not cut or
+  tag a revision unasked.
 - **`LICENSE`** + `LICENSE-CC-BY-4.0` + `LICENSE-APACHE-2.0` — dual licensing: CC BY 4.0
   for specification text, Apache-2.0 for code fragments. Do not restate license terms
   anywhere else; link to `LICENSE`.
