@@ -49,6 +49,37 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.2.0 — 2026-10-24
+
+Two gaps, both found by measuring the reference implementation rather than by reading the
+text, and both silent: the counter could not say which backend was wrong because the text
+did not decide. Each is normative, so MINOR moves (I10: no enumerated v1 construct is
+removed, MAJOR stands).
+
+**Normative — signedness is a property of the value, never of the expression's shape**
+(Concurrency §6.5; CC-8). The result type of unary `−` is its **operand's** type: over
+`u64`, `-a` is the negation modulo 2^64 — `2^64 − 5` for `a = 5`, a representable value —
+and **not** the signed `-5`. Because the operand types are unchanged, an operation's checked
+guard is selected by its **operand types** and by nothing else: unsigned tests the carry out
+of the result, signed tests signed overflow. An operand that *arrives* from a negation, a
+cast, a call or a load does not make the operation signed; the shape of a subexpression is
+not a type (I11). This also fixes what §12 item 3's "signedness in the operations" means —
+the operand's interpretation selects the operation; it is not permission for an operator to
+mint a new signedness for its result. Found as `u64(30 + -a)` with `a : u64 = 5`: x86_64
+emitted a signed guard and answered `25` where the unsigned sum overflows and must trap.
+Readings B (unary `−` yields signed) and C (forbid the form) are recorded with their costs
+in CC-8; B was rejected because it makes the inference that #546, #764 and #766 are made of.
+
+**Normative — `unchecked` is written by the programmer, never introduced by a pass**
+(Concurrency §6.6; CC-9). No compiler pass — lowering, IR builder or peephole — may open an
+`unchecked` scope the source does not contain. A grant the compiler invents moves the
+checked-by-default decision of §6.1 to a level where it is invisible in the program, and it
+makes every grant-reporting instrument false: a tool that answers "was this place inside a
+grant?" from the lexical nesting of a walk reports `in` for a place no author granted. A pass
+needing an unguarded wrap says so with an operation mode or a distinct IR operation, and the
+provenance of every grant in its output stays distinguishable — source-written or
+pass-introduced, never conflated.
+
 ## 1.1.0 — 2026-10-23
 
 The 2026-10-23 coherence audit: the checked-guard family, region/arena temporal safety, the
