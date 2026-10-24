@@ -260,6 +260,48 @@ ordinary functions (Type System §4.5):
 `bitsN` has **no** arithmetic — only bit operations (Type System §2.2); overflow
 concerns the numeric interpretations `u`/`i` only.
 
+#### 6.5 Signedness is a property of the value, never of the expression's shape
+
+The result type of **unary `−`** is its **operand's** type. Over an unsigned operand the
+result stays **unsigned** and its value is the two's-complement negation modulo `2^N` —
+so `-a` with `a : u64 = 5` is `2^64 − 5`, a representable value, and **not** the signed
+`-5`. Over a signed operand the result is that same signed type, and negating `MIN` is
+the checked failure of §6.1.
+
+Because the operand types are unchanged, **the guard an operation carries is chosen by
+the operand types and by nothing else**: an unsigned operation tests the **carry** out of
+the result (`jnc`/`bcs` family on x86_64, the per-arch equivalent in appendix §2), a
+signed operation tests **signed overflow** (`jno`/`jo`). An operand that *arrives* from a
+negation, a cast, a call or a load does not make the operation signed — the shape of the
+subexpression is not a type (I11: no rule is inferred from spelling). This is the same
+fact Type System §3 states as "signedness in the operations" (§12 item 3): the
+**interpretation of the operands** selects the operation, so a `u64` operand yields the
+unsigned operation wherever it came from; it does not mean an operator may choose a new
+signedness for its result.
+
+This settles the case that the reference implementation got wrong in opposite directions on
+different backends: for `u64(30 + -a)` with `a : u64 = 5`, the sum is an **unsigned**
+operation whose operands are `30` and `2^64 − 5`, which overflows unsigned, so it **must
+trap**. Emitting a signed guard (`addq` + `jno`) answers `25` silently instead — a wrong
+value, not a missed trap on someone else's part. A backend that selects the guard's
+condition from how an operand is spelled, rather than from the type recorded for the
+value, miscompiles every expression of this shape.
+
+#### 6.6 `unchecked` is written by the programmer, never introduced by a pass
+
+An `unchecked` scope exists in a program **only where the author wrote it** — `unchecked
+expr` or `unchecked { … }` in the source (§6.2). No compiler pass may introduce one: not
+the lowering, not the shared IR builder, not a peephole. An intermediate representation
+that carries an `unchecked` the source does not contain makes the checked-by-default rule
+of §6.1 **invisible at the level where the decision is taken**, and makes any tool that
+reports "was this place inside a grant?" report falsely, because it can no longer tell a
+grant the author accepted from one the compiler invented.
+
+A pass that needs an operation to wrap without a guard expresses that at the level where
+it lives — an operation **mode** (Codegen chapter, the guard/mode model), or a distinct IR operation — and does not
+dress it as the programmer's keyword. Where such a pass exists, the provenance of every
+grant in its output is distinguishable: source-written or pass-introduced, never conflated.
+
 ---
 
 ## Part C — Floating point
@@ -350,3 +392,10 @@ A conforming implementation MUST:
    via explicit `fma`, follow IEEE non-trapping exceptions (float div-by-0 → ±∞, not a
    trap — unlike integer), unordered NaN comparisons, RNE rounding with no implicit
    mode state, and `f32`/`f64` as the v1 types (§7; I1/CG-9).
+7. keep **signedness a property of the value**: unary `−` over an unsigned operand yields
+   that same unsigned type with the two's-complement negation modulo `2^N`, and every
+   operation's checked guard is selected by its **operand types** (unsigned → carry,
+   signed → signed overflow) and never by the shape of a subexpression; and introduce
+   **no** `unchecked` scope that the source did not write — a pass needing an unguarded
+   wrap says so with an operation mode or a distinct IR operation, never by dressing up the
+   programmer's keyword (§6.5, §6.6; CC-8, CC-9; I11).

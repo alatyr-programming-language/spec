@@ -135,3 +135,69 @@ FFI. This lives at the raw level (§9.2) with a safe API layered on top. Togethe
 poll-future being a library and async/await-sugar being additive (CC-6), this passes the
 I10/FND-6 test: the concurrency direction grows additively on the current language without
 underspecifying v1.
+
+### CC-8. Unary `−` keeps its operand's signedness; the guard is chosen by type
+*spec: Concurrency §6.5*
+
+**Found as.** `test/lower_bugA_neg_operand.al` — `main := fn() -> u64 { a := u64(5);
+u64(30 + -a) }`, every value `u64`. The cross-backend counter recorded it as `TRAP ×3`
+and blamed the twins. Measured, x86_64 emits `subq` then `addq` + **`jno`** — a *signed*
+overflow test — and answers `25`; the twins, lowering the shared IR, trap. x86_64 emits
+the correct unsigned guard (`addq` + **`jnc`**) when both operands are plain, so the
+machinery exists and chose wrongly here; the only thing that changed is that one operand
+now *arrives from a negation*. The spec enumerated unary `−` in the checked set (§6.1)
+and let it wrap under `unchecked` (§6.2), but **never said what the result type and
+signedness of unary `−` over an unsigned operand are** — so the counter could not say
+which backend was wrong, and the two readings disagreed about who miscompiles.
+
+**Options, as put to the owner.**
+
+| | `-a` for `a : u64` | `30 + -a` | who was right | cost |
+|---|---|---|---|---|
+| **A — signedness stays in the type** *(chosen)* | `2^64 − 5`, representable | unsigned overflow → **traps** | the twins; x86_64's `25` is a **silent wrong value** | the counter row moves from `TRAP ×3` to `WRONG-VALUE:x86_64`, and the fix lands in x86_64's guard selection |
+| **B — unary `−` yields a signed value** | `-5` | `25`, no overflow | x86_64; the twins over-trap | signedness would be derived from an *operation* rather than from the declaration — the very inference the language's strict forms forbid |
+| **C — forbid negating an unsigned operand** | compile error | — | neither, the program is ill-formed | breaks existing code of unknown extent, and needs a new diagnostic class |
+
+**Why A.** It is the only reading under which signedness has one home. `u`/`i` are
+zero-cost interpretations *over blocks*, and Type System §12 item 3 puts signedness
+**in the operations** — meaning the operand's interpretation selects the operation, so a
+`u64` operand yields the unsigned operation wherever it came from. If a unary operator could flip the signedness of its result independently of its operand's
+declared type, then no type-level rule about overflow would be stable — every backend would
+have to re-derive signedness from expression shape, which is the mechanism behind #546,
+#764 and #766, three of the counter's standing families. A also keeps §6.1's checked set
+meaningful for unsigned types: without it, "unsigned overflow traps" has no observable
+content on any expression containing a minus. C was rejected as disproportionate: the form
+is expressible and defined under A, and forbidding it would break working code to settle a
+question the type system already answers.
+
+**Consequence for the counter.** `lower_bugA_neg_operand` stops being a twin defect. Its
+row is `WRONG-VALUE:x86_64` — the shape that matters most, because a silent wrong answer
+recorded as someone else's trap is never looked for in `lower.al`.
+
+### CC-9. A pass may not invent an `unchecked` scope
+*spec: Concurrency §6.6*
+
+**Found as.** The same fixture. The shared IR builder emits, for source that contains no
+`unchecked`:
+
+    unchecked {
+      %3 = const.u i64 0
+      %4 = sub.wrap.u i64 %3, %1
+    }
+
+**Why forbidden.** §6.2 makes `unchecked` a *verification mode the programmer selects*, and
+§6.1 makes checked the default. A grant the compiler invents moves that decision to a level
+where it is no longer visible in the program, and it corrupts every instrument that reports
+grants: the #529 census's GRANT column answers "was this place inside a grant?" from the
+lexical nesting of the check walk, so an invented wrapper makes it say `in` about a place
+the author never granted — the same class of failure as a zero that was never measured
+(#1029) or a refusal labelled with the wrong cause (#1033). A pass that needs an
+unguarded wrap has an honest way to say so: an operation **mode** (Codegen), or a distinct
+IR operation. The alternative — allow it and document it — was rejected because it would
+require every grant-reporting tool to carry provenance it does not have today, and because
+it makes the checked-by-default guarantee unreviewable by the person who wrote the code.
+
+**Downstream.** The compiler conforms when the pin moves (the workspace rule: a spec change
+binds the compiler only after a release is cut and the pin moves in its own explicit
+compiler commit). Until then the builder keeps its current output, and this is recorded
+rather than silently fixed in a feature PR.
