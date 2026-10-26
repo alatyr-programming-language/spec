@@ -292,7 +292,10 @@ census's OP-CMP ratchet stays as the measurement either way (#1029).
 
 **Downstream.** The compiler conforms when the pin moves (workspace rule: a spec change binds the
 compiler only after a release is cut and the pin moves in its own explicit compiler commit). #1034
-implements the refusal on the comparison path and waits on that pin, not on review. Its seam is
+implements the refusal on the comparison path and waits on that pin, not on review — and, once the
+pin moves, on a rebase onto the new `main`, the **expected-delta** update it forces (the census and
+`xbackend_diff.baseline` counts move when the refusal starts firing), and a **green authoritative gate**
+before it lands. Its seam is
 kind-based (`TyInt × TyPtr`, either order), so it enforces the **grant boundary**; the rule that the
 integer operand is `usize` is NOT yet enforced there — inside a grant `p == u32(0)` stays accepted, and
 closing that is a follow-up on #1034, not a claim of this record.
