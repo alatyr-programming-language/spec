@@ -260,8 +260,8 @@ and the frozen seed, while `scripts/ptrint_census.sh` reports the OP-CMP row for
 proved the hook fires). So detection and enforcement had come apart. The spec was silent: §4.5
 named *fabricating* a pointer from an integer as capability-requiring, and said nothing about
 comparing one. Silence here is not neutral — two implementations could accept and reject the same
-source, and the spec's own bar — every question a compiler developer meets has exactly one answer in it —
-leaves a form that is neither confined nor permitted with no answer at all.
+source, and FND-3's bar — two independent developers must build **compatible** compilers **without
+guessing** — leaves a form that is neither confined nor permitted with no answer at all.
 
 **The rule.** Comparing a pointer with an integer is legal **only inside an `unchecked` grant**,
 where it tests the pointer's representation, the integer operand being `usize` and no conversion
@@ -283,4 +283,7 @@ census's OP-CMP ratchet stays as the measurement either way (#1029).
 
 **Downstream.** The compiler conforms when the pin moves (workspace rule: a spec change binds the
 compiler only after a release is cut and the pin moves in its own explicit compiler commit). #1034
-implements the refusal on the comparison path and waits on that pin, not on review.
+implements the refusal on the comparison path and waits on that pin, not on review. Its seam is
+kind-based (`TyInt × TyPtr`, either order), so it enforces the **grant boundary**; the rule that the
+integer operand is `usize` is NOT yet enforced there — inside a grant `p == u32(0)` stays accepted, and
+closing that is a follow-up on #1034, not a claim of this record.

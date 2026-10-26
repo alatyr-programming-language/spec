@@ -364,27 +364,39 @@ comparison is **ill-formed**. Inside an `unchecked` grant, where an address may 
 fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked `ptr(T)`
 type, not for raw fabricated bits), it is legal and tests the pointer's representation.
 
-**The comparison performs no conversion.** §4.3 governs conversions and each of its rows
-is explicit; none of them is a pointer-meeting-integer edge, and this rule adds none. The
-two operands are read as they are stored, at their own widths. Therefore the integer
-operand MUST be `usize` — the pointer's own width, the form the ABI appendix already names
-as the register-width integer that is interchangeable with `ptr(T)` (ABI §5) — and any
-other integer type is ill-formed. This is what makes the rule determinate: `p == -1` has
-no reading (there is no signed `usize`, and no implicit widening or re-signing reaches
-this operator), so no target can answer it differently.
+**The comparison performs no conversion.** The conversion lattice (Type System §4.2) has
+no pointer-meeting-integer edge, and this rule adds none; implicit conversion is confined
+to **widen** within one numeric domain (Type System §4.3), and a pointer is not in that
+domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
+own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
+common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
+ill-formed. Both operands are therefore `usize` values, of one width, and the answer is
+determinate: `p == -1` has exactly one reading, because the literal `1` takes `usize` from
+the position and unary `−` over an unsigned operand keeps that type and yields the
+two's-complement negation (Concurrency §6.5, CC-8) — so it asks for address `2^64 − 1`,
+the same value on every target.
 
 **What is hardware-defined, and what is not.** The *representation* is the target's: a
 pointer's width and the bits a fabricated address holds are the machine model's, and an
 address arithmetic overflow is the ISA's answer (I6; I11 as §4.5 already uses it). The
 *comparison* is not: given two `usize` values, every conforming target returns the same
 `true` or `false`. Nothing here licenses two implementations to answer one comparison
-differently — that would reverse I1.
+differently — that is the bar FND-3 sets, and this rule holds it.
+
+**The comparison is a compiler-known operator site.** It is not an `Eq` instance: `eq` is
+homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no `T` for a
+pointer meeting an integer, and no user-declared `eq` — not `eq(in a : ptr(T), in b :
+usize)` — lifts the grant requirement, because the site is refused before overload
+resolution. The precedent is the wording arrays and slices already carry: "the compiler-known
+built-ins … there is no source-level prelude function to override for them" (Type System
+§4.4).
 
 **The boundary of this rule.** It covers a pointer meeting an integer, and nothing else.
-Two pointers compared with each other (`p == q`, `p < q`) are not this capability and stay
-exactly as the comparison rules have them. `Option(ptr(T)) == None` is not a raw pointer
-meeting an integer either: its `None` is the niche §4.2 defines, and comparing an `Option`
-is the structural equality its derive gives it (Stdlib appendix §2.6). The concurrency
+Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
+compare by their address bits, which is what the structural derive gives a `Pointer` leaf
+(Stdlib appendix §2.6), and they stay legal in checked code. `Option(ptr(T)) == None` is
+not a raw pointer meeting an integer either: its `None` is the niche §4.2 defines, and
+comparing an `Option` is that same structural derive over the variant. The concurrency
 surface admits an `Option(ptr(U))` atomically for exactly this reason (Concurrency §2:
 checked code holds "no node" without a raw `ptr == 0`).
 
@@ -945,7 +957,7 @@ A conforming implementation MUST:
    definite assignment — at compile time (§3);
 5. represent pointers as non-null `ptr(T)`/`ptr(mut T)`, represent absence
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
-   pointer arithmetic and integer→pointer (including `str_at`) and a pointer meeting an
+   pointer arithmetic, integer→pointer (including `str_at`), and a pointer meeting an
    integer at a comparison (§4, §4.5) to an `unchecked` grant / assembly;
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access

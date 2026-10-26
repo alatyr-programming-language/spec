@@ -56,9 +56,10 @@ nothing about comparing one, so the checker accepted `return p == 0` with `rc=0`
 `scripts/ptrint_census.sh` already reported the shape as an OP-CMP row (#1029 proved the hook
 fires). It is now ill-formed outside an `unchecked` grant, and inside one it tests the
 pointer's representation — the integer operand being `usize`, the pointer's own width, with **no**
-conversion performed (§4.3 gains no edge). What is target-dependent is the representation, not the
-comparison: given two `usize` values every conforming target answers alike (I6; I11 as §4.5 uses it
-for address arithmetic). The rule is the grant
+conversion performed (the lattice, Type System §4.2, gains no edge; implicit conversion stays confined
+to widen, §4.3). What is target-dependent is the representation, not the comparison: given two `usize`
+values every conforming target answers alike (I6; I11 as §4.5 uses it for address arithmetic), and
+`p == -1` has exactly one reading — `2^64 − 1`, by CC-8. The rule is the grant
 model §4.5 already applies to its neighbouring operation, and MEM-8 makes the checked case
 vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so a checked
 `p == 0` cannot be true and the question the author meant is `Option(ptr(T))`, whose `None`

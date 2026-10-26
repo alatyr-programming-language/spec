@@ -123,9 +123,15 @@ structurally** over `typeinfo(T)` (Comptime §5.3), so a type provides them **by
 default** and may **override** per type (TYP-5). The derive walks each kind by its `typeinfo`
 shape: a **struct**'s fields via `a.(f)` (Comptime §5.4), an **array**'s elements by index,
 and an **enum**'s variants via the comptime variant pattern `T.(v)` in a `comptime
-for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directly. So the
+for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directly, and a
+**`Pointer`** leaf (`typeinfo` kind `Pointer{pointee, mutable}`, §4.1; not a `ScalarKind`
+member) compares **by its address bits**, which is the only thing a pointer has. So the
 derives are library code over `typeinfo` for **every** type, the compiler keeping no
-built-in structural-comparison knowledge. The signatures below are the **conformance
+built-in structural-comparison knowledge — with one exception it does not need to know:
+a comparison whose two operands have **different** types never reaches a derive at all,
+because `eq` is homogeneous (`eq(in a : T, in b : T)`); such a site is refused by the
+checker as ill-formed before overload resolution, which is how Memory §4.5 confines a
+pointer meeting an integer without the compiler holding any structural rule about it. The signatures below are the **conformance
 shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 
 - **`Eq`** — `eq(in a : T, in b : T) -> bool` (backs `==` / `!=`); default = componentwise
