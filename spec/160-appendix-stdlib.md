@@ -125,7 +125,15 @@ shape: a **struct**'s fields via `a.(f)` (Comptime §5.4), an **array**'s elemen
 and an **enum**'s variants via the comptime variant pattern `T.(v)` in a `comptime
 for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directly, and a
 **`Pointer`** leaf (`typeinfo` kind `Pointer{pointee, mutable}`, §4.1; not a `ScalarKind`
-member) compares **by its address bits**, which is the only thing a pointer has. So the
+member) compares **by its address bits**, which is the only thing a pointer has — and that walk
+is **not** the read Memory §4.5 confines. §4.5's grant governs *naming* the integer: a `bitcast` to
+`usize`, an explicit comparison with one, arithmetic on one. A derived `eq`/`lt`/`hash` names neither,
+so `hash(p)` and `p == q` over a pointer-bearing type need **no** grant in checked code, and the
+pointer stays an **opaque key** there — equal pointers hash alike, different pointers need not. What
+stays confined is the explicit read, and it stays confined **inside a derived body too**: a hand-written
+`Hash` impl that writes `bitcast(usize, self)` outside `unchecked { … }` is ill-formed exactly as it
+would be in a function body, and legal and hardware-defined inside one. The rule is about the spelling,
+not about where the spelling sits. So the
 derives are library code over `typeinfo` for **every** type, the compiler keeping no
 built-in structural-comparison knowledge — with one exception it does not need to know:
 a comparison whose two operands have **different** types never reaches a derive at all,
