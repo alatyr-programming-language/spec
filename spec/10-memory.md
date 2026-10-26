@@ -347,7 +347,11 @@ identity; Type System chapter).
 Pointer arithmetic and an integer↔pointer conversion **in either direction** are
 capability-requiring operations: fabricating a pointer from an integer (`bitcast` to a pointer
 type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
-pointer out as an integer (`bitcast` to `usize`, or any other equal-width integer). The body
+pointer out as an integer **value** (`bitcast` to `usize`, the only spelling that keeps the
+program's meaning explicit). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
+§2.6's derive walks the `Pointer` leaf by its address bits and stays legal in checked code, so
+`hash(p)` and `p == q` need no grant — what needs one is naming the integer explicitly, because
+that is where the address leaves the typed world. The body
 spells both directions because this section's own title says `integer↔pointer` and Grammar §3.7
 lists the raw set as `int↔ptr`; confining only one direction left the other as a two-token
 bypass of the rule below — `bitcast(usize, p) == 0` outside a grant is an integer comparison the
@@ -370,16 +374,19 @@ fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked
 type, not for raw fabricated bits), it is legal and tests the pointer's representation.
 
 **The comparison performs no conversion.** The conversion lattice (Type System §4.2) has
-no pointer-meeting-integer edge, and this rule adds none; implicit conversion is confined
-to **widen** within one numeric domain (Type System §4.3), and a pointer is not in that
-domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
+no **implicit** pointer-meeting-integer edge, and this rule adds none; its reinterpret row
+covers same-size bit reinterpretation and is **explicit** (§4.4), which is exactly the
+`bitcast` §4.5 confines above. Implicit conversion stays confined to **widen** within one
+numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
 own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
 common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
 ill-formed. Both operands are therefore `usize` values, of one width, and the answer is
 determinate: `p == -1` has exactly one reading, because the literal `1` takes `usize` from
 the position and unary `−` over an unsigned operand keeps that type and yields the
-two's-complement negation (Concurrency §6.5, CC-8) — so it asks for address `2^64 − 1`,
-the same value on every target.
+two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of
+the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's pointer width, Type System §7:
+`2^32 − 1` on i386/aarch32/riscv32, `2^64 − 1` on the 64-bit targets), the same value on
+every target **of that width**.
 
 **What is hardware-defined, and what is not.** The *representation* is the target's: a
 pointer's width and the bits a fabricated address holds are the machine model's, and an
@@ -392,9 +399,9 @@ differently — that is the bar FND-3 sets, and this rule holds it.
 homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no `T` for a
 pointer meeting an integer, and no user-declared `eq` — not `eq(in a : ptr(T), in b :
 usize)` — lifts the grant requirement, because the site is refused before overload
-resolution. The precedent is the wording arrays and slices already carry: "the compiler-known
+resolution (Functions §1.4, FN-7). The precedent is the wording arrays and slices already carry: "the compiler-known
 built-ins … there is no source-level prelude function to override for them" (Type System
-§4.4).
+§4.5).
 
 **The boundary of this rule.** It covers a pointer meeting an integer, and nothing else.
 Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
