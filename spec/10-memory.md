@@ -353,16 +353,38 @@ Outside such a grant they are ill-formed. Checked code traverses by
 code contains no pointer-arithmetic UB.
 
 **A pointer meeting an integer is the same capability.** Comparing a pointer with an
-integer — `p == 0`, `p != 0`, `p < q` where one side is an integer — is listed here
-rather than in the comparison rules because what it asks is not a value question: it asks
-whether a machine address holds a particular bit pattern, which is the same knowledge that
-fabricating an address requires. It is also, outside a grant, **dead by invariant**: §4.1
-and MEM-8 make every `ptr(T)` non-null and valid, so a checked `p == 0` cannot be true and
-the author's real question was "is there nothing here?" — which is `Option(ptr(T))`, whose
-`None` is the all-zero niche (§4.2, Type System §6.2) and which a `match` cannot leave out.
-Inside an `unchecked` grant, where an address may be fabricated or already invalid (§4.5),
-the comparison is meaningful: it is legal and tests the pointer's representation as an
-unsigned word (hardware-defined, I11). Outside a grant it is ill-formed. The concurrency
+integer — `p == 0`, `p != 0`, `p < 4096` — is listed here rather than in the comparison
+rules because what it asks is not a value question: it asks whether a machine address holds
+a particular bit pattern, which is the same knowledge that fabricating an address requires.
+It is also, outside a grant, **dead by invariant**: §4.1 and MEM-8 make every `ptr(T)`
+non-null and valid, so a checked `p == 0` cannot be true and the author's real question was
+"is there nothing here?" — which is `Option(ptr(T))`, whose `None` is the all-zero niche
+(§4.2, Type System §6.2) and which a `match` cannot leave out. Outside a grant the
+comparison is **ill-formed**. Inside an `unchecked` grant, where an address may be
+fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked `ptr(T)`
+type, not for raw fabricated bits), it is legal and tests the pointer's representation.
+
+**The comparison performs no conversion.** §4.3 governs conversions and each of its rows
+is explicit; none of them is a pointer-meeting-integer edge, and this rule adds none. The
+two operands are read as they are stored, at their own widths. Therefore the integer
+operand MUST be `usize` — the pointer's own width, the form the ABI appendix already names
+as the register-width integer that is interchangeable with `ptr(T)` (ABI §5) — and any
+other integer type is ill-formed. This is what makes the rule determinate: `p == -1` has
+no reading (there is no signed `usize`, and no implicit widening or re-signing reaches
+this operator), so no target can answer it differently.
+
+**What is hardware-defined, and what is not.** The *representation* is the target's: a
+pointer's width and the bits a fabricated address holds are the machine model's, and an
+address arithmetic overflow is the ISA's answer (I6; I11 as §4.5 already uses it). The
+*comparison* is not: given two `usize` values, every conforming target returns the same
+`true` or `false`. Nothing here licenses two implementations to answer one comparison
+differently — that would reverse I1.
+
+**The boundary of this rule.** It covers a pointer meeting an integer, and nothing else.
+Two pointers compared with each other (`p == q`, `p < q`) are not this capability and stay
+exactly as the comparison rules have them. `Option(ptr(T)) == None` is not a raw pointer
+meeting an integer either: its `None` is the niche §4.2 defines, and comparing an `Option`
+is the structural equality its derive gives it (Stdlib appendix §2.6). The concurrency
 surface admits an `Option(ptr(U))` atomically for exactly this reason (Concurrency §2:
 checked code holds "no node" without a raw `ptr == 0`).
 
@@ -923,8 +945,8 @@ A conforming implementation MUST:
    definite assignment — at compile time (§3);
 5. represent pointers as non-null `ptr(T)`/`ptr(mut T)`, represent absence
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
-   pointer arithmetic and integer→pointer (including `str_at`) to an `unchecked` grant /
-   assembly (§4);
+   pointer arithmetic and integer→pointer (including `str_at`) and a pointer meeting an
+   integer at a comparison (§4, §4.5) to an `unchecked` grant / assembly;
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
    check for handles, by generation trap for generational), reject

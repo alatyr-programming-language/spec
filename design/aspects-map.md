@@ -23,7 +23,7 @@ and **deferred (additive) growth**.
 - `[x]` **1. Language manifesto.** FND-4, FND-5: thesis, niche, pillars (I1–I11), non-goals (1–10).
 - `[x]` **2. Invariants and contracts.** I1–I11 (see invariants.md).
 - `[x]` **3. Execution and memory model.** Subnodes: vocabulary (MEM-6), storage classes (MEM-7), mutability
-  (MEM-7), pointers (MEM-8), keystone "storage+lifetime" — **one language reference (scoped) + a library
+  (MEM-7), pointers (MEM-8, refined by MEM-9), keystone "storage+lifetime" — **one language reference (scoped) + a library
   allocator-provider menu over first-class reference tokens** via `@alloc(value)` (MEM-1/STD-1, reframed by MEM-3; `get` ordinary via a
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),

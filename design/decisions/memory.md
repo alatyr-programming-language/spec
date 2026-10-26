@@ -252,7 +252,7 @@ OP-2; a new prefix marker would break the one-marker `@` model, SYN-7/CT-10), an
 word-function `ptr(mut T)` is shorter than `mem::addr(mut T)` without one.
 
 ### MEM-9. A pointer meeting an integer is grant-only
-*provenance: refines MEM-8, MEM-2 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; Concurrency §2 · owner decision, #1030*
+*provenance: refines MEM-8 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; cites Concurrency §2 · owner decision, #1030*
 
 **Why.** The instrument already sees the shape and the checker accepts it: `cmp_ptr_zero :=
 fn(p : ptr(u8)) -> bool { return p == 0 }` passes `check` with rc=0 on both the tree compiler
@@ -260,12 +260,14 @@ and the frozen seed, while `scripts/ptrint_census.sh` reports the OP-CMP row for
 proved the hook fires). So detection and enforcement had come apart. The spec was silent: §4.5
 named *fabricating* a pointer from an integer as capability-requiring, and said nothing about
 comparing one. Silence here is not neutral — two implementations could accept and reject the same
-source, and the strict-forms catalogue already promised this form would be either enforced or
-labelled review-only.
+source, and the spec's own bar — every question a compiler developer meets has exactly one answer in it —
+leaves a form that is neither confined nor permitted with no answer at all.
 
 **The rule.** Comparing a pointer with an integer is legal **only inside an `unchecked` grant**,
-where it tests the pointer's representation as an unsigned word (hardware-defined, I11); outside
-a grant it is ill-formed. This is the grant model §4.5 already applies to the neighbouring
+where it tests the pointer's representation, the integer operand being `usize` and no conversion
+being performed; outside a grant it is ill-formed. What is target-dependent is the representation
+(a pointer's width, the bits a fabricated address holds — I6, I11 as §4.5 already uses them), not
+the comparison: given two `usize` values every conforming target returns the same answer. This is the grant model §4.5 already applies to the neighbouring
 operation, not a new kind of rule — which is why it was chosen over the alternatives. It is also
 what MEM-8 makes evident: outside a grant every `ptr(T)` is non-null and valid, so a checked
 `p == 0` cannot be true, and the author's actual question — "is there nothing here?" — is
