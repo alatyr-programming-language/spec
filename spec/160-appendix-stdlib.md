@@ -148,6 +148,17 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 - **`Hash`** — `hash(in self : T) -> u64`, **consistent with `Eq`** (equal values hash
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
+A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): the site is
+well-formed when a comparison relation is **established for that pair**. Same-type pairs take the structural
+default below. A **heterogeneous** pair of the author's own types is established when the author provides a
+concrete `eq(in a : A, in b : B) -> bool` (likewise `lt`) — **structural** in exactly the sense of every
+other protocol in this appendix (§2: satisfied by *providing* the operation, not by naming an interface),
+and **additive** (FND-6): nothing that resolves today stops resolving. The one pair no declaration can
+establish in checked code is **pointer↔integer**: the grant attaches to the operand types at the site
+whatever relation exists (Memory §4.5), so `eq(in a : ptr(T), in b : usize)` may be written, but its body
+must compare the two and that comparison is confined — so the relation never comes to exist in checked code,
+and inside a grant both the declaration and the site are legal and hardware-defined.
+
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
 from the operands** (TYP-1/CT-2; Comptime §5.4 shows the body) — so `a == b` applies it without

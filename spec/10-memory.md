@@ -399,18 +399,23 @@ differ between targets is whether those two values are ever *reached*: inside a 
 fabricated (§1.4: it denotes whatever location its bits name), so `p == usize(0)` there can answer truly
 on one target and falsely on another **because the operands differ**, not because the comparison does.
 
-**The comparison is a compiler-known operator site.** It is not an `Eq` instance: `eq` is
-homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no `T` for a
-pointer meeting an integer. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it:
-the refusal is **MEM-9's own check at the comparison site**, ordered *before* overload resolution, so no
-overload set is ever consulted there. It is deliberately not derived from Functions §1.4 (FN-7), which
-**permits** heterogeneous bindings — "a name MAY be bound to more than one function value in the same
-scope when the bindings differ in their parameter signature" — and so cannot be cited as refusing this
-one. The compiler's shape is the evidence for the ordering: `seam_cmp_outside_grant_err` fires in the
-comparison arm above `ty_eq` (`compiler/src/sema.al`, #1034), guarded by the kind pair and
-`PTRINT_GRANT == 0`, so it is scoped to this site and no other int↔ptr crossing changes verdict.
-**Whether comparison operands must share a type in general is a separate open question** (§4.5 does not
-decide it; FN-7's permission stands for every other site), and it is filed rather than answered here.
+**The comparison is a compiler-known operator site.** It is not an `Eq` instance over a single `T`:
+`eq`'s structural default is homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no
+one `T` for a pointer meeting an integer; under the pair rule of Stdlib appendix §2.6 (MEM-10) the site is
+a **heterogeneous relation** site, and this is precisely the one pair for which no relation can be
+established in checked code — see below. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it, and
+the reason is **not** an ordering between two checks: the grant attaches to the **operand pair at the
+site**, independent of what is declared (MEM-10). `p == 0` with `p : ptr(T)` requires an enclosing
+`unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds a
+bit pattern — is the same knowledge fabricating an address requires. Such a declaration may be written, but
+its body must compare the two, and that comparison is itself confined, so **no checked-code relation over
+that pair can ever be established**; inside a grant both the declaration and the site are legal and
+hardware-defined. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
+heterogeneous bindings — "a name MAY be bound to more than one function value in the same scope when the
+bindings differ in their parameter signature" — and that permission stands for every other pair of types,
+where an author's concrete `eq(in a : A, in b : B) -> bool` establishes the relation structurally
+(Stdlib appendix §2.6). What closes this pair is a rule about the operand types, not the order of
+resolution: an ordering would be invisible to a second implementation, and I1 needs the rule in the text.
 The precedent for the wording above is what arrays and slices already carry: "the compiler-known
 built-ins … there is no source-level prelude function to override for them" (Type System
 §4.5).

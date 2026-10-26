@@ -81,6 +81,23 @@ explicit bitcasts by construction ("Every integer/pointer crossing below is EXPL
 nothing and the census must be empty", `scripts/ptrint_census.sh:462-463`), so its `places=3` measures the
 implicit half only, and quoting it as the cost of a both-directions rule was a category error. Owner decision B of #1030.
 
+**Normative — a comparison resolves over its operand pair, and the grant attaches to the pair** (Stdlib
+appendix §2.6, Functions §1.4; MEM-10, refining MEM-9; spec#20). The spec never required a comparison's
+operands to share a type, while Functions §1.4 permits heterogeneous bindings verbatim — so an author could
+declare `eq(in a : ptr(T), in b : usize)` and, on §1.4's "prefers the more specific definition", bind
+`p == 0` to it, reaching the site MEM-9 refuses. §4.5 had answered with an **ordering** ("refused before
+overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to a second
+implementation, and I1 with FND-3 require the rule to be in the text. The owner's direction was that
+expressing one's own types with a comparison relation is needed **and** must follow the language's
+principles, so neither a blanket same-type rule nor an ordering was adopted. A site is now well-formed when
+a comparison relation is **established for its operand pair**: same-type pairs by the structural default;
+heterogeneous pairs of the author's own types by a concrete `eq(in a : A, in b : B) -> bool`, structural in
+the existing protocol sense (satisfied by providing the operation, not naming an interface) and additive
+(FND-6). The pointer↔integer pair is confined **by the pair itself**: the grant attaches to the operand
+types at the site whatever overload set exists, so such a declaration may be written but its body is
+confined and the relation never comes to exist in checked code. No new syntax; §1.4's mechanism is
+unchanged and is named in §4.5 as a permission, not the refuser.
+
 ## 1.2.0 — 2026-10-24
 
 Two gaps, both found by measuring the reference implementation rather than by reading the

@@ -250,7 +250,6 @@ does and pairs with `ptr`. The **`T.addr` / `T.mut.addr` suffix** and the **`mem
 `mem::val` module** spellings (both superseded) — a sigil is barred (`&`/`*`/`~` are taken,
 OP-2; a new prefix marker would break the one-marker `@` model, SYN-7/CT-10), and the flat
 word-function `ptr(mut T)` is shorter than `mem::addr(mut T)` without one.
-
 ### MEM-9. A pointer meeting an integer is grant-only
 *provenance: refines MEM-8 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; cites Concurrency §2 · owner decision, #1030*
 
@@ -299,3 +298,49 @@ before it lands. Its seam is
 kind-based (`TyInt × TyPtr`, either order), so it enforces the **grant boundary**; the rule that the
 integer operand is `usize` is NOT yet enforced there — inside a grant `p == u32(0)` stays accepted, and
 closing that is a follow-up on #1034, not a claim of this record.
+
+### MEM-10. Comparison is a relation over an operand pair; the grant attaches to the pair, not to a name
+*provenance: refines MEM-9 · spec: Memory §4.5, Stdlib appendix §2.6; cross-cuts Functions §1.4 (FN-7) · owner decision, spec#20*
+
+**Why.** MEM-9 confines a pointer meeting an integer, and a fourth independent read of §4.5 found the
+confinement bypassable: the spec nowhere requires a comparison's operands to share a type, while
+Functions §1.4 (FN-7) **permits** heterogeneous bindings verbatim — "a name MAY be bound to more than one
+function value in the same scope when the bindings differ in their parameter signature"
+(`spec/50-functions.md:59`) — and resolution "prefers the more specific definition" (`:90-93`). So an
+author may declare `eq(in a : ptr(T), in b : usize)`, and an implementer following §1.4 lets `p == 0`
+bind to it, reaching the site MEM-9 refuses. §4.5 had answered this with an **ordering** ("refused
+before overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to
+a second implementation, so two conforming compilers could disagree on whether a source is well-formed —
+the exact failure I1 and FND-3 exist to prevent.
+
+**The owner's direction.** Expressing one's own types with a comparison relation is needed, and it must
+follow the language's principles. A blanket same-type rule would delete that expressiveness, so it is not
+adopted; an ordering rule leaves the hole open for every other type pair.
+
+**The rule.** A comparison site is well-formed when a **comparison relation is established for the
+operand pair** — the pair, not the name:
+- **Same-type pairs** are established by the structural derive, exactly as today (`eq(in a : T, in b :
+  T)`, `lt(in a : T, in b : T)`; Stdlib appendix §2.6).
+- **Heterogeneous pairs of the author's own types** are established when the author provides a concrete
+  `eq(in a : A, in b : B) -> bool` (likewise `lt`). This is **structural**, in the same sense as every
+  other protocol: satisfied by *providing the operation*, not by naming an interface (Stdlib appendix §2,
+  Comptime §6.2). It is **additive** (FND-6): nothing that resolves today stops resolving.
+- **The pointer↔integer pair is confined by the pair itself.** The grant attaches to the operand types at
+  the site, **independent of what is declared**: `p == 0` with `p : ptr(T)` requires an enclosing
+  `unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds
+  a bit pattern — is the same knowledge fabricating an address requires (MEM-9's own argument). So a
+  declaration cannot lift the requirement. A heterogeneous `eq` over a pointer and an integer may be
+  *written*, but its body must compare the two, and that comparison is itself confined: outside a grant it
+  is ill-formed, so no checked-code relation over that pair can ever be established. Inside a grant both
+  the declaration and the site are legal and hardware-defined.
+
+**Why this and not the alternatives.** It closes the bypass with a rule about the program text rather than
+a rule about the order of two checks, so I1 holds by inspection; it keeps heterogeneous comparison
+expressible for ordinary types, which the owner asked for and a same-type rule would have removed; and it
+costs no new syntax, because FN-7 already admits the binding and the protocol convention already means
+"satisfied by providing the operation".
+
+**Diagnostics.** The compiler reports at the site: `seam_cmp_outside_grant_err` fires in the comparison
+arm above `ty_eq`, guarded by the kind pair and `PTRINT_GRANT == 0` (compiler#1034). That location stays;
+when the pair rule lands the same marker covers a declared heterogeneous pair, because the condition is the
+same kind pair at the site.

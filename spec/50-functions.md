@@ -97,6 +97,12 @@ exactly-one-match rule still holds; the generic never causes ambiguity — it is
 on concrete-miss. This is the sole mixing allowed: a name still may not bind two functions of
 the *same* concrete signature, nor two generic definitions.)
 
+**One pair this permission does not reach.** A heterogeneous binding is admissible for every pair of types
+**except** pointer↔integer at a comparison site: there the grant attaches to the operand **pair**, whatever
+overload set exists, so no concrete `eq(in a : ptr(T), in b : usize)` establishes the relation in checked
+code (Memory §4.5, MEM-10). This is a rule about the operand types, not an ordering inside resolution —
+§1.4's mechanism is unchanged and must not be cited as the refuser of that site.
+
 *(Rejected: overloading on the **result** type — a call would not be resolvable in
 isolation, breaking left-to-right typing; an explicit per-type **dispatch table** value —
 redundant with the symbol the compiler already mangles, and not zero-cost at the call
