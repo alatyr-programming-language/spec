@@ -201,7 +201,8 @@ never UB (I11): `+`, `−`, `*` and unary `−` **wrap** (two's-complement); div
 indexing skips the bounds check;
 narrowing truncates and float→int is hardware-defined; alignment-requiring access skips
 the alignment check. The scope **additionally permits the genuinely-raw operations**
-ill-formed in checked code (pointer arithmetic, `int↔ptr`, reading a raw-union member
+ill-formed in checked code (pointer arithmetic, `int↔ptr` in **both** directions, a pointer
+compared with an integer (Memory §4.5), reading a raw-union member
 that is not definitely active / reading `uninit`, raw control transfer, raw `asm`, a call
 to `arena_over` over a non-static buffer, whose caller vouches that the buffer outlives the arena
 (over a `@static` place the call is checked — the declaration supplies the fact, Stdlib appendix §5.2.1), a call to `str_at`, whose caller vouches for the bytes at an integer address,
