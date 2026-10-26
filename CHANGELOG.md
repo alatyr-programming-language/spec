@@ -70,11 +70,22 @@ is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked
 blind to it (`blind-lib=12` in the same record), which is stated rather than glossed. The gap closed
 is between detecting a form and refusing it. The same decision confines an integer↔pointer conversion in
 **either direction** (§4.5's title and Grammar §3.7 already said `int↔ptr`; the body confined only
-integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost, re-measured because the first figure was wrong: **8 sites in 7 tracked fixtures** write an
-explicit `bitcast(usize, …)` outside any grant and become illegal — `require_ptr_ok.al:3`,
-`require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52`, `subword_ptr_deref.al:5`,
-`issue345_ptr_target_spacing.al:13`, `deref_subword_field_write_raw.al:11` (the last two are
-`@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely mechanical). `lib/` and
+integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost, re-measured twice because both earlier figures were wrong: **at least 17 sites in 11 tracked
+fixtures** write an explicit `bitcast(usize, …)` over a pointer outside any grant and become illegal.
+Seven lines carry them, one of them twice (`hashmap_str_key.al:52` compares two): `require_ptr_ok.al:3`,
+`require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52` (×2), `subword_ptr_deref.al:5`,
+`issue345_ptr_target_spacing.al:13`, `deref_subword_field_write_raw.al:11`. **The first two** are the
+`@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely mechanical; the last two are
+plain `base := bitcast(usize, r)` off an `mmap`, which a grant fixes directly. A first re-count missed a
+further **9 sites in 4 fixtures** by counting lines that contain `unchecked` as granted: a grant scopes
+**one expression** (glossary, `unchecked expr`), so in
+`deref(unchecked bitcast(ptr(mut usize), base)) = bitcast(usize, s0.ptr)` the grant covers the LHS and the
+RHS — reading `Slice.ptr : ptr(T)` — is un-granted. Those are `slice_len_field.al:19,21`,
+`slice_local_arg.al:26,28`, `slice_str_read.al:21,23`, `str_join.al:18,20,22`. The figure is a **floor**:
+separating a pointer operand from an integer one at `bitcast(usize, …)` needs the operand's type, so a
+lexical sweep over `test/` cannot prove completeness — 225 `bitcast(usize, …)` occurrences sit in 108
+fixtures and only the ones whose operand is a pointer are affected. The typed count is the gate's, on the
+run that lands this. `lib/` and
 `src/` hold **zero** such sites, so the self-host build is untouched — the cost is confined to fixtures,
 which the compiler fixes under its own gate. The census could not have reported this: it excludes
 explicit bitcasts by construction ("Every integer/pointer crossing below is EXPLICIT, so the seam decides

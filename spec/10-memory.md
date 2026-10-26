@@ -347,8 +347,9 @@ identity; Type System chapter).
 Pointer arithmetic and an integer↔pointer conversion **in either direction** are
 capability-requiring operations: fabricating a pointer from an integer (`bitcast` to a pointer
 type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
-pointer out as an integer **value** (`bitcast` to `usize`, the only spelling that keeps the
-program's meaning explicit). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
+pointer out as an integer **value** (`bitcast` to `usize`, the only *operator* that keeps the
+program's meaning explicit — UFCS `p.bitcast(usize)` is the same operator, Type System §4.4, not a second
+permission). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
 Stdlib appendix §2.6's derive walks the `Pointer` leaf by its address bits and stays legal in
 checked code, so
 `hash(p)` and `p == q` need no grant — what needs one is naming the integer explicitly, because
@@ -369,7 +370,8 @@ a particular bit pattern, which is the same knowledge that fabricating an addres
 It is also, outside a grant, **dead by invariant**: §4.1 and MEM-8 make every `ptr(T)`
 non-null and valid, so a checked `p == 0` cannot be true and the author's real question was
 "is there nothing here?" — which is `Option(ptr(T))`, whose `None` is the all-zero niche
-(§4.2, Type System §6.2) and which a `match` cannot leave out. Outside a grant the
+(§4.2, Type System §6.2) and which a `match` cannot leave out (Control Flow §5.1: "A `match` MUST be
+**exhaustive**"). Outside a grant the
 comparison is **ill-formed**. Inside an `unchecked` grant, where an address may be
 fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked `ptr(T)`
 type, not for raw fabricated bits), it is legal and tests the pointer's representation.
@@ -402,20 +404,22 @@ on one target and falsely on another **because the operands differ**, not becaus
 **The comparison is a compiler-known operator site.** It is not an `Eq` instance over a single `T`:
 `eq`'s structural default is homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no
 one `T` for a pointer meeting an integer; under the pair rule of Stdlib appendix §2.6 (MEM-10) the site is
-a **heterogeneous relation** site, and this is precisely the one pair for which no relation can be
-established in checked code — see below. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it, and
+a **heterogeneous relation** site, and this is precisely the one pair for which no relation is
+**well-formed at the site** in checked code — see below. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it, and
 the reason is **not** an ordering between two checks: the grant attaches to the **operand pair at the
 site**, independent of what is declared (MEM-10). `p == 0` with `p : ptr(T)` requires an enclosing
 `unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds a
 bit pattern — is the same knowledge fabricating an address requires. **A declaration cannot supply the
-grant.** A relation over this pair may be established — even by a body whose comparison sits inside its own
+grant.** A relation over this pair may be **declared** — even by a body whose comparison sits inside its own
 `unchecked { … }` — and the site still requires its own enclosing grant: the requirement is a property of
 the operand types at the site, never of where some function's body happens to put a block. So declaring
-`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code, and inside a grant both the
-declaration and the site are legal and hardware-defined. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; inside a grant both the
+declaration and the site are **legal**, and what is hardware-defined there is the *operand* — the
+fabricated address whose bits name whatever location the target gives them (§1.4) — never the comparison,
+which stays determined by the two `usize` values it is given, as above. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
 heterogeneous bindings — "a name MAY be bound to more than one function value in the same scope when the
 bindings differ in their parameter signature" — and that permission stands for every other pair of types,
-where an author's concrete `eq(in a : A, in b : B) -> bool` establishes the relation structurally
+where an author's concrete `eq(in a : A, in b : B) -> bool` declares the relation structurally
 (Stdlib appendix §2.6). What closes this pair is a rule about the operand types, not the order of
 resolution: an ordering would be invisible to a second implementation, and I1 needs the rule in the text.
 The precedent for the wording above is what arrays and slices already carry: "the compiler-known
@@ -423,7 +427,12 @@ built-ins … there is no source-level prelude function to override for them" (T
 §4.5).
 
 **The boundary of this rule.** It covers a pointer meeting an integer, and nothing else.
-Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
+`deref(p) == 0` is **not** this capability: the comparison's operands are the loaded
+`u64`/`T` value and the integer literal, and the pointer appears only as the place being read —
+so it is a memory operation plus an integer comparison, legal in checked code (its dereference is
+governed by §4.1 and §4.6, not here). A seam keyed on the operand *kinds* (`TyInt × TyPtr`,
+MEM-9) must not reach it, and a site that is refused after the load has been inserted is refused
+for the wrong reason. Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
 compare by their address bits, which is what the structural derive gives a `Pointer` leaf
 (Stdlib appendix §2.6), and they stay legal in checked code. `Option(ptr(T)) == None` is
 not a raw pointer meeting an integer either: its `None` is the niche §4.2 defines, and

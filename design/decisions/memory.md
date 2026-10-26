@@ -276,10 +276,14 @@ what MEM-8 makes evident: outside a grant every `ptr(T)` is non-null and valid, 
 written was bypassable in two tokens: `bitcast(usize, p) == 0` outside a grant compares two integers, so
 confining only integer→pointer left the comparison reachable. The owner chose to confine **integer↔pointer
 in either direction**, which is what §4.5's own title and Grammar §3.7's raw list already said; the body
-now matches them. The measured cost is stated rather than discovered later: `scripts/ptrint_census.baseline`
-records its 3 places as "all OUTSIDE an `unchecked` grant", 2 of them pointer→integer (`RESULT-TAIL p2i`,
-in `test/`), and those 2 become illegal — they are fixtures, not stdlib, and the compiler repo files the
-fix as its own change with its own gate.
+now matches them. The measured cost is stated rather than discovered later, and it is **not** the census's
+`places=3`: that record counts the **implicit** half only — it excludes explicit bitcasts by construction —
+so quoting it as the cost of a both-directions rule was a category error, and the earlier text that did so
+is corrected here. The cost is in the **explicit** half: **at least 17 sites in 11 tracked fixtures** read
+a pointer out with `bitcast(usize, …)` outside any grant and become illegal, enumerated line by line in the
+CHANGELOG entry for this revision (a floor: a lexical sweep cannot tell a pointer operand from an integer
+one). They are fixtures, not stdlib — `lib/` and `src/` hold zero such sites — and the compiler repo files
+the fix as its own change with its own gate.
 
 **Rejected.** *Refuse in every context, grant included* — contradicts §4.5, under `unchecked` an
 address may be fabricated or already invalid and testing its bits is precisely what the grant is

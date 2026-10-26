@@ -137,7 +137,9 @@ not about where the spelling sits. So the
 derives are library code over `typeinfo` for **every** type, and the compiler holds no
 built-in structural-comparison knowledge at all: a heterogeneous site never reaches a derive, because
 `eq` is homogeneous (`eq(in a : T, in b : T)`) and MEM-9 refuses the pointer-meeting-integer site at
-the comparison itself, before overload resolution (Memory §4.5) — so §4.5's confinement needs no
+the comparison itself, by a rule about the **operand pair at the site** (Memory §4.5) — not by an
+ordering between that refusal and overload resolution, which MEM-10 retracts as the wrong instrument: an
+ordering between two rules is invisible to a second implementation. So §4.5's confinement needs no
 structural rule here, and there is no exception to the sentence before it. The signatures below are the **conformance
 shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 
@@ -149,17 +151,18 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): the site is
-well-formed when a comparison relation is **established for that pair**. Same-type pairs take the structural
-default below. A **heterogeneous** pair of the author's own types is established when the author provides a
+**well-formed at the site** when a comparison relation is **declared** for that pair. Same-type pairs take the structural
+default below. A **heterogeneous** pair of the author's own types is declared when the author provides a
 concrete `eq(in a : A, in b : B) -> bool` (likewise `lt`) — **structural** in exactly the sense of every
 other protocol in this appendix (§2: satisfied by *providing* the operation, not by naming an interface),
-and **additive** (FND-6): nothing that resolves today stops resolving. The one pair no declaration can
-establish in checked code is **pointer↔integer**: the grant attaches to the operand types at the site
-whatever relation exists (Memory §4.5). A relation over that pair may be established, even by a body whose
+and **additive** (FND-6): nothing that resolves today stops resolving. The one pair no declaration can make
+**well-formed at the site** in checked code is **pointer↔integer**: the grant attaches to the operand types at the site
+whatever relation exists (Memory §4.5). A relation over that pair may be **declared**, even by a body whose
 comparison sits inside its own `unchecked { … }`, and the site still needs its own enclosing grant — the
 requirement is a property of the operand types at the site, not of where a function body places a block. So
-`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; inside a grant both are legal
-and hardware-defined.
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; inside a grant both are
+**legal**, and what is hardware-defined there is the fabricated address the operand holds (Memory §1.4),
+never the comparison, which is determined by the two `usize` values it is given (Memory §4.5).
 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
