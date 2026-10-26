@@ -50,8 +50,8 @@ several at once (see `CONTRIBUTING.md`).
 ## Unreleased
 
 **Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
-Comparing a pointer with an integer (`p == 0`, `p != 0`, or an ordering against one,
-`p < usize(-1`) — the form that previously reached a mixed-signature comparison and was refused there) was
+Comparing a pointer with an integer — `p == 0`, `p != 0`, or an ordering against one such as
+`p < 4096`, the three forms §4.5 itself lists — was
 unnamed: §4.5 made *fabricating* an address from an integer capability-requiring and said
 nothing about comparing one, so the checker accepted `return p == 0` with `rc=0` while
 `scripts/ptrint_census.sh` already reported the shape as an OP-CMP row (#1029 proved the hook
