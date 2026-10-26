@@ -250,3 +250,35 @@ does and pairs with `ptr`. The **`T.addr` / `T.mut.addr` suffix** and the **`mem
 `mem::val` module** spellings (both superseded) — a sigil is barred (`&`/`*`/`~` are taken,
 OP-2; a new prefix marker would break the one-marker `@` model, SYN-7/CT-10), and the flat
 word-function `ptr(mut T)` is shorter than `mem::addr(mut T)` without one.
+
+### MEM-9. A pointer meeting an integer is grant-only
+*provenance: refines MEM-8, MEM-2 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; Concurrency §2 · owner decision, #1030*
+
+**Why.** The instrument already sees the shape and the checker accepts it: `cmp_ptr_zero :=
+fn(p : ptr(u8)) -> bool { return p == 0 }` passes `check` with rc=0 on both the tree compiler
+and the frozen seed, while `scripts/ptrint_census.sh` reports the OP-CMP row for it (#1029
+proved the hook fires). So detection and enforcement had come apart. The spec was silent: §4.5
+named *fabricating* a pointer from an integer as capability-requiring, and said nothing about
+comparing one. Silence here is not neutral — two implementations could accept and reject the same
+source, and the strict-forms catalogue already promised this form would be either enforced or
+labelled review-only.
+
+**The rule.** Comparing a pointer with an integer is legal **only inside an `unchecked` grant**,
+where it tests the pointer's representation as an unsigned word (hardware-defined, I11); outside
+a grant it is ill-formed. This is the grant model §4.5 already applies to the neighbouring
+operation, not a new kind of rule — which is why it was chosen over the alternatives. It is also
+what MEM-8 makes evident: outside a grant every `ptr(T)` is non-null and valid, so a checked
+`p == 0` cannot be true, and the author's actual question — "is there nothing here?" — is
+`Option(ptr(T))`, whose `None` is the all-zero niche and which a `match` cannot leave out.
+
+**Rejected.** *Refuse in every context, grant included* — contradicts §4.5, under `unchecked` an
+address may be fabricated or already invalid and testing its bits is precisely what the grant is
+for; it would also refuse code written correctly by today's rules. *Keep detecting without
+refusing, and let the census ratchet be the pin* — cheapest, breaks nothing, and the goal permits
+the `review-only` label explicitly; rejected only because the grant model already exists in the
+checker and reporting a form as enforced while accepting it is the gap this decision closes. The
+census's OP-CMP ratchet stays as the measurement either way (#1029).
+
+**Downstream.** The compiler conforms when the pin moves (workspace rule: a spec change binds the
+compiler only after a release is cut and the pin moves in its own explicit compiler commit). #1034
+implements the refusal on the comparison path and waits on that pin, not on review.

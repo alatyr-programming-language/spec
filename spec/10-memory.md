@@ -352,6 +352,20 @@ Outside such a grant they are ill-formed. Checked code traverses by
 **bounds-checked indexing** through typed arrays and slices; therefore checked
 code contains no pointer-arithmetic UB.
 
+**A pointer meeting an integer is the same capability.** Comparing a pointer with an
+integer — `p == 0`, `p != 0`, `p < q` where one side is an integer — is listed here
+rather than in the comparison rules because what it asks is not a value question: it asks
+whether a machine address holds a particular bit pattern, which is the same knowledge that
+fabricating an address requires. It is also, outside a grant, **dead by invariant**: §4.1
+and MEM-8 make every `ptr(T)` non-null and valid, so a checked `p == 0` cannot be true and
+the author's real question was "is there nothing here?" — which is `Option(ptr(T))`, whose
+`None` is the all-zero niche (§4.2, Type System §6.2) and which a `match` cannot leave out.
+Inside an `unchecked` grant, where an address may be fabricated or already invalid (§4.5),
+the comparison is meaningful: it is legal and tests the pointer's representation as an
+unsigned word (hardware-defined, I11). Outside a grant it is ill-formed. The concurrency
+surface admits an `Option(ptr(U))` atomically for exactly this reason (Concurrency §2:
+checked code holds "no node" without a raw `ptr == 0`).
+
 #### 4.6 Lowering contract
 
 - Address-of a memory-resident place lowers to the target's effective-address

@@ -49,6 +49,20 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
+Comparing a pointer with an integer (`p == 0`, `p != 0`, or a mixed-signature ordering) was
+unnamed: §4.5 made *fabricating* an address from an integer capability-requiring and said
+nothing about comparing one, so the checker accepted `return p == 0` with `rc=0` while
+`scripts/ptrint_census.sh` already reported the shape as an OP-CMP row (#1029 proved the hook
+fires). It is now ill-formed outside an `unchecked` grant, and inside one it tests the
+pointer's representation as an unsigned word (hardware-defined, I11). The rule is the grant
+model §4.5 already applies to its neighbouring operation, and MEM-8 makes the checked case
+vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so a checked
+`p == 0` cannot be true and the question the author meant is `Option(ptr(T))`, whose `None`
+is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked corpus reports
+`op-cmp=0`, so no accepted program in the tree changes verdict — the gap closed is between
+detecting a form and refusing it. Owner decision B of #1030.
+
 ## 1.2.0 — 2026-10-24
 
 Two gaps, both found by measuring the reference implementation rather than by reading the
