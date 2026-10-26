@@ -344,11 +344,16 @@ identity; Type System chapter).
 
 #### 4.5 Pointer arithmetic and integer↔pointer
 
-Pointer arithmetic and fabricating a pointer from an integer (`bitcast` to a pointer type, or a
-`str` view at an integer address, `str_at` — Stdlib appendix §3.6) are
-capability-requiring operations: they are legal only inside an `unchecked` grant
-(or the assembly surface), and there they have hardware-defined behavior (I11).
-Outside such a grant they are ill-formed. Checked code traverses by
+Pointer arithmetic and an integer↔pointer conversion **in either direction** are
+capability-requiring operations: fabricating a pointer from an integer (`bitcast` to a pointer
+type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
+pointer out as an integer (`bitcast` to `usize`, or any other equal-width integer). The body
+spells both directions because this section's own title says `integer↔pointer` and Grammar §3.7
+lists the raw set as `int↔ptr`; confining only one direction left the other as a two-token
+bypass of the rule below — `bitcast(usize, p) == 0` outside a grant is an integer comparison the
+comparison rule does not reach, so the confinement would be decorative. These operations are legal
+only inside an `unchecked` grant (or the assembly surface), and there they have hardware-defined
+behavior (I11). Outside such a grant they are ill-formed. Checked code traverses by
 **bounds-checked indexing** through typed arrays and slices; therefore checked
 code contains no pointer-arithmetic UB.
 
@@ -957,8 +962,9 @@ A conforming implementation MUST:
    definite assignment — at compile time (§3);
 5. represent pointers as non-null `ptr(T)`/`ptr(mut T)`, represent absence
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
-   pointer arithmetic, integer→pointer (including `str_at`), and a pointer meeting an
-   integer at a comparison (§4, §4.5) to an `unchecked` grant / assembly;
+   pointer arithmetic, integer↔pointer in either direction (including `str_at` and a
+   pointer read out as `usize`), and a pointer meeting an integer at a comparison
+   (§4, §4.5) to an `unchecked` grant / assembly;
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
    check for handles, by generation trap for generational), reject

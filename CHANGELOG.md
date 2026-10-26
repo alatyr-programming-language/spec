@@ -66,7 +66,11 @@ vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so
 is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked corpus reports
 `op-cmp=0`, so no place the census **measures** changes verdict — 12 tracked `lib/` modules remain
 blind to it (`blind-lib=12` in the same record), which is stated rather than glossed. The gap closed
-is between detecting a form and refusing it. Owner decision B of #1030.
+is between detecting a form and refusing it. The same decision confines an integer↔pointer conversion in
+**either direction** (§4.5's title and Grammar §3.7 already said `int↔ptr`; the body confined only
+integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost:
+2 of the census's 3 recorded places are pointer→integer outside a grant (`RESULT-TAIL p2i`, in `test/`)
+and become illegal; they are fixtures, and the compiler fixes them under its own gate. Owner decision B of #1030.
 
 ## 1.2.0 — 2026-10-24
 

@@ -273,6 +273,15 @@ what MEM-8 makes evident: outside a grant every `ptr(T)` is non-null and valid, 
 `p == 0` cannot be true, and the author's actual question — "is there nothing here?" — is
 `Option(ptr(T))`, whose `None` is the all-zero niche and which a `match` cannot leave out.
 
+**Refined by the same owner decision — both directions.** A follow-up read showed the rule as first
+written was bypassable in two tokens: `bitcast(usize, p) == 0` outside a grant compares two integers, so
+confining only integer→pointer left the comparison reachable. The owner chose to confine **integer↔pointer
+in either direction**, which is what §4.5's own title and Grammar §3.7's raw list already said; the body
+now matches them. The measured cost is stated rather than discovered later: `scripts/ptrint_census.baseline`
+records its 3 places as "all OUTSIDE an `unchecked` grant", 2 of them pointer→integer (`RESULT-TAIL p2i`,
+in `test/`), and those 2 become illegal — they are fixtures, not stdlib, and the compiler repo files the
+fix as its own change with its own gate.
+
 **Rejected.** *Refuse in every context, grant included* — contradicts §4.5, under `unchecked` an
 address may be fabricated or already invalid and testing its bits is precisely what the grant is
 for; it would also refuse code written correctly by today's rules. *Keep detecting without
