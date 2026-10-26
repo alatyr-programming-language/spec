@@ -155,9 +155,11 @@ concrete `eq(in a : A, in b : B) -> bool` (likewise `lt`) — **structural** in 
 other protocol in this appendix (§2: satisfied by *providing* the operation, not by naming an interface),
 and **additive** (FND-6): nothing that resolves today stops resolving. The one pair no declaration can
 establish in checked code is **pointer↔integer**: the grant attaches to the operand types at the site
-whatever relation exists (Memory §4.5), so `eq(in a : ptr(T), in b : usize)` may be written, but its body
-must compare the two and that comparison is confined — so the relation never comes to exist in checked code,
-and inside a grant both the declaration and the site are legal and hardware-defined.
+whatever relation exists (Memory §4.5). A relation over that pair may be established, even by a body whose
+comparison sits inside its own `unchecked { … }`, and the site still needs its own enclosing grant — the
+requirement is a property of the operand types at the site, not of where a function body places a block. So
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; inside a grant both are legal
+and hardware-defined.
 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred

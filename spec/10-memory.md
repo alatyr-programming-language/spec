@@ -407,10 +407,12 @@ established in checked code — see below. Nor does a user-declared `eq(in a : p
 the reason is **not** an ordering between two checks: the grant attaches to the **operand pair at the
 site**, independent of what is declared (MEM-10). `p == 0` with `p : ptr(T)` requires an enclosing
 `unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds a
-bit pattern — is the same knowledge fabricating an address requires. Such a declaration may be written, but
-its body must compare the two, and that comparison is itself confined, so **no checked-code relation over
-that pair can ever be established**; inside a grant both the declaration and the site are legal and
-hardware-defined. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
+bit pattern — is the same knowledge fabricating an address requires. **A declaration cannot supply the
+grant.** A relation over this pair may be established — even by a body whose comparison sits inside its own
+`unchecked { … }` — and the site still requires its own enclosing grant: the requirement is a property of
+the operand types at the site, never of where some function's body happens to put a block. So declaring
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code, and inside a grant both the
+declaration and the site are legal and hardware-defined. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
 heterogeneous bindings — "a name MAY be bound to more than one function value in the same scope when the
 bindings differ in their parameter signature" — and that permission stands for every other pair of types,
 where an author's concrete `eq(in a : A, in b : B) -> bool` establishes the relation structurally

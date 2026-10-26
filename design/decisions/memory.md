@@ -328,11 +328,16 @@ operand pair** — the pair, not the name:
 - **The pointer↔integer pair is confined by the pair itself.** The grant attaches to the operand types at
   the site, **independent of what is declared**: `p == 0` with `p : ptr(T)` requires an enclosing
   `unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds
-  a bit pattern — is the same knowledge fabricating an address requires (MEM-9's own argument). So a
-  declaration cannot lift the requirement. A heterogeneous `eq` over a pointer and an integer may be
-  *written*, but its body must compare the two, and that comparison is itself confined: outside a grant it
-  is ill-formed, so no checked-code relation over that pair can ever be established. Inside a grant both
-  the declaration and the site are legal and hardware-defined.
+  a bit pattern — is the same knowledge fabricating an address requires (MEM-9's own argument).
+  **A declaration cannot supply the grant, and neither can its body.** A relation over this pair may be
+  established — even by a body whose comparison sits inside its own `unchecked { … }` — and the site still
+  requires its own enclosing grant, because the requirement is a property of the operand types at the site
+  and not of where some function places a block. So declaring `eq(in a : ptr(T), in b : usize)` never
+  makes `p == 0` legal in checked code; inside a grant both are legal and hardware-defined.
+  *An earlier draft of this rule argued that the declaration's body "must compare the two, and is therefore
+  confined". That argument was wrong and is retracted here rather than edited out: `unchecked { bitcast(usize, a) } == b`
+  inside the body satisfies it, so the bypass would have stayed open behind a sentence that read as a
+  closure. The rule belongs to the site, which is why it holds whatever the declaration does.*
 
 **Why this and not the alternatives.** It closes the bypass with a rule about the program text rather than
 a rule about the order of two checks, so I1 holds by inspection; it keeps heterogeneous comparison

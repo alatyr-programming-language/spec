@@ -94,9 +94,11 @@ a comparison relation is **established for its operand pair**: same-type pairs b
 heterogeneous pairs of the author's own types by a concrete `eq(in a : A, in b : B) -> bool`, structural in
 the existing protocol sense (satisfied by providing the operation, not naming an interface) and additive
 (FND-6). The pointer↔integer pair is confined **by the pair itself**: the grant attaches to the operand
-types at the site whatever overload set exists, so such a declaration may be written but its body is
-confined and the relation never comes to exist in checked code. No new syntax; §1.4's mechanism is
-unchanged and is named in §4.5 as a permission, not the refuser.
+types at the site whatever overload set exists. **A declaration cannot supply the grant, and neither can
+its body**: a relation over that pair may be established even by a body whose comparison sits inside its own
+`unchecked { … }`, and the site still requires its own enclosing grant, because the requirement is a property
+of the operand types at the site and not of where a function places a block. No new syntax; §1.4's mechanism
+is unchanged and is named in §4.5 as a permission, not the refuser.
 
 ## 1.2.0 — 2026-10-24
 

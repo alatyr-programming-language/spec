@@ -99,9 +99,11 @@ the *same* concrete signature, nor two generic definitions.)
 
 **One pair this permission does not reach.** A heterogeneous binding is admissible for every pair of types
 **except** pointer↔integer at a comparison site: there the grant attaches to the operand **pair**, whatever
-overload set exists, so no concrete `eq(in a : ptr(T), in b : usize)` establishes the relation in checked
-code (Memory §4.5, MEM-10). This is a rule about the operand types, not an ordering inside resolution —
-§1.4's mechanism is unchanged and must not be cited as the refuser of that site.
+overload set exists (Memory §4.5, MEM-10). So a concrete `eq(in a : ptr(T), in b : usize)` may exist and
+be selected by this mechanism, and `p == 0` in checked code is **still** refused: the grant is the site's,
+and neither the declaration nor its body can supply it. This is a rule about the operand types, not an
+ordering inside resolution — §1.4's mechanism is unchanged and must not be cited as the refuser of that
+site.
 
 *(Rejected: overloading on the **result** type — a call would not be resolvable in
 isolation, breaking left-to-right typing; an explicit per-type **dispatch table** value —
