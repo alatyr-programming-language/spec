@@ -349,7 +349,8 @@ capability-requiring operations: fabricating a pointer from an integer (`bitcast
 type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
 pointer out as an integer **value** (`bitcast` to `usize`, the only spelling that keeps the
 program's meaning explicit). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
-§2.6's derive walks the `Pointer` leaf by its address bits and stays legal in checked code, so
+Stdlib appendix §2.6's derive walks the `Pointer` leaf by its address bits and stays legal in
+checked code, so
 `hash(p)` and `p == q` need no grant — what needs one is naming the integer explicitly, because
 that is where the address leaves the typed world. The body
 spells both directions because this section's own title says `integer↔pointer` and Grammar §3.7
@@ -375,7 +376,7 @@ type, not for raw fabricated bits), it is legal and tests the pointer's represen
 
 **The comparison performs no conversion.** The conversion lattice (Type System §4.2) has
 no **implicit** pointer-meeting-integer edge, and this rule adds none; its reinterpret row
-covers same-size bit reinterpretation and is **explicit** (§4.4), which is exactly the
+covers same-size bit reinterpretation and is **explicit** (Type System §4.4), which is exactly the
 `bitcast` §4.5 confines above. Implicit conversion stays confined to **widen** within one
 numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
 own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
@@ -392,14 +393,25 @@ every target **of that width**.
 pointer's width and the bits a fabricated address holds are the machine model's, and an
 address arithmetic overflow is the ISA's answer (I6; I11 as §4.5 already uses it). The
 *comparison* is not: given two `usize` values, every conforming target returns the same
-`true` or `false`. Nothing here licenses two implementations to answer one comparison
-differently — that is the bar FND-3 sets, and this rule holds it.
+`true` or `false`. Given **the same two `usize` values**, nothing here licenses two implementations
+to answer one comparison differently — that is the bar FND-3 sets, and this rule holds it. What may
+differ between targets is whether those two values are ever *reached*: inside a grant an address may be
+fabricated (§1.4: it denotes whatever location its bits name), so `p == usize(0)` there can answer truly
+on one target and falsely on another **because the operands differ**, not because the comparison does.
 
 **The comparison is a compiler-known operator site.** It is not an `Eq` instance: `eq` is
 homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no `T` for a
-pointer meeting an integer, and no user-declared `eq` — not `eq(in a : ptr(T), in b :
-usize)` — lifts the grant requirement, because the site is refused before overload
-resolution (Functions §1.4, FN-7). The precedent is the wording arrays and slices already carry: "the compiler-known
+pointer meeting an integer. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it:
+the refusal is **MEM-9's own check at the comparison site**, ordered *before* overload resolution, so no
+overload set is ever consulted there. It is deliberately not derived from Functions §1.4 (FN-7), which
+**permits** heterogeneous bindings — "a name MAY be bound to more than one function value in the same
+scope when the bindings differ in their parameter signature" — and so cannot be cited as refusing this
+one. The compiler's shape is the evidence for the ordering: `seam_cmp_outside_grant_err` fires in the
+comparison arm above `ty_eq` (`compiler/src/sema.al`, #1034), guarded by the kind pair and
+`PTRINT_GRANT == 0`, so it is scoped to this site and no other int↔ptr crossing changes verdict.
+**Whether comparison operands must share a type in general is a separate open question** (§4.5 does not
+decide it; FN-7's permission stands for every other site), and it is filed rather than answered here.
+The precedent for the wording above is what arrays and slices already carry: "the compiler-known
 built-ins … there is no source-level prelude function to override for them" (Type System
 §4.5).
 

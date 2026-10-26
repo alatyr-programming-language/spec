@@ -50,9 +50,9 @@ several at once (see `CONTRIBUTING.md`).
 ## Unreleased
 
 **Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
-Comparing a pointer with an integer — `p == 0`, `p != 0`, or an ordering against one such as
-`p < 4096`, the three forms §4.5 itself lists — was
-unnamed: §4.5 made *fabricating* an address from an integer capability-requiring and said
+Comparing a pointer with an integer — `p == 0`, `p != 0`, or an ordering against one such
+as `p < 4096`, the three forms §4.5 itself lists — was unnamed: §4.5 made *fabricating* an
+address from an integer capability-requiring and said
 nothing about comparing one, so the checker accepted `return p == 0` with `rc=0` while
 `scripts/ptrint_census.sh` already reported the shape as an OP-CMP row (#1029 proved the hook
 fires). It is now ill-formed outside an `unchecked` grant, and inside one it tests the
@@ -60,18 +60,26 @@ pointer's representation — the integer operand being `usize`, the pointer's ow
 conversion performed (the lattice, Type System §4.2, gains no edge; implicit conversion stays confined
 to widen, §4.3). What is target-dependent is the representation, not the comparison: given two `usize`
 values every conforming target answers alike (I6; I11 as §4.5 uses it for address arithmetic), and
-`p == -1` has exactly one reading — `2^64 − 1`, by CC-8. The rule is the grant
+`p == -1` has exactly one reading — the all-ones address of the pointer's own width, `2^N − 1`
+(`usize`, Type System §7: `2^32 − 1` on i386/aarch32/riscv32), by CC-8. The rule is the grant
 model §4.5 already applies to its neighbouring operation, and MEM-8 makes the checked case
 vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so a checked
 `p == 0` cannot be true and the question the author meant is `Option(ptr(T))`, whose `None`
 is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked corpus reports
-`op-cmp=0`, so no place the census **measures** changes verdict — 12 tracked `lib/` modules remain
+`op-cmp=0`, so the **comparison** half of the rule changes no verdict the census measures — 12 tracked `lib/` modules remain
 blind to it (`blind-lib=12` in the same record), which is stated rather than glossed. The gap closed
 is between detecting a form and refusing it. The same decision confines an integer↔pointer conversion in
 **either direction** (§4.5's title and Grammar §3.7 already said `int↔ptr`; the body confined only
-integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost:
-2 of the census's 3 recorded places are pointer→integer outside a grant (`RESULT-TAIL p2i`, in `test/`)
-and become illegal; they are fixtures, and the compiler fixes them under its own gate. Owner decision B of #1030.
+integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost, re-measured because the first figure was wrong: **8 sites in 7 tracked fixtures** write an
+explicit `bitcast(usize, …)` outside any grant and become illegal — `require_ptr_ok.al:3`,
+`require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52`, `subword_ptr_deref.al:5`,
+`issue345_ptr_target_spacing.al:13`, `deref_subword_field_write_raw.al:11` (the last two are
+`@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely mechanical). `lib/` and
+`src/` hold **zero** such sites, so the self-host build is untouched — the cost is confined to fixtures,
+which the compiler fixes under its own gate. The census could not have reported this: it excludes
+explicit bitcasts by construction ("Every integer/pointer crossing below is EXPLICIT, so the seam decides
+nothing and the census must be empty", `scripts/ptrint_census.sh:462-463`), so its `places=3` measures the
+implicit half only, and quoting it as the cost of a both-directions rule was a category error. Owner decision B of #1030.
 
 ## 1.2.0 — 2026-10-24
 

@@ -127,19 +127,18 @@ for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directl
 **`Pointer`** leaf (`typeinfo` kind `Pointer{pointee, mutable}`, §4.1; not a `ScalarKind`
 member) compares **by its address bits**, which is the only thing a pointer has — and that walk
 is **not** the read Memory §4.5 confines. §4.5's grant governs *naming* the integer: a `bitcast` to
-`usize`, an explicit comparison with one, arithmetic on one. A derived `eq`/`lt`/`hash` names neither,
+`usize`, an explicit comparison with one, pointer arithmetic on one. A derived `eq`/`lt`/`hash` names neither,
 so `hash(p)` and `p == q` over a pointer-bearing type need **no** grant in checked code, and the
 pointer stays an **opaque key** there — equal pointers hash alike, different pointers need not. What
 stays confined is the explicit read, and it stays confined **inside a derived body too**: a hand-written
 `Hash` impl that writes `bitcast(usize, self)` outside `unchecked { … }` is ill-formed exactly as it
 would be in a function body, and legal and hardware-defined inside one. The rule is about the spelling,
 not about where the spelling sits. So the
-derives are library code over `typeinfo` for **every** type, the compiler keeping no
-built-in structural-comparison knowledge — with one exception it does not need to know:
-a comparison whose two operands have **different** types never reaches a derive at all,
-because `eq` is homogeneous (`eq(in a : T, in b : T)`); such a site is refused by the
-checker as ill-formed before overload resolution, which is how Memory §4.5 confines a
-pointer meeting an integer without the compiler holding any structural rule about it. The signatures below are the **conformance
+derives are library code over `typeinfo` for **every** type, and the compiler holds no
+built-in structural-comparison knowledge at all: a heterogeneous site never reaches a derive, because
+`eq` is homogeneous (`eq(in a : T, in b : T)`) and MEM-9 refuses the pointer-meeting-integer site at
+the comparison itself, before overload resolution (Memory §4.5) — so §4.5's confinement needs no
+structural rule here, and there is no exception to the sentence before it. The signatures below are the **conformance
 shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 
 - **`Eq`** — `eq(in a : T, in b : T) -> bool` (backs `==` / `!=`); default = componentwise
@@ -406,7 +405,7 @@ lives on the arch surface (Assembly §4). Two kinds.
 | Built-in | Signature (UFCS receiver where applicable) | Contract |
 |----------|--------------------------------------------|----------|
 | `typeinfo`  | `typeinfo(comptime T : type) -> TypeInfo`            | comptime type introspection; no RTTI (Comptime §5) |
-| `bitcast`   | `bitcast(comptime T : type, in v : U) -> T`          | reinterpret bits; **equal width** required (Type System §4.4); to a pointer type it fabricates a pointer from an integer — a raw operation, `unchecked` only (Memory §4.5) |
+| `bitcast`   | `bitcast(comptime T : type, in v : U) -> T`          | reinterpret bits; **equal width** required (Type System §4.4); in **either direction** a raw operation, `unchecked` only (Memory §4.5) — to a pointer type it fabricates a pointer from an integer, from a pointer type it reads the address out as an integer |
 | `size`   | `T.size() -> usize` (prefix `size(comptime T : type)`) | size in bytes; compiler-folded over the machine model (Memory §4.3) |
 | `align`  | `T.align() -> usize` (prefix `align(comptime T : type)`) | alignment in bytes; compiler-folded (layout = machine model, I6) |
 | `ptr`   | `ptr(place) -> ptr([mut] T)`                 | take an address (Memory §4.3); on a *type* `ptr(T)` / `ptr(mut T)` it is the pointer **type** (`mut` on the pointee), on a *place* its address — UFCS `place.ptr()` |
