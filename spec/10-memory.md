@@ -383,8 +383,12 @@ covers same-size bit reinterpretation and is **explicit** (Type System §4.4), w
 numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
 own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
 common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
-ill-formed. Both operands are therefore `usize` values, of one width, and the answer is
-determinate: `p == -1` has exactly one reading, because the literal `1` takes `usize` from
+ill-formed. Nothing converts, so the two operands keep their own types — the integer operand is a
+`usize`, and the pointer contributes **its address bits at that same width** to a relation the compiler
+knows (below); neither operand is a `usize` copy of the other, and that is exactly why no edge is added
+to the lattice. Both operands therefore **occupy one width**, which is what makes the answer
+determinate. An integer literal at this position — `0`, `4096`, `-1` — takes `usize` from the position,
+the same rule that settles `p == -1`: the literal `1` takes `usize` from
 the position and unary `−` over an unsigned operand keeps that type and yields the
 two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of
 the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's
@@ -414,7 +418,11 @@ bit pattern — is the same knowledge fabricating an address requires. **A decla
 grant.** A relation over this pair may be **declared** — even by a body whose comparison sits inside its own
 `unchecked { … }` — and the site still requires its own enclosing grant: the requirement is a property of
 the operand types at the site, never of where some function's body happens to put a block. So declaring
-`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; inside a grant both the
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; and the rule reaches the
+**spelled-out call too** — `eq(p, n)` with `p : ptr(T)`, `n : usize` is the same operand pair at a
+comparison site, so it requires the same enclosing grant, and selecting that binding is not a way to
+reach the site from checked code. `0 == p` is the same site with its operands exchanged: the pair is
+unordered, so the grant is required there as well. Inside a grant both the
 declaration and the site are **legal**, and what is hardware-defined there is the *operand* — the
 fabricated address whose bits name whatever location the target gives them (§1.4) — never the comparison,
 which stays determined by the two `usize` values it is given, as above. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**

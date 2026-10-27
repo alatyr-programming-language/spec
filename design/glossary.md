@@ -553,4 +553,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   declared somewhere. The distinction exists because exactly one pair separates them: **pointer↔integer**
   may be declared by anyone, in any scope, and is still not well-formed at the site in checked code; it
   requires an enclosing `unchecked` grant there (Memory §4.5, MEM-9; the grant attaches to the pair at
-  the site, not to the declaration — MEM-10). Every other pair is well-formed wherever it is declared.
+  the site, not to the declaration — MEM-10). Every other pair is well-formed at a site once its relation
+  is declared — which speaks of the relation only: other rules still bear on the site, and a declared
+  operation is not thereby well-formed where the raw set confines it (a raw-union member read not proven
+  definitely active, an `uninit` read — Grammar §3.7) or where scope and visibility refuse it.
