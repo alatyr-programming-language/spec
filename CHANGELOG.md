@@ -49,6 +49,51 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.4.0 — 2026-10-27
+
+**Normative — the granted comparison site, and what a grant covers** (Memory §4.5, Stdlib appendix
+§2.6; MEM-9, MEM-10). Two passages of 1.3.0 contradicted each other on the half of the rule that
+proves it is a grant and not a ban. Stdlib appendix §2.6 stated the well-formedness condition
+universally — a site is well-formed when a comparison relation is **declared** for its operand pair —
+and carved out only that pointer↔integer cannot be made well-formed in **checked** code, without ever
+saying what stands in for a declaration **inside** a grant. Memory §4.5 said the site is legal inside
+a grant on its own. Read literally, §2.6 refuses `unchecked { p == 0 }`, which is exactly the program
+§4.5 exists to allow, and the two chapters then license different verdicts on one source — the FND-3
+divergence, in the paragraph written to prevent it. §2.6 now names the compiler-known operator relation
+of Memory §4.5 as **standing in for a declaration** inside a grant, and says why no author-declared
+`eq` is needed or possible there (`eq`'s parameters are the author's own types). The reference
+implementation already reads §4.5 this way: #1034's accept fixture runs the granted comparison with no
+`eq(ptr(T), usize)` declared anywhere, and its refusal is keyed on the operand types plus the grant,
+never on a declared relation.
+
+The same review moved a premise into the text that was resting on it. Whether `unchecked` reaches a
+**sibling subexpression of the same statement** was decided nowhere: the glossary says granularity is
+the author's choice (one line or a block), and the answer lived only in a changelog parenthetical —
+yet nine of the sites this revision counts depend on it. Memory §4.5 now states it: a grant covers the
+expression it is written on, not the statement that contains it; the grant is raised where the crossing
+value is walked, and a sibling does not inherit it. So in
+`deref(unchecked bitcast(ptr(mut usize), base)) = bitcast(usize, s.ptr)` the left-hand address
+computation is granted and the right-hand read of `Slice.ptr : ptr(T)` out as an integer is **not**,
+and is ill-formed; a block grant covers every crossing in its block.
+
+**Editorial — the measured cost of 1.3.0 was inflated by three sites it does not touch, and four
+citations were wrong** (CHANGELOG, MEM-9, MEM-10). `subword_ptr_deref.al:5`,
+`issue345_ptr_target_spacing.al:13` and `deref_subword_field_write_raw.al:11` read
+`bitcast(usize, r)` where `r` is the result of `sys_mmap`, declared `-> isize`: an integer→integer
+**reinterpret inside the numeric domain** (Type System §4.2), neither direction of integer↔pointer, not
+capability-requiring, legal after this rule. The 1.3.0 entry counted them and prescribed a grant for
+them, which would have added dead `unchecked` scopes. The cost is **at least 14 sites in 8 tracked
+fixtures**, not 17 in 11, corrected here and in MEM-9's own record where the inflated figure was
+recorded twice. The unreproducible "225 occurrences in 108 fixtures" becomes the figure that
+reproduces, with its command stated (`git grep -o 'bitcast(usize' -- 'test/*.al'` → 358 occurrences in
+144 fixtures on `main`). I1 was cited in four places for the bar that two implementations must not
+diverge on whether a source is well-formed; that bar is **FND-3** — I1 is codegen transparency, the
+programmer predicts the emitted assembly — and this correction had already been made once at 6b05dbf
+before coming back. The quotation "refused before overload resolution" was attributed to Memory §4.5;
+it was written in Stdlib appendix §2.6 and removed there, and is now attributed where it stood. The
+normative chapter no longer cites the reference compiler's internal kind names as spec vocabulary; the
+glossary reconciles the decision record's word **established** with its own two terms.
+
 ## 1.3.0 — 2026-10-27
 
 **Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
