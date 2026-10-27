@@ -387,8 +387,9 @@ ill-formed. Both operands are therefore `usize` values, of one width, and the an
 determinate: `p == -1` has exactly one reading, because the literal `1` takes `usize` from
 the position and unary `−` over an unsigned operand keeps that type and yields the
 two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of
-the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's pointer width, Type System §7:
-`2^32 − 1` on i386/aarch32/riscv32, `2^64 − 1` on the 64-bit targets), the same value on
+the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's
+pointer width, Type System §7 — which states the width, not the number: `2^32 − 1` follows on
+i386/aarch32/riscv32 and `2^64 − 1` on the 64-bit targets), the same value on
 every target **of that width**.
 
 **What is hardware-defined, and what is not.** The *representation* is the target's: a
