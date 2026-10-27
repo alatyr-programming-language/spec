@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.6.0 — 2026-10-27
+
 **Normative — the derived `Pointer` arm is granted library code, not a mechanism outside the lattice**
 (Stdlib appendix §2.6, Memory §4.5; MEM-9). 1.5.0 named the derive's pointer step a "compiler-known rule"
 with "no source expression at that point to confine". That was wrong in the direction it mattered, and it

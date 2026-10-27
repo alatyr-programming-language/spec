@@ -539,7 +539,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   guaranteed across the whole of `1.*.*`; **conformance is not** — a conformance claim cites a
   revision, never `v1` (Overview §6, FND-13).
 
-- **Revision** — a published version of *this document*, `MAJOR.MINOR.PATCH` (e.g. `1.4.0`). MAJOR
+- **Revision** — a published version of *this document*, `MAJOR.MINOR.PATCH` (e.g. `1.6.0`). MAJOR
   is the language version above; MINOR marks a normative revision of the text (a gap closed, a
   collision resolved); PATCH is editorial. Distinct from **maturity** (`draft (under review)` /
   `accepted`), which is carried by each chapter's Status line and never by the number.
