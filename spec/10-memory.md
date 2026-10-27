@@ -349,10 +349,12 @@ capability-requiring operations: fabricating a pointer from an integer (`bitcast
 type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
 pointer out as an integer **value** (`bitcast` to `usize`, the only *operator* that keeps the
 program's meaning explicit — UFCS `p.bitcast(usize)` is the same operator, Type System §4.4, not a second
-permission). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
-Stdlib appendix §2.6's derive walks the `Pointer` leaf by its address bits and stays legal in
-checked code, so
-`hash(p)` and `p == q` need no grant — what needs one is naming the integer explicitly, because
+permission). A derived `Eq`/`Ord`/`Hash` over a whole pointer reaches that read too, but **granted where
+it is generated**: Stdlib appendix §2.6's derive expands to library code that spells its `Pointer` arm as
+`unchecked bitcast(usize, …)`, so the crossing is named and granted inside the generated body and the
+author's checked call site needs no grant of its own —
+`hash(p)` and `p == q` are legal in checked code because the grant is not the author's to write, and what
+needs one is naming the integer explicitly **in the author's own source**, because
 that is where the address leaves the typed world. The body
 spells both directions because this section's own title says `integer↔pointer` and Grammar §3.7
 lists the raw set as `int↔ptr`; confining only one direction left the other as a two-token

@@ -49,6 +49,26 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the derived `Pointer` arm is granted library code, not a mechanism outside the lattice**
+(Stdlib appendix §2.6, Memory §4.5; MEM-9). 1.5.0 named the derive's pointer step a "compiler-known rule"
+with "no source expression at that point to confine". That was wrong in the direction it mattered, and it
+invented a mechanism: the derives **are** library code in this language — `lib/base/derive.al` is a
+hand-written `comptime match` over `typeinfo(T)` — so there *is* a source expression at that point, and
+§4.5 does reach it. The correct shape is the one the same stdlib already uses for a pointer at library
+level: `Option::get` matches `typeinfo(T)` for `Pointer(_)` and then spells its crossings as explicit
+`unchecked bitcast` (`lib/base/option.al`). The derive's `Pointer` arm therefore expands to
+`unchecked bitcast(usize, …)` **inside the generated body**: every confined crossing is named and granted
+where it is written, and the author's checked `hash(p)` / `p == q` still need no grant of their own,
+because the grant is not theirs to write. Nothing observable to a user moves — checked code keeps hashing
+pointer-bearing keys, an author's own `bitcast(usize, self)` outside a grant stays ill-formed — but the
+mechanism is now one the language already has instead of a new one, and §4.4's "bitcast is the only
+reinterpret form" survives intact. The chapter text is corrected in both places it was stated.
+
+**Follow-up this creates in the compiler:** `lib/base/derive.al` has no `Pointer` arm today and falls
+through to `return u64(v)` at `:149` — a `T(value)` conversion for which the lattice has no class, since
+§4.4 makes `bitcast` the only reinterpret form. It needs the granted arm the text now describes. Filed
+against `compiler/`.
+
 ## 1.5.0 — 2026-10-27
 
 **Normative — the derived walk over a `Pointer` leaf is a compiler-known step, and what a declared

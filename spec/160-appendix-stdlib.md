@@ -125,21 +125,25 @@ shape: a **struct**'s fields via `a.(f)` (Comptime §5.4), an **array**'s elemen
 and an **enum**'s variants via the comptime variant pattern `T.(v)` in a `comptime
 for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directly, and a
 **`Pointer`** leaf (`typeinfo` kind `Pointer{pointee, mutable}`, §4.1; not a `ScalarKind`
-member) compares **by its address bits**, which is the only thing a pointer has — and that walk
-is **not** the read Memory §4.5 confines, because it is **not a spelling at all**: the `Pointer` arm of
-the walk is a **compiler-known rule**, applied where the compiler generates the derive, and there is no
-source expression at that point for §4.5 to confine. §4.5's grant governs *naming* the integer in source: a
-`bitcast` to `usize`, an explicit comparison with one, pointer arithmetic on one. A derived
-`eq`/`lt`/`hash` names neither, so `hash(p)` and `p == q` over a pointer-bearing type need **no** grant in
-checked code, and the pointer stays an **opaque key** there — equal pointers hash alike, different pointers
-need not. What stays confined is the explicit read, and it stays confined **inside a hand-written impl too**:
-a `Hash` impl that writes `bitcast(usize, self)` outside `unchecked { … }` is ill-formed exactly as it
-would be in a function body, and legal and hardware-defined inside one. The rule is about the spelling,
-not about where the spelling sits — which is also why the generated arm cannot be spelled `u64(self)` over
-a pointer: `T(value)` preserves a value or re-brands it, and reading address bits out of a pointer is
-**reinterpret**, whose only form is `bitcast` (Type System §4.4). So the derives are library code over
-`typeinfo` for every type **whose leaf the lattice can walk**, and the `Pointer` leaf is the one place the
-compiler supplies the step itself: it holds no *general* structural-comparison knowledge, and it supplies
+member) compares **by its address bits**, which is the only thing a pointer has. The read that gets
+those bits **is** a `bitcast`, and it **is** granted — but the grant sits in the **generated body**, not
+at the user's call site: the derive expands to library code that spells `unchecked bitcast(usize, …)`
+over the leaf, so `hash(p)` and `p == q` written in checked code need **no** grant of their own while
+every confined crossing they reach is granted where it is spelled. That is how the same stdlib already
+handles a pointer at library level — `Option::get` matches `typeinfo(T)` for `Pointer(_)` and then
+spells its crossings as explicit `unchecked bitcast` (`lib/base/option.al`) — and the derives follow the
+same shape rather than inventing a second way to reach an address. §4.5's grant governs *naming* the
+integer in **the author's** source: a `bitcast` to `usize`, an explicit comparison with one, pointer
+arithmetic on one. The pointer stays an **opaque key** to a checked caller — equal pointers hash alike,
+different pointers need not. What stays confined is the author's explicit read, and it stays confined
+**inside a hand-written impl too**: a `Hash` impl that writes `bitcast(usize, self)` outside
+`unchecked { … }` is ill-formed exactly as it would be in a function body, and legal and hardware-defined
+inside one. The rule is about the spelling, not about where the spelling sits — which is also why the
+derived arm cannot be spelled `u64(self)` over a pointer: `T(value)` preserves a value or re-brands it,
+and reading address bits out of a pointer is **reinterpret**, whose only form is `bitcast` (Type System
+§4.4). So the derives are library code over
+`typeinfo` for every type, and the `Pointer` leaf is the one arm that must carry its own grant: it holds
+no *general* structural-comparison knowledge, and it supplies
 exactly this arm. A heterogeneous site never reaches a derive, because
 `eq` is homogeneous (`eq(in a : T, in b : T)`) and the site is refused at the comparison itself, by MEM-9's
 grant rule read together with MEM-10's rule about the **operand pair at the site** (Memory §4.5) — not by an
