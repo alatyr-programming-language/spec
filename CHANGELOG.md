@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.3.0 — 2026-10-27
+
 **Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
 Comparing a pointer with an integer — `p == 0`, `p != 0`, or an ordering against one such
 as `p < 4096`, the three forms §4.5 itself lists — was unnamed: §4.5 made *fabricating* an

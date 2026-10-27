@@ -3,7 +3,7 @@
 **A systems programming language whose ceiling of expressiveness equals the assembler's —
 with abstractions that stay transparent in code generation.**
 
-![spec version 1.2.0](https://img.shields.io/badge/spec-1.2.0-blue)
+![spec version 1.3.0](https://img.shields.io/badge/spec-1.3.0-blue)
 ![status: draft under review](https://img.shields.io/badge/status-draft%20under%20review-orange)
 ![license CC BY 4.0 / Apache-2.0](https://img.shields.io/badge/license-CC%20BY%204.0%20%2F%20Apache--2.0-green)
 
@@ -23,7 +23,16 @@ contradiction between two files is a defect to be fixed rather than a matter of 
 
 ## Status
 
-**Version `1.2.0` — the Alatyr v1 specification, under review. Not accepted.**
+**Version `1.3.0` — the Alatyr v1 specification, under review. Not accepted.**
+
+Revision 1.3.0 closes the gap between detecting a pointer/integer crossing and refusing
+it: a pointer meeting an integer is now the same capability as fabricating one, so
+`p == 0` with `p : ptr(T)` is ill-formed outside an `unchecked` grant and tests the
+pointer's own-width representation inside one (Memory §4.5; MEM-9), and a comparison
+resolves over its **operand pair**, with the grant attaching to the pair rather than to
+an ordering before overload resolution (Stdlib appendix §2.6, Functions §1.4; MEM-10).
+The integer↔pointer confinement now runs in **both** directions, which closes the
+`bitcast(usize, p) == 0` bypass.
 
 Revision 1.2.0 closes two gaps the reference implementation exposed: the signedness of
 unary `−` over an unsigned operand, and who may open an `unchecked` scope (CC-8, CC-9).
@@ -264,7 +273,7 @@ shifted, or repurposed; a decision that changes is superseded by a new entry.
 
 | Repository | What it holds | Status |
 |---|---|---|
-| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.2.0` — under review |
+| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.3.0` — under review |
 | [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain — front end, lowering, GAS / WAT emission, the CLI — together with the prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
 
 The direction of authority runs one way and does not reverse: **the toolchain conforms to
@@ -287,7 +296,7 @@ confer it either: an independent implementation is conforming when it matches *t
 not when it matches the reference. Three things worth knowing before you start:
 
 - The specification is a **draft under review**. Cite the revision you built against
-  (`1.2.0`) and expect the text to move under you: during review, MINOR is the digit that
+  (`1.3.0`) and expect the text to move under you: during review, MINOR is the digit that
   bumps whenever a norm changes. The leading `1` is the *language* version, not a claim
   that the text is settled — see `CHANGELOG.md`.
 - If you have to guess, that is a **bug in this repository**, not in your reading. File
