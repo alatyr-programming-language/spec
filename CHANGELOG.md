@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.5.0 — 2026-10-27
+
 **Normative — the derived walk over a `Pointer` leaf is a compiler-known step, and what a declared
 heterogeneous relation's body must spell** (Stdlib appendix §2.6, Functions §1.4; MEM-9, MEM-10). 1.4.0
 said the derive compares a `Pointer` leaf "by its address bits" and needs no grant, while also calling the
