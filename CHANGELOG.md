@@ -49,6 +49,30 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the derived walk over a `Pointer` leaf is a compiler-known step, and what a declared
+heterogeneous relation's body must spell** (Stdlib appendix §2.6, Functions §1.4; MEM-9, MEM-10). 1.4.0
+said the derive compares a `Pointer` leaf "by its address bits" and needs no grant, while also calling the
+derives "library code over `typeinfo` for **every** type" — but a library body must spell its reads, and
+every source spelling that reads address bits out of a pointer is `bitcast`, which §4.5 confines. The
+reference implementation showed the gap: `lib/base/derive.al` has no `Pointer` arm and falls through to
+`u64(v)`, a `T(value)` conversion for which the lattice has no class (§4.4 makes `bitcast` the only
+reinterpret form), so two implementations diverge on `hash(p)`. The chapter now says the `Pointer` arm is a
+**compiler-known rule** with no source expression at that point to confine, and scopes the derives to every
+type **whose leaf the lattice can walk**. It also closes a hole the same paragraph left: a body writing
+`a == b` inside `eq(in a : ptr(T), in b : usize)` re-enters the pair it defines and recurses, so the body
+must spell its own crossing inside its own grant — `bitcast(usize, a) == b`, a same-type pair.
+
+**Editorial — one collision resolved and four citations corrected** (Functions §1.4, Memory §4.5, Stdlib
+appendix §2.6, MEM-9). Functions §1.4 answered its own question twice: "admissible for every pair of types
+**except** pointer↔integer at a comparison site" against "may exist and **be selected by this mechanism**".
+Resolved in the direction MEM-10 decided — the binding is admissible and selectable, the **site** is what
+is refused — and the false claim that §1.4's mechanism is unchanged, made inside a paragraph that narrows
+§1.4, is removed. Memory §4.5's "any other integer type at this position is ill-formed" was unconditional
+and collided with §1.4's permission for every other pair; scoped to this operator position. MEM-9's decision
+record still said the granted comparison is "hardware-defined", which §4.5, §2.6 and the CHANGELOG all deny
+— scoped to the operand. §2.6 attributed the pair rule to MEM-9; it is MEM-10's. The CHANGELOG repeated the
+§7 overclaim that 0a1aa16 had already fixed in the chapter.
+
 ## 1.4.0 — 2026-10-27
 
 **Normative — the granted comparison site, and what a grant covers** (Memory §4.5, Stdlib appendix
@@ -108,7 +132,8 @@ conversion performed (the lattice, Type System §4.2, gains no edge; implicit co
 to widen, §4.3). What is target-dependent is the representation, not the comparison: given two `usize`
 values every conforming target answers alike (I6; I11 as §4.5 uses it for address arithmetic), and
 `p == -1` has exactly one reading — the all-ones address of the pointer's own width, `2^N − 1`
-(`usize`, Type System §7: `2^32 − 1` on i386/aarch32/riscv32), by CC-8. The rule is the grant
+(`usize` is a prelude alias for the target's pointer width, Type System §7 — which states the width,
+not the number; `2^32 − 1` follows on i386/aarch32/riscv32), by CC-8. The rule is the grant
 model §4.5 already applies to its neighbouring operation, and MEM-8 makes the checked case
 vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so a checked
 `p == 0` cannot be true and the question the author meant is `Option(ptr(T))`, whose `None`

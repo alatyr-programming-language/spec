@@ -339,7 +339,9 @@ operand pair** — the pair, not the name:
   established — even by a body whose comparison sits inside its own `unchecked { … }` — and the site still
   requires its own enclosing grant, because the requirement is a property of the operand types at the site
   and not of where some function places a block. So declaring `eq(in a : ptr(T), in b : usize)` never
-  makes `p == 0` legal in checked code; inside a grant both are legal and hardware-defined.
+  makes `p == 0` legal in checked code; inside a grant both are legal, and what is hardware-defined
+  there is the operand — the fabricated address its bits name (Memory §1.4) — never the comparison,
+  which is determined by the two values it is given.
   *An earlier draft of this rule argued that the declaration's body "must compare the two, and is therefore
   confined". That argument was wrong and is retracted here rather than edited out: `unchecked { bitcast(usize, a) } == b`
   inside the body satisfies it, so the bypass would have stayed open behind a sentence that read as a

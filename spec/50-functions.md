@@ -97,13 +97,14 @@ exactly-one-match rule still holds; the generic never causes ambiguity — it is
 on concrete-miss. This is the sole mixing allowed: a name still may not bind two functions of
 the *same* concrete signature, nor two generic definitions.)
 
-**One pair this permission does not reach.** A heterogeneous binding is admissible for every pair of types
-**except** pointer↔integer at a comparison site: there the grant attaches to the operand **pair**, whatever
-overload set exists (Memory §4.5, MEM-10). So a concrete `eq(in a : ptr(T), in b : usize)` may exist and
-be selected by this mechanism, and `p == 0` in checked code is **still** refused: the grant is the site's,
-and neither the declaration nor its body can supply it. This is a rule about the operand types, not an
-ordering inside resolution — §1.4's mechanism is unchanged and must not be cited as the refuser of that
-site.
+**The one site this permission does not license.** A heterogeneous binding is admissible for **every**
+pair of types, pointer↔integer included: the declaration `eq(in a : ptr(T), in b : usize)` is legal, and
+this mechanism may select it. What is refused is the **comparison site**, not the binding — the grant
+attaches to the operand pair at the site, whatever overload set exists (Memory §4.5, MEM-10). So the
+binding may exist and be selected by this mechanism, and `p == 0` in checked code is **still** refused: the
+grant is the site's, and neither the declaration nor its body can supply it. This is a rule about where a
+relation may be **used**, not about which relation resolves — the resolution mechanism above is unchanged,
+and must not be cited as the refuser of that site.
 
 *(Rejected: overloading on the **result** type — a call would not be resolvable in
 isolation, breaking left-to-right typing; an explicit per-type **dispatch table** value —

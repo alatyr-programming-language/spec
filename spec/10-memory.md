@@ -388,8 +388,10 @@ covers same-size bit reinterpretation and is **explicit** (Type System §4.4), w
 `bitcast` this section confines above. Implicit conversion stays confined to **widen** within one
 numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
 own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
-common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
-ill-formed. Nothing converts, so the two operands keep their own types — the integer operand is a
+common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at **this operator position** is
+ill-formed. That confines the built-in operator site only: a relation the author declares over a different
+pair (`eq(in a : ptr(T), in b : u32)`) is a different pair, admissible under Functions §1.4 and legal
+wherever its own site is well-formed (below); this sentence does not reach it. Nothing converts, so the two operands keep their own types — the integer operand is a
 `usize`, and the pointer contributes **its address bits at that same width** to a relation the compiler
 knows (below); neither operand is a `usize` copy of the other, and that is exactly why no edge is added
 to the lattice. Both operands therefore **occupy one width**, which is what makes the answer

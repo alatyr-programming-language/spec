@@ -126,21 +126,26 @@ and an **enum**'s variants via the comptime variant pattern `T.(v)` in a `compti
 for`-unrolled `match` (Comptime §5.5 / CT-9) — a scalar leaf compares directly, and a
 **`Pointer`** leaf (`typeinfo` kind `Pointer{pointee, mutable}`, §4.1; not a `ScalarKind`
 member) compares **by its address bits**, which is the only thing a pointer has — and that walk
-is **not** the read Memory §4.5 confines. §4.5's grant governs *naming* the integer: a `bitcast` to
-`usize`, an explicit comparison with one, pointer arithmetic on one. A derived `eq`/`lt`/`hash` names neither,
-so `hash(p)` and `p == q` over a pointer-bearing type need **no** grant in checked code, and the
-pointer stays an **opaque key** there — equal pointers hash alike, different pointers need not. What
-stays confined is the explicit read, and it stays confined **inside a derived body too**: a hand-written
-`Hash` impl that writes `bitcast(usize, self)` outside `unchecked { … }` is ill-formed exactly as it
+is **not** the read Memory §4.5 confines, because it is **not a spelling at all**: the `Pointer` arm of
+the walk is a **compiler-known rule**, applied where the compiler generates the derive, and there is no
+source expression at that point for §4.5 to confine. §4.5's grant governs *naming* the integer in source: a
+`bitcast` to `usize`, an explicit comparison with one, pointer arithmetic on one. A derived
+`eq`/`lt`/`hash` names neither, so `hash(p)` and `p == q` over a pointer-bearing type need **no** grant in
+checked code, and the pointer stays an **opaque key** there — equal pointers hash alike, different pointers
+need not. What stays confined is the explicit read, and it stays confined **inside a hand-written impl too**:
+a `Hash` impl that writes `bitcast(usize, self)` outside `unchecked { … }` is ill-formed exactly as it
 would be in a function body, and legal and hardware-defined inside one. The rule is about the spelling,
-not about where the spelling sits. So the
-derives are library code over `typeinfo` for **every** type, and the compiler holds no
-built-in structural-comparison knowledge at all: a heterogeneous site never reaches a derive, because
-`eq` is homogeneous (`eq(in a : T, in b : T)`) and MEM-9 refuses the pointer-meeting-integer site at
-the comparison itself, by a rule about the **operand pair at the site** (Memory §4.5) — not by an
+not about where the spelling sits — which is also why the generated arm cannot be spelled `u64(self)` over
+a pointer: `T(value)` preserves a value or re-brands it, and reading address bits out of a pointer is
+**reinterpret**, whose only form is `bitcast` (Type System §4.4). So the derives are library code over
+`typeinfo` for every type **whose leaf the lattice can walk**, and the `Pointer` leaf is the one place the
+compiler supplies the step itself: it holds no *general* structural-comparison knowledge, and it supplies
+exactly this arm. A heterogeneous site never reaches a derive, because
+`eq` is homogeneous (`eq(in a : T, in b : T)`) and the site is refused at the comparison itself, by MEM-9's
+grant rule read together with MEM-10's rule about the **operand pair at the site** (Memory §4.5) — not by an
 ordering between that refusal and overload resolution, which MEM-10 retracts as the wrong instrument: an
 ordering between two rules is invisible to a second implementation. So §4.5's confinement needs no
-structural rule here, and there is no exception to the sentence before it. The signatures below are the **conformance
+structural rule of its own here. The signatures below are the **conformance
 shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 
 - **`Eq`** — `eq(in a : T, in b : T) -> bool` (backs `==` / `!=`); default = componentwise
@@ -154,7 +159,11 @@ A comparison site resolves over its **operand pair**, not over a name (Memory §
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
 the compiler-known **pointer↔integer** pair and the site sits inside an `unchecked` grant, where the
 compiler-known operator relation of Memory §4.5 **stands in for a declaration**: no author-declared `eq`
-is needed there, and none is possible, since `eq`'s parameters are the author's own types. Same-type pairs
+is needed there, and none is possible, since `eq`'s parameters are the author's own types. **What such a
+declaration's body must spell** is its own crossing, not the operator again: writing `a == b` inside
+`eq(in a : ptr(T), in b : usize)` re-enters this same pair — `==` is backed by `eq`, so the occurrence
+resolves back into the overload set and the body recurses — so the body converts inside its own grant,
+`bitcast(usize, a) == b`, which is a same-type `usize × usize` pair, legal there and terminating. Same-type pairs
 take the structural default below. A **heterogeneous** pair of the author's own types is declared when the author provides a
 concrete `eq(in a : A, in b : B) -> bool` (likewise `lt`) — **structural** in exactly the sense of every
 other protocol in this appendix (§2: satisfied by *providing* the operation, not by naming an interface),
