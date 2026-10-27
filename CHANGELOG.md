@@ -72,22 +72,28 @@ is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked
 blind to it (`blind-lib=12` in the same record), which is stated rather than glossed. The gap closed
 is between detecting a form and refusing it. The same decision confines an integer↔pointer conversion in
 **either direction** (§4.5's title and Grammar §3.7 already said `int↔ptr`; the body confined only
-integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost, re-measured twice because both earlier figures were wrong: **at least 17 sites in 11 tracked
-fixtures** write an explicit `bitcast(usize, …)` over a pointer outside any grant and become illegal.
-Seven lines carry them, one of them twice (`hashmap_str_key.al:52` compares two): `require_ptr_ok.al:3`,
-`require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52` (×2), `subword_ptr_deref.al:5`,
-`issue345_ptr_target_spacing.al:13`, `deref_subword_field_write_raw.al:11`. **The first two** are the
-`@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely mechanical; the last two are
-plain `base := bitcast(usize, r)` off an `mmap`, which a grant fixes directly. A first re-count missed a
-further **9 sites in 4 fixtures** by counting lines that contain `unchecked` as granted: a grant scopes
-**one expression** (glossary, `unchecked expr`), so in
+integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost,
+re-measured three times because both earlier figures were wrong: **at least 14 sites in 8 tracked
+fixtures** write an explicit `bitcast(usize, …)` over a **pointer** outside any grant and become illegal.
+Five of them sit on four lines, one line twice (`hashmap_str_key.al:52` compares two):
+`require_ptr_ok.al:3`, `require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52` (×2).
+**The first two** are `@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely
+mechanical. A first re-count missed a further **9 sites in 4 fixtures** by counting lines that contain
+`unchecked` as granted: a grant scopes **one expression**, the one it is written on, and does not reach a
+sibling subexpression of the same statement (§4.5, "What a grant covers"), so in
 `deref(unchecked bitcast(ptr(mut usize), base)) = bitcast(usize, s0.ptr)` the grant covers the LHS and the
-RHS — reading `Slice.ptr : ptr(T)` — is un-granted. Those are `slice_len_field.al:19,21`,
-`slice_local_arg.al:26,28`, `slice_str_read.al:21,23`, `str_join.al:18,20,22`. The figure is a **floor**:
-separating a pointer operand from an integer one at `bitcast(usize, …)` needs the operand's type, so a
-lexical sweep over `test/` cannot prove completeness — 225 `bitcast(usize, …)` occurrences sit in 108
-fixtures and only the ones whose operand is a pointer are affected. The typed count is the gate's, on the
-run that lands this. `lib/` and
+RHS — reading `Slice.ptr : ptr(T)` — is ungranted. Those are `slice_len_field.al:19,21`,
+`slice_local_arg.al:26,28`, `slice_str_read.al:21,23`, `str_join.al:18,20,22`. A second re-count then
+removed **3 sites in 3 fixtures** that this rule does not touch at all:
+`subword_ptr_deref.al:5`, `issue345_ptr_target_spacing.al:13` and `deref_subword_field_write_raw.al:11`
+all read `base := bitcast(usize, r)` where `r` is the result of `sys_mmap`, declared `-> isize` — an
+integer→integer **reinterpret inside the numeric domain** (Type System §4.2, reinterpret row), neither
+direction of integer↔pointer, so it is not capability-requiring and stays legal. The earlier text prescribed
+a grant for them; that instruction was wrong and would have added dead `unchecked` scopes. The figure is a
+**floor**: separating a pointer operand from an integer one at `bitcast(usize, …)` needs the operand's
+type, so a lexical sweep over `test/` cannot prove completeness — `git grep -o 'bitcast(usize' -- 'test/*.al'`
+counts **358 occurrences in 144 fixtures** on `main`, and only the ones whose operand is a pointer are
+affected. The typed count is the gate's, on the run that lands this. `lib/` and
 `src/` hold **zero** such sites, so the self-host build is untouched — the cost is confined to fixtures,
 which the compiler fixes under its own gate. The census could not have reported this: it excludes
 explicit bitcasts by construction ("Every integer/pointer crossing below is EXPLICIT, so the seam decides
@@ -98,9 +104,10 @@ implicit half only, and quoting it as the cost of a both-directions rule was a c
 appendix §2.6, Functions §1.4; MEM-10, refining MEM-9; spec#20). The spec never required a comparison's
 operands to share a type, while Functions §1.4 permits heterogeneous bindings verbatim — so an author could
 declare `eq(in a : ptr(T), in b : usize)` and, on §1.4's "prefers the more specific definition", bind
-`p == 0` to it, reaching the site MEM-9 refuses. §4.5 had answered with an **ordering** ("refused before
-overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to a second
-implementation, and I1 with FND-3 require the rule to be in the text. The owner's direction was that
+`p == 0` to it, reaching the site MEM-9 refuses. The answer first written was an **ordering** — Stdlib
+appendix §2.6 said the site is refused "before overload resolution" (the words were never in Memory §4.5,
+and are removed there), which is the wrong instrument: an ordering between two rules is invisible to a second
+implementation, and FND-3 requires the rule to be in the text. The owner's direction was that
 expressing one's own types with a comparison relation is needed **and** must follow the language's
 principles, so neither a blanket same-type rule nor an ordering was adopted. A site is now well-formed when
 a comparison relation is **established for its operand pair**: same-type pairs by the structural default;

@@ -557,3 +557,5 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   is declared — which speaks of the relation only: other rules still bear on the site, and a declared
   operation is not thereby well-formed where the raw set confines it (a raw-union member read not proven
   definitely active, an `uninit` read — Grammar §3.7) or where scope and visibility refuse it.
+  **Established** is the word the MEM-10 decision record uses for **declared**; it names nothing further,
+  and it is not **well-formed at the site** — the two hold or fail together only for same-type pairs.

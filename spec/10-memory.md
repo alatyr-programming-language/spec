@@ -359,7 +359,13 @@ lists the raw set as `int↔ptr`; confining only one direction left the other as
 bypass of the rule below — `bitcast(usize, p) == 0` outside a grant is an integer comparison the
 comparison rule does not reach, so the confinement would be decorative. These operations are legal
 only inside an `unchecked` grant (or the assembly surface), and there they have hardware-defined
-behavior (I11). Outside such a grant they are ill-formed. Checked code traverses by
+behavior (I11). Outside such a grant they are ill-formed. **What a grant covers** is the expression it is
+written on, not the statement that contains it: the grant is raised where the crossing value is walked, and
+a sibling subexpression of the same statement does not inherit it. So in
+`deref(unchecked bitcast(ptr(mut usize), base)) = bitcast(usize, s.ptr)` the grant covers the left-hand
+address computation and leaves the right-hand `bitcast(usize, s.ptr)` — reading `Slice.ptr : ptr(T)` out
+as an integer — **ungranted**, and that read is ill-formed; a block grant `unchecked { … }` covers every
+crossing inside its block. Checked code traverses by
 **bounds-checked indexing** through typed arrays and slices; therefore checked
 code contains no pointer-arithmetic UB.
 
@@ -371,15 +377,15 @@ It is also, outside a grant, **dead by invariant**: §4.1 and MEM-8 make every `
 non-null and valid, so a checked `p == 0` cannot be true and the author's real question was
 "is there nothing here?" — which is `Option(ptr(T))`, whose `None` is the all-zero niche
 (§4.2, Type System §6.2) and which a `match` cannot leave out (Control Flow §5.1: "A `match` MUST be
-**exhaustive**"). Outside a grant the
-comparison is **ill-formed**. Inside an `unchecked` grant, where an address may be
+**exhaustive**"). Outside a grant the comparison is **ill-formed**. Inside an `unchecked` grant, where an
+address may be
 fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked `ptr(T)`
 type, not for raw fabricated bits), it is legal and tests the pointer's representation.
 
 **The comparison performs no conversion.** The conversion lattice (Type System §4.2) has
 no **implicit** pointer-meeting-integer edge, and this rule adds none; its reinterpret row
 covers same-size bit reinterpretation and is **explicit** (Type System §4.4), which is exactly the
-`bitcast` §4.5 confines above. Implicit conversion stays confined to **widen** within one
+`bitcast` this section confines above. Implicit conversion stays confined to **widen** within one
 numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
 own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
 common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
@@ -398,7 +404,7 @@ every target **of that width**.
 
 **What is hardware-defined, and what is not.** The *representation* is the target's: a
 pointer's width and the bits a fabricated address holds are the machine model's, and an
-address arithmetic overflow is the ISA's answer (I6; I11 as §4.5 already uses it). The
+address arithmetic overflow is the ISA's answer (I6, and I11 as this section has always used it). The
 *comparison* is not: given two `usize` values, every conforming target returns the same
 `true` or `false`. Given **the same two `usize` values**, nothing here licenses two implementations
 to answer one comparison differently — that is the bar FND-3 sets, and this rule holds it. What may
@@ -430,7 +436,7 @@ heterogeneous bindings — "a name MAY be bound to more than one function value 
 bindings differ in their parameter signature" — and that permission stands for every other pair of types,
 where an author's concrete `eq(in a : A, in b : B) -> bool` declares the relation structurally
 (Stdlib appendix §2.6). What closes this pair is a rule about the operand types, not the order of
-resolution: an ordering would be invisible to a second implementation, and I1 needs the rule in the text.
+resolution: an ordering would be invisible to a second implementation, and FND-3 needs the rule in the text.
 The precedent for the wording above is what arrays and slices already carry: "the compiler-known
 built-ins … there is no source-level prelude function to override for them" (Type System
 §4.5).
@@ -439,9 +445,9 @@ built-ins … there is no source-level prelude function to override for them" (T
 `deref(p) == 0` is **not** this capability: the comparison's operands are the loaded
 `u64`/`T` value and the integer literal, and the pointer appears only as the place being read —
 so it is a memory operation plus an integer comparison, legal in checked code (its dereference is
-governed by §4.1 and §4.6, not here). A seam keyed on the operand *kinds* (`TyInt × TyPtr`,
-MEM-9) must not reach it, and a site that is refused after the load has been inserted is refused
-for the wrong reason. Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
+governed by §4.1 and §4.6, not here). A seam keyed on the operand **types** — an integer against a
+pointer, in either order (MEM-9) — must not reach it, and a site that is refused after the load has been
+inserted is refused for the wrong reason. Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
 compare by their address bits, which is what the structural derive gives a `Pointer` leaf
 (Stdlib appendix §2.6), and they stay legal in checked code. `Option(ptr(T)) == None` is
 not a raw pointer meeting an integer either: its `None` is the niche §4.2 defines, and

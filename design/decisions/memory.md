@@ -250,6 +250,7 @@ does and pairs with `ptr`. The **`T.addr` / `T.mut.addr` suffix** and the **`mem
 `mem::val` module** spellings (both superseded) — a sigil is barred (`&`/`*`/`~` are taken,
 OP-2; a new prefix marker would break the one-marker `@` model, SYN-7/CT-10), and the flat
 word-function `ptr(mut T)` is shorter than `mem::addr(mut T)` without one.
+
 ### MEM-9. A pointer meeting an integer is grant-only
 *provenance: refines MEM-8 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; cites Concurrency §2 · owner decision, #1030*
 
@@ -279,7 +280,7 @@ in either direction**, which is what §4.5's own title and Grammar §3.7's raw l
 now matches them. The measured cost is stated rather than discovered later, and it is **not** the census's
 `places=3`: that record counts the **implicit** half only — it excludes explicit bitcasts by construction —
 so quoting it as the cost of a both-directions rule was a category error, and the earlier text that did so
-is corrected here. The cost is in the **explicit** half: **at least 17 sites in 11 tracked fixtures** read
+is corrected here. The cost is in the **explicit** half: **at least 14 sites in 8 tracked fixtures** read
 a pointer out with `bitcast(usize, …)` outside any grant and become illegal, enumerated line by line in the
 CHANGELOG entry for this revision (a floor: a lexical sweep cannot tell a pointer operand from an integer
 one). They are fixtures, not stdlib — `lib/` and `src/` hold zero such sites — and the compiler repo files
@@ -312,10 +313,11 @@ Functions §1.4 (FN-7) **permits** heterogeneous bindings verbatim — "a name M
 function value in the same scope when the bindings differ in their parameter signature"
 (`spec/50-functions.md:59`) — and resolution "prefers the more specific definition" (`:90-93`). So an
 author may declare `eq(in a : ptr(T), in b : usize)`, and an implementer following §1.4 lets `p == 0`
-bind to it, reaching the site MEM-9 refuses. §4.5 had answered this with an **ordering** ("refused
-before overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to
+bind to it, reaching the site MEM-9 refuses. The answer first written was an **ordering** — Stdlib
+appendix §2.6 said the comparison is refused "before overload resolution" (the words were never in Memory
+§4.5, and are removed there), which is the wrong instrument: an ordering between two rules is invisible to
 a second implementation, so two conforming compilers could disagree on whether a source is well-formed —
-the exact failure I1 and FND-3 exist to prevent.
+the exact failure FND-3 exists to prevent.
 
 **The owner's direction.** Expressing one's own types with a comparison relation is needed, and it must
 follow the language's principles. A blanket same-type rule would delete that expressiveness, so it is not
@@ -344,7 +346,7 @@ operand pair** — the pair, not the name:
   closure. The rule belongs to the site, which is why it holds whatever the declaration does.*
 
 **Why this and not the alternatives.** It closes the bypass with a rule about the program text rather than
-a rule about the order of two checks, so I1 holds by inspection; it keeps heterogeneous comparison
+a rule about the order of two checks, so FND-3 holds by inspection; it keeps heterogeneous comparison
 expressible for ordinary types, which the owner asked for and a same-type rule would have removed; and it
 costs no new syntax, because FN-7 already admits the binding and the protocol convention already means
 "satisfied by providing the operation".

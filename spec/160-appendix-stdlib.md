@@ -150,9 +150,12 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 - **`Hash`** — `hash(in self : T) -> u64`, **consistent with `Eq`** (equal values hash
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
-A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): the site is
-**well-formed at the site** when a comparison relation is **declared** for that pair. Same-type pairs take the structural
-default below. A **heterogeneous** pair of the author's own types is declared when the author provides a
+A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
+**well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
+the compiler-known **pointer↔integer** pair and the site sits inside an `unchecked` grant, where the
+compiler-known operator relation of Memory §4.5 **stands in for a declaration**: no author-declared `eq`
+is needed there, and none is possible, since `eq`'s parameters are the author's own types. Same-type pairs
+take the structural default below. A **heterogeneous** pair of the author's own types is declared when the author provides a
 concrete `eq(in a : A, in b : B) -> bool` (likewise `lt`) — **structural** in exactly the sense of every
 other protocol in this appendix (§2: satisfied by *providing* the operation, not by naming an interface),
 and **additive** (FND-6): nothing that resolves today stops resolving. The one pair no declaration can make
