@@ -49,6 +49,68 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a pointer meeting an integer is grant-only** (Memory §4.5; MEM-9, #1030).
+Comparing a pointer with an integer — `p == 0`, `p != 0`, or an ordering against one such
+as `p < 4096`, the three forms §4.5 itself lists — was unnamed: §4.5 made *fabricating* an
+address from an integer capability-requiring and said
+nothing about comparing one, so the checker accepted `return p == 0` with `rc=0` while
+`scripts/ptrint_census.sh` already reported the shape as an OP-CMP row (#1029 proved the hook
+fires). It is now ill-formed outside an `unchecked` grant, and inside one it tests the
+pointer's representation — the integer operand being `usize`, the pointer's own width, with **no**
+conversion performed (the lattice, Type System §4.2, gains no edge; implicit conversion stays confined
+to widen, §4.3). What is target-dependent is the representation, not the comparison: given two `usize`
+values every conforming target answers alike (I6; I11 as §4.5 uses it for address arithmetic), and
+`p == -1` has exactly one reading — the all-ones address of the pointer's own width, `2^N − 1`
+(`usize`, Type System §7: `2^32 − 1` on i386/aarch32/riscv32), by CC-8. The rule is the grant
+model §4.5 already applies to its neighbouring operation, and MEM-8 makes the checked case
+vacuous rather than merely discouraged: every `ptr(T)` is non-null and valid, so a checked
+`p == 0` cannot be true and the question the author meant is `Option(ptr(T))`, whose `None`
+is the all-zero niche (§4.2). Found by measurement, not by reading: the tracked corpus reports
+`op-cmp=0`, so the **comparison** half of the rule changes no verdict the census measures — 12 tracked `lib/` modules remain
+blind to it (`blind-lib=12` in the same record), which is stated rather than glossed. The gap closed
+is between detecting a form and refusing it. The same decision confines an integer↔pointer conversion in
+**either direction** (§4.5's title and Grammar §3.7 already said `int↔ptr`; the body confined only
+integer→pointer, leaving `bitcast(usize, p) == 0` outside a grant as a two-token bypass). Measured cost, re-measured twice because both earlier figures were wrong: **at least 17 sites in 11 tracked
+fixtures** write an explicit `bitcast(usize, …)` over a pointer outside any grant and become illegal.
+Seven lines carry them, one of them twice (`hashmap_str_key.al:52` compares two): `require_ptr_ok.al:3`,
+`require_ptr_trap.al:2`, `linked_walk.al:9`, `hashmap_str_key.al:52` (×2), `subword_ptr_deref.al:5`,
+`issue345_ptr_target_spacing.al:13`, `deref_subword_field_write_raw.al:11`. **The first two** are the
+`@require`-style non-null predicates over `ptr(u64)`, so the fix is not purely mechanical; the last two are
+plain `base := bitcast(usize, r)` off an `mmap`, which a grant fixes directly. A first re-count missed a
+further **9 sites in 4 fixtures** by counting lines that contain `unchecked` as granted: a grant scopes
+**one expression** (glossary, `unchecked expr`), so in
+`deref(unchecked bitcast(ptr(mut usize), base)) = bitcast(usize, s0.ptr)` the grant covers the LHS and the
+RHS — reading `Slice.ptr : ptr(T)` — is un-granted. Those are `slice_len_field.al:19,21`,
+`slice_local_arg.al:26,28`, `slice_str_read.al:21,23`, `str_join.al:18,20,22`. The figure is a **floor**:
+separating a pointer operand from an integer one at `bitcast(usize, …)` needs the operand's type, so a
+lexical sweep over `test/` cannot prove completeness — 225 `bitcast(usize, …)` occurrences sit in 108
+fixtures and only the ones whose operand is a pointer are affected. The typed count is the gate's, on the
+run that lands this. `lib/` and
+`src/` hold **zero** such sites, so the self-host build is untouched — the cost is confined to fixtures,
+which the compiler fixes under its own gate. The census could not have reported this: it excludes
+explicit bitcasts by construction ("Every integer/pointer crossing below is EXPLICIT, so the seam decides
+nothing and the census must be empty", `scripts/ptrint_census.sh:462-463`), so its `places=3` measures the
+implicit half only, and quoting it as the cost of a both-directions rule was a category error. Owner decision B of #1030.
+
+**Normative — a comparison resolves over its operand pair, and the grant attaches to the pair** (Stdlib
+appendix §2.6, Functions §1.4; MEM-10, refining MEM-9; spec#20). The spec never required a comparison's
+operands to share a type, while Functions §1.4 permits heterogeneous bindings verbatim — so an author could
+declare `eq(in a : ptr(T), in b : usize)` and, on §1.4's "prefers the more specific definition", bind
+`p == 0` to it, reaching the site MEM-9 refuses. §4.5 had answered with an **ordering** ("refused before
+overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to a second
+implementation, and I1 with FND-3 require the rule to be in the text. The owner's direction was that
+expressing one's own types with a comparison relation is needed **and** must follow the language's
+principles, so neither a blanket same-type rule nor an ordering was adopted. A site is now well-formed when
+a comparison relation is **established for its operand pair**: same-type pairs by the structural default;
+heterogeneous pairs of the author's own types by a concrete `eq(in a : A, in b : B) -> bool`, structural in
+the existing protocol sense (satisfied by providing the operation, not naming an interface) and additive
+(FND-6). The pointer↔integer pair is confined **by the pair itself**: the grant attaches to the operand
+types at the site whatever overload set exists. **A declaration cannot supply the grant, and neither can
+its body**: a relation over that pair may be established even by a body whose comparison sits inside its own
+`unchecked { … }`, and the site still requires its own enclosing grant, because the requirement is a property
+of the operand types at the site and not of where a function places a block. No new syntax; §1.4's mechanism
+is unchanged and is named in §4.5 as a permission, not the refuser.
+
 ## 1.2.0 — 2026-10-24
 
 Two gaps, both found by measuring the reference implementation rather than by reading the

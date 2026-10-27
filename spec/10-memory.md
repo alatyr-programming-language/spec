@@ -344,13 +344,110 @@ identity; Type System chapter).
 
 #### 4.5 Pointer arithmetic and integer↔pointer
 
-Pointer arithmetic and fabricating a pointer from an integer (`bitcast` to a pointer type, or a
-`str` view at an integer address, `str_at` — Stdlib appendix §3.6) are
-capability-requiring operations: they are legal only inside an `unchecked` grant
-(or the assembly surface), and there they have hardware-defined behavior (I11).
-Outside such a grant they are ill-formed. Checked code traverses by
+Pointer arithmetic and an integer↔pointer conversion **in either direction** are
+capability-requiring operations: fabricating a pointer from an integer (`bitcast` to a pointer
+type, or a `str` view at an integer address, `str_at` — Stdlib appendix §3.6), and reading a
+pointer out as an integer **value** (`bitcast` to `usize`, the only *operator* that keeps the
+program's meaning explicit — UFCS `p.bitcast(usize)` is the same operator, Type System §4.4, not a second
+permission). A derived `Eq`/`Ord`/`Hash` over a whole pointer is NOT such a read:
+Stdlib appendix §2.6's derive walks the `Pointer` leaf by its address bits and stays legal in
+checked code, so
+`hash(p)` and `p == q` need no grant — what needs one is naming the integer explicitly, because
+that is where the address leaves the typed world. The body
+spells both directions because this section's own title says `integer↔pointer` and Grammar §3.7
+lists the raw set as `int↔ptr`; confining only one direction left the other as a two-token
+bypass of the rule below — `bitcast(usize, p) == 0` outside a grant is an integer comparison the
+comparison rule does not reach, so the confinement would be decorative. These operations are legal
+only inside an `unchecked` grant (or the assembly surface), and there they have hardware-defined
+behavior (I11). Outside such a grant they are ill-formed. Checked code traverses by
 **bounds-checked indexing** through typed arrays and slices; therefore checked
 code contains no pointer-arithmetic UB.
+
+**A pointer meeting an integer is the same capability.** Comparing a pointer with an
+integer — `p == 0`, `p != 0`, `p < 4096` — is listed here rather than in the comparison
+rules because what it asks is not a value question: it asks whether a machine address holds
+a particular bit pattern, which is the same knowledge that fabricating an address requires.
+It is also, outside a grant, **dead by invariant**: §4.1 and MEM-8 make every `ptr(T)`
+non-null and valid, so a checked `p == 0` cannot be true and the author's real question was
+"is there nothing here?" — which is `Option(ptr(T))`, whose `None` is the all-zero niche
+(§4.2, Type System §6.2) and which a `match` cannot leave out (Control Flow §5.1: "A `match` MUST be
+**exhaustive**"). Outside a grant the
+comparison is **ill-formed**. Inside an `unchecked` grant, where an address may be
+fabricated or already invalid (§1.4: the guarantees of §4 hold for the checked `ptr(T)`
+type, not for raw fabricated bits), it is legal and tests the pointer's representation.
+
+**The comparison performs no conversion.** The conversion lattice (Type System §4.2) has
+no **implicit** pointer-meeting-integer edge, and this rule adds none; its reinterpret row
+covers same-size bit reinterpretation and is **explicit** (Type System §4.4), which is exactly the
+`bitcast` §4.5 confines above. Implicit conversion stays confined to **widen** within one
+numeric domain (Type System §4.3), and a pointer is not in that domain. So nothing converts here, and the integer operand MUST be `usize` — the pointer's
+own width, the register class the ABI appendix gives pointers and `usize`/`isize` in
+common (ABI §6) — while any other integer type (`i32`, `u32`, `isize`) at this position is
+ill-formed. Nothing converts, so the two operands keep their own types — the integer operand is a
+`usize`, and the pointer contributes **its address bits at that same width** to a relation the compiler
+knows (below); neither operand is a `usize` copy of the other, and that is exactly why no edge is added
+to the lattice. Both operands therefore **occupy one width**, which is what makes the answer
+determinate. An integer literal at this position — `0`, `4096`, `-1` — takes `usize` from the position,
+the same rule that settles `p == -1`: the literal `1` takes `usize` from
+the position and unary `−` over an unsigned operand keeps that type and yields the
+two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of
+the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's
+pointer width, Type System §7 — which states the width, not the number: `2^32 − 1` follows on
+i386/aarch32/riscv32 and `2^64 − 1` on the 64-bit targets), the same value on
+every target **of that width**.
+
+**What is hardware-defined, and what is not.** The *representation* is the target's: a
+pointer's width and the bits a fabricated address holds are the machine model's, and an
+address arithmetic overflow is the ISA's answer (I6; I11 as §4.5 already uses it). The
+*comparison* is not: given two `usize` values, every conforming target returns the same
+`true` or `false`. Given **the same two `usize` values**, nothing here licenses two implementations
+to answer one comparison differently — that is the bar FND-3 sets, and this rule holds it. What may
+differ between targets is whether those two values are ever *reached*: inside a grant an address may be
+fabricated (§1.4: it denotes whatever location its bits name), so `p == usize(0)` there can answer truly
+on one target and falsely on another **because the operands differ**, not because the comparison does.
+
+**The comparison is a compiler-known operator site.** It is not an `Eq` instance over a single `T`:
+`eq`'s structural default is homogeneous (`eq(in a : T, in b : T)`, Stdlib appendix §2.6), so there is no
+one `T` for a pointer meeting an integer; under the pair rule of Stdlib appendix §2.6 (MEM-10) the site is
+a **heterogeneous relation** site, and this is precisely the one pair for which no relation is
+**well-formed at the site** in checked code — see below. Nor does a user-declared `eq(in a : ptr(T), in b : usize)` lift it, and
+the reason is **not** an ordering between two checks: the grant attaches to the **operand pair at the
+site**, independent of what is declared (MEM-10). `p == 0` with `p : ptr(T)` requires an enclosing
+`unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds a
+bit pattern — is the same knowledge fabricating an address requires. **A declaration cannot supply the
+grant.** A relation over this pair may be **declared** — even by a body whose comparison sits inside its own
+`unchecked { … }` — and the site still requires its own enclosing grant: the requirement is a property of
+the operand types at the site, never of where some function's body happens to put a block. So declaring
+`eq(in a : ptr(T), in b : usize)` never makes `p == 0` legal in checked code; and the rule reaches the
+**spelled-out call too** — `eq(p, n)` with `p : ptr(T)`, `n : usize` is the same operand pair at a
+comparison site, so it requires the same enclosing grant, and selecting that binding is not a way to
+reach the site from checked code. `0 == p` is the same site with its operands exchanged: the pair is
+unordered, so the grant is required there as well. Inside a grant both the
+declaration and the site are **legal**, and what is hardware-defined there is the *operand* — the
+fabricated address whose bits name whatever location the target gives them (§1.4) — never the comparison,
+which stays determined by the two `usize` values it is given, as above. Functions §1.4 (FN-7) is not the refuser and must not be cited as one: it **permits**
+heterogeneous bindings — "a name MAY be bound to more than one function value in the same scope when the
+bindings differ in their parameter signature" — and that permission stands for every other pair of types,
+where an author's concrete `eq(in a : A, in b : B) -> bool` declares the relation structurally
+(Stdlib appendix §2.6). What closes this pair is a rule about the operand types, not the order of
+resolution: an ordering would be invisible to a second implementation, and I1 needs the rule in the text.
+The precedent for the wording above is what arrays and slices already carry: "the compiler-known
+built-ins … there is no source-level prelude function to override for them" (Type System
+§4.5).
+
+**The boundary of this rule.** It covers a pointer meeting an integer, and nothing else.
+`deref(p) == 0` is **not** this capability: the comparison's operands are the loaded
+`u64`/`T` value and the integer literal, and the pointer appears only as the place being read —
+so it is a memory operation plus an integer comparison, legal in checked code (its dereference is
+governed by §4.1 and §4.6, not here). A seam keyed on the operand *kinds* (`TyInt × TyPtr`,
+MEM-9) must not reach it, and a site that is refused after the load has been inserted is refused
+for the wrong reason. Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
+compare by their address bits, which is what the structural derive gives a `Pointer` leaf
+(Stdlib appendix §2.6), and they stay legal in checked code. `Option(ptr(T)) == None` is
+not a raw pointer meeting an integer either: its `None` is the niche §4.2 defines, and
+comparing an `Option` is that same structural derive over the variant. The concurrency
+surface admits an `Option(ptr(U))` atomically for exactly this reason (Concurrency §2:
+checked code holds "no node" without a raw `ptr == 0`).
 
 #### 4.6 Lowering contract
 
@@ -909,8 +1006,9 @@ A conforming implementation MUST:
    definite assignment — at compile time (§3);
 5. represent pointers as non-null `ptr(T)`/`ptr(mut T)`, represent absence
    as a niche-`0` `Option(ptr(T))`, enforce monotonic permissions, and confine
-   pointer arithmetic and integer→pointer (including `str_at`) to an `unchecked` grant /
-   assembly (§4);
+   pointer arithmetic, integer↔pointer in either direction (including `str_at` and a
+   pointer read out as `usize`), and a pointer meeting an integer at a comparison
+   (§4, §4.5) to an `unchecked` grant / assembly;
 6. guarantee temporal safety in checked code via the §5 mechanisms (statically for
    scoped — including the transient rule for `scoped` call results, §5.3.1 — by access
    check for handles, by generation trap for generational), reject

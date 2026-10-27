@@ -215,7 +215,10 @@ two spellings of one:
   `x.bitcast(T)` (UFCS; §4.5). `bitcast` does **not** check any validity invariant
   of `T`; producing an out-of-range bit pattern this way is explicit
   reinterpretation (I8), and any later use has hardware-defined meaning, never
-  undefined behavior the compiler exploits (I11).
+  undefined behavior the compiler exploits (I11). Where the reinterpretation crosses
+  between a pointer and an integer — **in either direction** — this section's mechanics
+  still apply, and Memory §4.5 confines the operation to an `unchecked` grant: explicit
+  and capability-requiring are not alternatives.
 
 `bitcast` is the only conversion in the **reinterpret** class; all others go through
 `T(value)`.

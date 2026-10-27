@@ -32,7 +32,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   expression) or `unchecked { … }` (a block) — the **checked-guard family is dropped** (arithmetic wraps,
   indexing skips the bounds check, narrowing truncates, float→int and div0/shift/alignment faults are
   hardware-defined; never UB, I11) **and** the genuinely-raw operations (pointer arithmetic,
-  int→ptr, a raw-union member read not proven definitely active / an `uninit` read, raw
+  int↔ptr in either direction (fabricating a pointer from an integer, and reading one out as `usize` —
+  Memory §4.5), a pointer compared with an integer, a raw-union member read not proven definitely active / an `uninit` read, raw
   transfer, `asm`, a call to `arena_over` or `str_at`) become writeable; in an `unchecked { … }` block a `scoped` call result may
   also be bound to a local (Memory §5.3.1). Granularity is the author's choice (one line or a
   block); the scope is always lexically visible. **No re-entry / no `checked` keyword**
@@ -542,3 +543,17 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   is the language version above; MINOR marks a normative revision of the text (a gap closed, a
   collision resolved); PATCH is editorial. Distinct from **maturity** (`draft (under review)` /
   `accepted`), which is carried by each chapter's Status line and never by the number.
+
+- **Declared** vs **well-formed at the site** — the two things a comparison rule can be about, kept apart
+  because conflating them reverses the answer. A relation is **declared** for a pair of types when a
+  signature exists for it: the structural default for a same-type pair, or an author's concrete
+  `eq(in a : A, in b : B) -> bool` for a heterogeneous one (Stdlib appendix §2.6). A comparison is
+  **well-formed at the site** when that declared relation may actually be used at that occurrence, which
+  is a property of the **operand types at the site** and of the grants enclosing it — never of what is
+  declared somewhere. The distinction exists because exactly one pair separates them: **pointer↔integer**
+  may be declared by anyone, in any scope, and is still not well-formed at the site in checked code; it
+  requires an enclosing `unchecked` grant there (Memory §4.5, MEM-9; the grant attaches to the pair at
+  the site, not to the declaration — MEM-10). Every other pair is well-formed at a site once its relation
+  is declared — which speaks of the relation only: other rules still bear on the site, and a declared
+  operation is not thereby well-formed where the raw set confines it (a raw-union member read not proven
+  definitely active, an `uninit` read — Grammar §3.7) or where scope and visibility refuse it.

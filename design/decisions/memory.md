@@ -250,3 +250,106 @@ does and pairs with `ptr`. The **`T.addr` / `T.mut.addr` suffix** and the **`mem
 `mem::val` module** spellings (both superseded) — a sigil is barred (`&`/`*`/`~` are taken,
 OP-2; a new prefix marker would break the one-marker `@` model, SYN-7/CT-10), and the flat
 word-function `ptr(mut T)` is shorter than `mem::addr(mut T)` without one.
+### MEM-9. A pointer meeting an integer is grant-only
+*provenance: refines MEM-8 (§4.1 non-nullness, §4.2 optional pointer) · spec: Memory §4.5; cites Concurrency §2 · owner decision, #1030*
+
+**Why.** The instrument already sees the shape and the checker accepts it: `cmp_ptr_zero :=
+fn(p : ptr(u8)) -> bool { return p == 0 }` passes `check` with rc=0 on both the tree compiler
+and the frozen seed, while `scripts/ptrint_census.sh` reports the OP-CMP row for it (#1029
+proved the hook fires). So detection and enforcement had come apart. The spec was silent: §4.5
+named *fabricating* a pointer from an integer as capability-requiring, and said nothing about
+comparing one. Silence here is not neutral — two implementations could accept and reject the same
+source, and FND-3's bar — two independent developers must build **compatible** compilers **without
+guessing** — leaves a form that is neither confined nor permitted with no answer at all.
+
+**The rule.** Comparing a pointer with an integer is legal **only inside an `unchecked` grant**,
+where it tests the pointer's representation, the integer operand being `usize` and no conversion
+being performed; outside a grant it is ill-formed. What is target-dependent is the representation
+(a pointer's width, the bits a fabricated address holds — I6, I11 as §4.5 already uses them), not
+the comparison: given two `usize` values every conforming target returns the same answer. This is the grant model §4.5 already applies to the neighbouring
+operation, not a new kind of rule — which is why it was chosen over the alternatives. It is also
+what MEM-8 makes evident: outside a grant every `ptr(T)` is non-null and valid, so a checked
+`p == 0` cannot be true, and the author's actual question — "is there nothing here?" — is
+`Option(ptr(T))`, whose `None` is the all-zero niche and which a `match` cannot leave out.
+
+**Refined by the same owner decision — both directions.** A follow-up read showed the rule as first
+written was bypassable in two tokens: `bitcast(usize, p) == 0` outside a grant compares two integers, so
+confining only integer→pointer left the comparison reachable. The owner chose to confine **integer↔pointer
+in either direction**, which is what §4.5's own title and Grammar §3.7's raw list already said; the body
+now matches them. The measured cost is stated rather than discovered later, and it is **not** the census's
+`places=3`: that record counts the **implicit** half only — it excludes explicit bitcasts by construction —
+so quoting it as the cost of a both-directions rule was a category error, and the earlier text that did so
+is corrected here. The cost is in the **explicit** half: **at least 17 sites in 11 tracked fixtures** read
+a pointer out with `bitcast(usize, …)` outside any grant and become illegal, enumerated line by line in the
+CHANGELOG entry for this revision (a floor: a lexical sweep cannot tell a pointer operand from an integer
+one). They are fixtures, not stdlib — `lib/` and `src/` hold zero such sites — and the compiler repo files
+the fix as its own change with its own gate.
+
+**Rejected.** *Refuse in every context, grant included* — contradicts §4.5, under `unchecked` an
+address may be fabricated or already invalid and testing its bits is precisely what the grant is
+for; it would also refuse code written correctly by today's rules. *Keep detecting without
+refusing, and let the census ratchet be the pin* — cheapest, breaks nothing, and the goal permits
+the `review-only` label explicitly; rejected only because the grant model already exists in the
+checker and reporting a form as enforced while accepting it is the gap this decision closes. The
+census's OP-CMP ratchet stays as the measurement either way (#1029).
+
+**Downstream.** The compiler conforms when the pin moves (workspace rule: a spec change binds the
+compiler only after a release is cut and the pin moves in its own explicit compiler commit). #1034
+implements the refusal on the comparison path and waits on that pin, not on review — and, once the
+pin moves, on a rebase onto the new `main`, the **expected-delta** update it forces (the census and
+`xbackend_diff.baseline` counts move when the refusal starts firing), and a **green authoritative gate**
+before it lands. Its seam is
+kind-based (`TyInt × TyPtr`, either order), so it enforces the **grant boundary**; the rule that the
+integer operand is `usize` is NOT yet enforced there — inside a grant `p == u32(0)` stays accepted, and
+closing that is a follow-up on #1034, not a claim of this record.
+
+### MEM-10. Comparison is a relation over an operand pair; the grant attaches to the pair, not to a name
+*provenance: refines MEM-9 · spec: Memory §4.5, Stdlib appendix §2.6; cross-cuts Functions §1.4 (FN-7) · owner decision, spec#20*
+
+**Why.** MEM-9 confines a pointer meeting an integer, and a fourth independent read of §4.5 found the
+confinement bypassable: the spec nowhere requires a comparison's operands to share a type, while
+Functions §1.4 (FN-7) **permits** heterogeneous bindings verbatim — "a name MAY be bound to more than one
+function value in the same scope when the bindings differ in their parameter signature"
+(`spec/50-functions.md:59`) — and resolution "prefers the more specific definition" (`:90-93`). So an
+author may declare `eq(in a : ptr(T), in b : usize)`, and an implementer following §1.4 lets `p == 0`
+bind to it, reaching the site MEM-9 refuses. §4.5 had answered this with an **ordering** ("refused
+before overload resolution"), which is the wrong instrument: an ordering between two rules is invisible to
+a second implementation, so two conforming compilers could disagree on whether a source is well-formed —
+the exact failure I1 and FND-3 exist to prevent.
+
+**The owner's direction.** Expressing one's own types with a comparison relation is needed, and it must
+follow the language's principles. A blanket same-type rule would delete that expressiveness, so it is not
+adopted; an ordering rule leaves the hole open for every other type pair.
+
+**The rule.** A comparison site is well-formed when a **comparison relation is established for the
+operand pair** — the pair, not the name:
+- **Same-type pairs** are established by the structural derive, exactly as today (`eq(in a : T, in b :
+  T)`, `lt(in a : T, in b : T)`; Stdlib appendix §2.6).
+- **Heterogeneous pairs of the author's own types** are established when the author provides a concrete
+  `eq(in a : A, in b : B) -> bool` (likewise `lt`). This is **structural**, in the same sense as every
+  other protocol: satisfied by *providing the operation*, not by naming an interface (Stdlib appendix §2,
+  Comptime §6.2). It is **additive** (FND-6): nothing that resolves today stops resolving.
+- **The pointer↔integer pair is confined by the pair itself.** The grant attaches to the operand types at
+  the site, **independent of what is declared**: `p == 0` with `p : ptr(T)` requires an enclosing
+  `unchecked` grant whatever relation exists, because what the site asks — whether a machine address holds
+  a bit pattern — is the same knowledge fabricating an address requires (MEM-9's own argument).
+  **A declaration cannot supply the grant, and neither can its body.** A relation over this pair may be
+  established — even by a body whose comparison sits inside its own `unchecked { … }` — and the site still
+  requires its own enclosing grant, because the requirement is a property of the operand types at the site
+  and not of where some function places a block. So declaring `eq(in a : ptr(T), in b : usize)` never
+  makes `p == 0` legal in checked code; inside a grant both are legal and hardware-defined.
+  *An earlier draft of this rule argued that the declaration's body "must compare the two, and is therefore
+  confined". That argument was wrong and is retracted here rather than edited out: `unchecked { bitcast(usize, a) } == b`
+  inside the body satisfies it, so the bypass would have stayed open behind a sentence that read as a
+  closure. The rule belongs to the site, which is why it holds whatever the declaration does.*
+
+**Why this and not the alternatives.** It closes the bypass with a rule about the program text rather than
+a rule about the order of two checks, so I1 holds by inspection; it keeps heterogeneous comparison
+expressible for ordinary types, which the owner asked for and a same-type rule would have removed; and it
+costs no new syntax, because FN-7 already admits the binding and the protocol convention already means
+"satisfied by providing the operation".
+
+**Diagnostics.** The compiler reports at the site: `seam_cmp_outside_grant_err` fires in the comparison
+arm above `ty_eq`, guarded by the kind pair and `PTRINT_GRANT == 0` (compiler#1034). That location stays;
+when the pair rule lands the same marker covers a declared heterogeneous pair, because the condition is the
+same kind pair at the site.
