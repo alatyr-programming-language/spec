@@ -49,6 +49,19 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a target revision with published deviations (refines FND-13 and TOOL-21).**
+TOOL-21 required `version` to report "the revision of this specification it conforms to", and
+Overview §6 defines conformance strictly. An implementation still in development conforms to no
+revision completely, so the rule left it two untruthful choices: print a revision it does not
+conform to, or fall back to an older one whose gaps are no fewer, only unlisted. Overview §6 now
+lets such an implementation name a **target revision** instead. It must publish its known
+deviations (a list for the naming implementation version, kept current, publicly readable where
+the implementation says; each entry the rule, by section or decision ID, and the observable
+difference), and it must not present the target as conformance. An implementation that does
+conform to a revision reports that conformance. Under TOOL-21, `version` reports the target
+marked as such, with where the deviations are published. (Overview §6; Tooling §4, §7 item 4;
+FND-13; TOOL-21; glossary; aspects map; README.)
+
 ## 1.6.0 — 2026-10-27
 
 **Normative — the derived `Pointer` arm is granted library code, not a mechanism outside the lattice**

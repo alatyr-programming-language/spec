@@ -269,6 +269,19 @@ chapter.)
   A conformance claim MUST cite the **revision** it was made against ("conforms to the
   Alatyr specification 1.1.0"). "Conforms to `v1`" is not a well-formed claim: it names
   the language, which does not by itself fix what an implementation must do.
+- **A target revision is not a conformance claim.** An implementation that conforms to no
+  revision MAY instead name the revision it is **answerable to** — its **target revision**
+  ("targets the Alatyr specification 1.7.0"). It then MUST publish its **known
+  deviations** from that revision: a list that describes the implementation version naming
+  the target and is kept current with that version, each entry stating the rule not met
+  (by chapter and section, or decision ID) and the observable difference, publicly
+  readable at a location the implementation reports (a path in its distribution, or a
+  URL). It MUST NOT present the target as conformance. Each implementation version names
+  exactly one revision: the **newest** revision it conforms to, if any — an implementation
+  that conforms to a revision reports that conformance and does not substitute a target —
+  and otherwise its target. A toolchain's `version` (TOOL-21) is where it names it. A
+  deviation is a defect of the implementation, never a permission: the target revision's
+  rules stay the ones the implementation is measured against (FND-13).
 - Where behavior is **implementation-defined**, it is explicitly marked as such.
   There is **no undefined behavior** (I11).
 

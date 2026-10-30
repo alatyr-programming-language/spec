@@ -229,8 +229,9 @@ own and makes the boundary between, say, a `no_alloc` unit and an allocating one
 specified ABI surface rather than a silent blend.
 
 ### FND-13. The language version and the document revision are separate axes
-*provenance: refines FND-3 (the specification bar) and FND-6 (additive growth) · spec:
-Overview §6; design/glossary.md*
+*provenance: refines FND-3 (the specification bar) and FND-6 (additive growth); its target revision is
+what TOOL-21's `version` reports while no revision is conformed to · spec: Overview §6; Tooling §4, §7
+item 4; design/glossary.md*
 
 **Why.** `v1` names an **epoch of the language** — the feature set, the six architectures,
 the closed supported-target set, the enumerated prelude and ABIs. The document specifying
@@ -257,3 +258,12 @@ of closing it. It would also force every gap-closure to be a MAJOR bump, contrad
 pinning of MAJOR to the language version. Reading `v1` as the SemVer range `1.*.*` — it
 lets an implementation claim conformance against the loosest revision it ever passed, which
 is the opposite of what a citable revision is for.
+
+**Refined (target revision, 2026-10-30, owner decision).** An implementation that conforms to no
+revision yet MAY name a **target revision** instead, provided it publishes its known deviations from
+it — a list for the naming implementation version, kept current, each entry the rule and the
+observable difference, publicly readable where the implementation says — and never presents the
+target as conformance (Overview §6; TOOL-21's `version`). This adds no weaker kind of conformance: a
+target revision is a statement of which rules the implementation is measured against, and every
+deviation stays a defect. Rejected: citing the highest revision fully satisfied — during development
+there is none, and the fallback is an older number whose gaps are not fewer but unlisted.
