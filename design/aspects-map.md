@@ -83,7 +83,8 @@ and **deferred (additive) growth**.
   `alatyr plan`); distribution packaging (`.deb`, APK, …) is deliberately **not** a `Kind` and not a
   command — an external tool, or a future `publish`, consumes the plan (TOOL-20). The CLI reports on
   itself through the **introspection** pair `help`/`version`, valid outside a package, with `version`
-  reporting the specification revision and a bare invocation failing with help on stderr (TOOL-21); an
+  reporting the specification revision — conformed to, or a target revision with its published
+  deviations (FND-13) — and a bare invocation failing with help on stderr (TOOL-21); an
   **unrecognised argument** is an invocation-level Config diagnostic, never a source path (TOOL-14);
   and **output verbosity** may not affect a build (TOOL-22).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4), declarations/expressions (SYN-5),

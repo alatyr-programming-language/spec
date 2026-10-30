@@ -320,9 +320,10 @@ confer it either: an independent implementation is conforming when it matches *t
 not when it matches the reference. Three things worth knowing before you start:
 
 - The specification is a **draft under review**. Cite the revision you built against
-  (`1.6.0`) and expect the text to move under you: during review, MINOR is the digit that
-  bumps whenever a norm changes. The leading `1` is the *language* version, not a claim
-  that the text is settled — see `CHANGELOG.md`.
+  (`1.6.0`) — or, until you conform to one, name it as your **target revision** and publish
+  your known deviations (Overview §6) — and expect the text to move under you: during
+  review, MINOR is the digit that bumps whenever a norm changes. The leading `1` is the
+  *language* version, not a claim that the text is settled — see `CHANGELOG.md`.
 - If you have to guess, that is a **bug in this repository**, not in your reading. File
   it as an underspecification gap with the case where two conforming implementations
   would diverge — that report is worth more here than a patch.

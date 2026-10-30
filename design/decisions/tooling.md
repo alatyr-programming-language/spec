@@ -836,7 +836,8 @@ install path answers the packaging case without pretending to answer those.
 ### TOOL-21. `help` and `version` are introspection commands; `version` reports the specification revision
 *provenance: refines TOOL-1 (the CLI is part of the toolchain contract) and TOOL-14 (a bare invocation is
 never a silent no-op); applies Overview §6 (the language version and the document revision are separate
-axes) · spec: Tooling §4, §7 item 4*
+axes) and FND-13's target revision (what `version` reports while no revision is conformed to) ·
+spec: Tooling §4, §7 item 4; Overview §6*
 
 **Why.** Tooling §4 fixed the command set, discovery, target and profile selection and artifact placement,
 but said nothing about how a toolchain reports on *itself*: the words `--help` and `--version` did not occur
@@ -849,15 +850,17 @@ job to record.
 both as a command and as a flag (short forms MAY be added). Neither reads a manifest, performs discovery,
 resolves dependencies, nor produces an artifact, so both are valid from **any** working directory, including
 one with no package. Each writes to **stdout** and exits **successfully**. `help` lists the commands;
-`version` identifies the implementation **and the revision of this specification it conforms to**. An
-implementation's own version and the revision are separate axes (Overview §6), and a conformance claim
-cites a revision, so reporting only the former leaves a user unable to tell what the toolchain implements. A
-**bare invocation** with no arguments reports the same material as `help`, but on **stderr** with a
-**failure** exit. Help that was asked for is an **answer**; the same text volunteered after a mistake is a
-**diagnostic**. So `alatyr help | …` pipes cleanly, while a script that lost its arguments still fails. What
-either command prints is **quality-of-implementation**, by the same split as §5's diagnostics (the stage and
-shape are normative, the wording is not). No implementation may be assumed to emit a particular string,
-tooling MUST NOT parse `help` output, and introspection output is not a build input (§6.2).
+`version` identifies the implementation **and the newest revision of this specification it conforms to** —
+or, while it conforms to none, its **target revision**, marked as a target and pointing to its published
+known deviations (Overview §6). An implementation's own version and the revision are separate axes, and a
+conformance claim cites a revision, so reporting only the former leaves a user unable to tell what the
+toolchain implements. A **bare invocation** with no arguments reports the same material as `help`, but on
+**stderr** with a **failure** exit. Help that was asked for is an **answer**; the same text volunteered
+after a mistake is a **diagnostic**. So `alatyr help | …` pipes cleanly, while a script that lost its
+arguments still fails. What either command prints is **quality-of-implementation**, by the same split as
+§5's diagnostics (the stage and shape are normative, the wording is not). No implementation may be assumed
+to emit a particular string, tooling MUST NOT parse `help` output, and introspection output is not a build
+input (§6.2).
 
 **Rejected.** Leaving introspection unspecified — the `--version` disagreement above stays conforming.
 `version` reporting only the implementation's own version — it does not say which revision the toolchain
@@ -867,7 +870,16 @@ what the tool does. A bare invocation as `help` itself, on stdout with success (
 proposed in PR #2) — a script that lost its arguments silently succeeds, which is TOOL-14's silent no-op
 applied to the invocation itself. Pinning the text or format of either output — §5 already fixes
 *what must happen* and leaves *what is printed* to the implementation, and introspection follows the same
-principle.
+principle. Requiring a fully conformed revision even when there is none — see *Refined* below.
+
+**Refined (target revision, 2026-10-30, owner decision).** An implementation still in development
+satisfies no revision completely: the reference compiler then had open wrong-value defects against rules
+present since `1.0.0`. Read strictly, the rule forced it either to print a revision it does not conform
+to, or to fall back to an older number whose gaps are no fewer, only unlisted. So while it conforms to no
+revision, `version` reports its **target revision** (FND-13), marked as a target, with where its known
+deviations are published — the same information, stated truthfully, with the target's rules still the
+ones it is measured against. Rejected: falling back to the highest revision fully satisfied (there is
+none during development, and the fallback hides the gaps instead of listing them).
 
 ### TOOL-22. Output verbosity is an observation of a build, never a parameter of one
 *provenance: refines TOOL-1 (reproducible builds) and sits beside Tooling §4's debug-only budget/limit

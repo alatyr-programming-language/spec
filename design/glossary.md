@@ -544,6 +544,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   collision resolved); PATCH is editorial. Distinct from **maturity** (`draft (under review)` /
   `accepted`), which is carried by each chapter's Status line and never by the number.
 
+- **Target revision** — the revision an implementation that does not yet conform to any revision is
+  **answerable to**, cited together with its published **known deviations** from it. It is not a
+  conformance claim, and a deviation is a defect, never a permission (Overview §6, FND-13, TOOL-21).
+
 - **Declared** vs **well-formed at the site** — the two things a comparison rule can be about, kept apart
   because conflating them reverses the answer. A relation is **declared** for a pair of types when a
   signature exists for it: the structural default for a same-type pair, or an author's concrete
