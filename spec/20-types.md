@@ -181,10 +181,10 @@ written* anonymous tuple/block, never to a type-function's result.
 
 #### 4.2 The conversion lattice
 
-Every conversion between types belongs to exactly one of the following classes. The
-class fixes whether the conversion may be implicit and what it costs. It fixes **cost and
-whether it may be implicit, not denotation**: where an in-scope `@convert` matches the pair, the site
-denotes that conversion and this table gives the cost of the crossing it stands in front
+Every conversion between types belongs to exactly one of the following classes. The class
+fixes **cost and whether it may be implicit, not denotation**: where an in-scope
+`@convert` matches the pair, the site denotes that conversion and this table gives the
+cost of the crossing it stands in front
 of (§4.6, TYP-14):
 
 | Class | Meaning | Bits | Cost | Notation |

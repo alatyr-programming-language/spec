@@ -402,7 +402,7 @@ no-silent-wrap rule.
 ### TYP-14. `@convert` precedence over the brand crossing — spec#22
 *provenance: refines TYP-2/TYP-4 (branding) and TYP-6 (§4.6 conversion-constructors),
   on CT-11 (mode-polymorphic library checks) · spec: Types §4.2, §4.6, §5.4, §7, §12;
-  Stdlib appendix §3.2*
+  Stdlib appendix §3.2, Stdlib chapter §4.1*
 
 **Question.** `char := brand(u32)` (§4.2, Stdlib appendix §3.2), and the prelude declares
 `to_char := @convert fn(n : u32) -> char`. §4.6's dispatch put the **builtin lattice**
