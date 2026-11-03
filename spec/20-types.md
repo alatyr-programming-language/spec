@@ -182,14 +182,17 @@ written* anonymous tuple/block, never to a type-function's result.
 #### 4.2 The conversion lattice
 
 Every conversion between types belongs to exactly one of the following classes. The
-class fixes whether the conversion may be implicit and what it costs:
+class fixes whether the conversion may be implicit and what it costs. It fixes **cost and
+implicility, not denotation**: where an in-scope `@convert` matches the pair, the site
+denotes that conversion and this table gives the cost of the crossing it stands in front
+of (§4.6, TYP-14):
 
 | Class | Meaning | Bits | Cost | Notation |
 |-------|---------|------|------|----------|
 | **widen** | lossless size increase within one numeric domain (`u8`→`u64`) | extended | sign/zero-extend instruction | `T(v)`; **implicit** outside `no_abstractions` |
 | **narrow** | size decrease, possibly lossy (`u64`→`u8`) | truncated | checked by default (traps if out of range); inside an `unchecked` scope narrowing truncates (CG-7) | `T(v)`; always explicit |
 | **numeric** | domain change (`int`↔`float`, signed↔unsigned value) | changed | conversion instruction (`float`→`int`: toward-zero, range/NaN checked — Concurrency §7.7; the clamping form is the prelude `saturating_convert(T, f)`, Stdlib appendix §4.4) | `T(v)`; always explicit |
-| **brand** | add/remove a brand over **the type it directly brands**, same numeric domain (`Meters`↔`u64`) | unchanged | zero | `T(v)`; always explicit |
+| **brand** | add/remove a brand over **the type it directly brands**, same numeric domain (`Meters`↔`u64`) | unchanged | zero — the crossing's cost; a matching in-scope `@convert` is the operation and costs its body (§4.6) | `T(v)`; always explicit |
 | **reinterpret** | same-size bit reinterpretation | unchanged | zero | `bitcast`; always explicit |
 
 #### 4.3 Implicit versus explicit is governed by limits
@@ -310,9 +313,11 @@ and never moves the pointee. The supplied address is an ordinary second-class sc
 
 #### 4.6 User-declared conversion-constructors — `@convert`
 
-The conversion lattice (§4.2) is the **builtin** numeric/brand set. A library may
-declare a conversion for any other source→target pair as a **conversion-constructor**:
-a function marked **`@convert`** whose **single** parameter is the source value and
+The conversion lattice (§4.2) is the **builtin** numeric/brand set: it fixes what each
+crossing costs and whether it may be implicit. A library may declare a conversion for any
+other source→target pair — **and for a target that is a brand, where it precedes the
+crossing of that brand (§4.6 dispatch, TYP-14)** — as a **conversion-constructor**: a
+function marked **`@convert`** whose **single** parameter is the source value and
 whose **return type** is the target.
 
 ```
@@ -325,17 +330,24 @@ x := u64(b)          # b : bool — dispatches to the in-scope @convert whose
 **Dispatch.** A `T(v)` with a **single** argument resolves, in order, to: (1) when `T`
 is a required type `R = @require(pred) U` and `v` is assignable to the immediate `U`,
 the built-in contract gate (§8.1); otherwise (2) the **one** in-scope `@convert` whose
-return type is `T` and whose parameter accepts `typeof(v)` (the static type of `v`;
-Stdlib appendix §4.1), **except in a body carrying the `unchecked` grant** (Concurrency
-§6.2), where the grant suppresses the conversion's declared guard and the builtin crossing
-of §4.2 is taken instead (CG-7); otherwise (3) a builtin lattice conversion (§4.2) when one applies in `T`'s
-numeric domain. A `@convert` therefore **precedes the zero-cost brand crossing** of §4.2
-to a branded target: branding adds identity and its "cost: zero" clause describes the
-crossing's *cost*, not its precedence, and a brand over a numeric type is not one of the
-**numeric classes** the clause below protects. So `char(n)` — `char` being a brand over
-`u32` with a prelude `@convert` in scope — runs that conversion's code-point guard when
-checked, and is the zero-cost brand crossing under `unchecked` (Stdlib appendix §3.2;
-spec#22, TYP-14). Thus an in-scope direct `@convert` from `S` to a required
+return type is `T` and whose parameter **accepts** `typeof(v)` — equal to it, or
+assignable to it per §4.3 (the static type of `v`; Stdlib appendix §4.1); otherwise
+(3) a builtin lattice conversion (§4.2) when one applies in `T`'s numeric domain.
+**An in-scope `@convert` therefore precedes the brand crossing** to a branded target:
+§4.2's "cost: zero" states what that crossing *costs*, and a cost statement does not
+settle **which operation a site denotes** — where a conversion matches, the site denotes
+the conversion (spec#22, TYP-14). So `char(n)` — `char` being a brand over `u32` with
+the prelude's `@convert` in scope — runs that conversion, whose code-point validity
+check is library code under `comptime if verify.checked` (§4.5, CT-11) and is therefore
+comptime-absent inside an `unchecked` scope, where the body is an identity crossing and
+costs nothing (Stdlib appendix §3.2). The step is selected **checked or unchecked
+alike**: `unchecked` drops the guard inside the operation the site denotes, and never
+substitutes a different one — CG-7's list of what the mode drops is closed, and
+choosing another operation would let a caller's scope change a value (I1, I11).
+**Termination.** Step (2) does not re-select the conversion whose own body is being
+compiled: inside a `@convert` to a brand, the crossing is spelled `bitcast(T, v)`, as
+MEM-10 lays down for the derived `Pointer` arm (Stdlib appendix §2.6), so dispatch ends
+at the crossing. Thus an in-scope direct `@convert` from `S` to a required
 `R` remains usable when `S` is not assignable to `U`, but it MUST construct and return
 `R` in its own body under the ordinary rules; dispatch does not compose `S`→`U` with
 the gate. If `v` is assignable to `U`, the gate takes precedence over a competing
@@ -357,14 +369,16 @@ at a site are an **ambiguity error** (no guessing, FND-3).
 
 **Always explicit, never the lattice.** A `@convert` fires **only** through an explicit
 `T(v)`; it is never an implicit conversion (only **widen** is implicit, §4.3), and it
-cannot override a builtin **numeric** lattice class within that class's domain — widen,
-narrow and reinterpret stay the builtin path. A brand over a numeric type is not such a
-class: an in-scope `@convert` to it precedes the brand crossing (§4.6 dispatch, TYP-14). Its cost is the
-cost of its body (I2); **selection** is comptime and monomorphized (zero dispatch
-overhead). A `@convert` is an ordinary function — its body runs at the stage its
-argument is available (a comptime-known argument folds; a runtime argument runs at
-runtime). The `?` operator's cross-error widening remains its own **`OutErr`** declared
-conversion (Control Flow §8.2), distinct from `@convert`.
+cannot override a builtin lattice class **other than brand**: **widen**, **narrow** and
+**numeric** stay the builtin path wherever they apply, and **reinterpret** is
+`bitcast`'s alone (§4.4). A **brand** crossing is the one lattice step a matching
+in-scope `@convert` precedes, because a guard over a branded target is library work, not
+builtin work (TYP-14). Its cost is the cost of its body (I2); **selection** is
+comptime and monomorphized (zero dispatch overhead). A `@convert` is an ordinary
+function — its body runs at the stage its argument is available (a comptime-known
+argument folds; a runtime argument runs at runtime). The `?` operator's cross-error
+widening remains its own **`OutErr`** declared conversion (Control Flow §8.2), distinct
+from `@convert`.
 
 ---
 
@@ -417,7 +431,9 @@ Branding alone does **not** determine the conversion class (§4.2); the numeric
 domain does:
 
 - crossing between a brand and the type it **directly brands**, within the **same
-  numeric domain**, is the zero-cost **brand** conversion (`Meters`↔`u64`);
+  numeric domain**, is the zero-cost **brand** conversion (`Meters`↔`u64`) — unless an
+  in-scope `@convert` to that brand matches the site, which then denotes the conversion
+  and costs its body (§4.6, TYP-14);
 - crossing between two **different numeric interpretations** — different signedness
   (`u64`↔`i64`) or different domain (`int`↔`float`) — is a **numeric** conversion
   (`T(v)`, value-checked) or a `bitcast` (bit-preserving **reinterpret**), **not** a
@@ -732,7 +748,8 @@ cost is **visible**.
   implementation where the width exceeds the native register, **visible** cost (TYP-10).
 - **Target-dependent** `usize` / `isize`: prelude aliases that compile-time-expand
   to the kernel's pointer-width interpretation for the target.
-- **`char`**: a prelude alias for a Unicode code point (`u32`-shaped). A byte string
+- **`char`**: a prelude **brand over `u32`** (`char := brand(u32)`, Stdlib appendix
+  §3.2) for a Unicode code point. A byte string
   (`str`) is **UTF-8 bytes** and its length in bytes is not its length in code
   points; text operations are in the standard library (Lexis/Stdlib chapters).
 
@@ -1188,8 +1205,10 @@ A conforming implementation MUST:
    the operations, and make them available under every limit (§3);
 4. enforce nominal identity per declaration and structural identity only for
    anonymous layouts (§4.1);
-5. classify every conversion into exactly one lattice class, make only **widen**
-   implicit (and nothing implicit under `no_abstractions`), and keep `T(value)`
+5. classify every conversion into exactly one lattice class — its cost and implicility;
+   where an in-scope `@convert` matches, the site denotes that conversion (§4.6) —
+   make only **widen** implicit (and nothing implicit under `no_abstractions`), and keep
+   `T(value)`
    (value conversion) and `bitcast` (equal-width bit reinterpretation) as distinct
    operations (§4.2–4.4);
 6. build all types from the five layout primitives of §5.1 and provide no layout

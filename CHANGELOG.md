@@ -49,6 +49,23 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike
+(Types §4.2, §4.6, §5.4, §7, §12; TYP-14 as amended).** 1.7.0 made an in-scope `@convert`
+precede the brand crossing, but wrote the exception as *dispatch takes the builtin crossing
+instead* inside an `unchecked` scope. For a source type outside the numeric lattice that
+leaves the site with **no** operation: `to_u64 : bool -> u64` is §4.6's own example, step (3)
+cannot match `bool`→`u64`, so `unchecked u64(b)` compiled checked and refused unchecked — an
+observable defect, not a wording slip. The exception is now what Stdlib appendix §3.2 already
+said and what the decision's own `(CT-11)` named: the conversion is selected at every site,
+and its guard — library code under `comptime if verify.checked` — is comptime-absent inside
+`unchecked`, where the body is an identity crossing that costs nothing. `unchecked` drops a
+guard inside the operation a site denotes and never substitutes another one (CG-7's list is
+closed; I1, I11). Added: dispatch terminates — step (2) never re-selects the conversion whose
+body is being compiled, and inside that body the crossing is spelled `bitcast(T, v)` per
+MEM-10. §4.2's intro and brand row, §5.4's brand bullet and §12 item 5 now state that the
+table fixes cost and implicility, not denotation; §7 calls `char` what it is, a brand over
+`u32`, not an alias. (spec#22; compiler#364, #1244.)
+
 ## 1.7.0 — 2026-11-03
 
 **Normative — an in-scope `@convert` precedes the brand crossing (Types §4.2, §4.6; TYP-14).**

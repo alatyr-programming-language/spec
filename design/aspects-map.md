@@ -28,7 +28,7 @@ and **deferred (additive) growth**.
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
   closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
-- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-12
+- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-14
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
   integers at multiples of 64 — `u128 ≡ uint(128)`, TYP-10; raw-union members have one
