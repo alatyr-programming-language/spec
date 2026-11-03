@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.8.0 — 2026-11-03
+
 **Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike
 (Types §4.2, §4.6, §5.4, §7, §12; TYP-14 as amended).** 1.7.0 made an in-scope `@convert`
 precede the brand crossing, but wrote the exception as *dispatch takes the builtin crossing
@@ -59,14 +61,29 @@ observable defect, not a wording slip. The exception is now what Stdlib appendix
 said and what the decision's own `(CT-11)` named: the conversion is selected at every site,
 and its guard — library code under `comptime if verify.checked` — is comptime-absent inside
 `unchecked`, where the body is an identity crossing that costs nothing. `unchecked` drops a
-guard inside the operation a site denotes and never substitutes another one (CG-7's list is
-closed; I1, I11). Added: dispatch terminates — step (2) never re-selects the conversion whose
+guard inside the operation a site denotes and never substitutes another one: each guarded
+operation takes its hardware-defined behaviour, the same operation and never another (CG-7),
+and the guard itself is absent by CT-11 (I1, I11). Added: dispatch terminates — step (2) never re-selects the conversion whose
 body is being compiled, and inside that body `T(v)` over the directly-branded type
 resolves at step (3) to the brand crossing — still `T(v)`, since `bitcast` is
 reinterpret's only form (§4.4). §4.2's intro and brand row, §5.4's brand bullet and §12 item 5 now state that the
 table fixes cost and whether a crossing may be implicit, not denotation; §7 calls `char`
-what it is, a brand over
-`u32`, not an alias. (spec#22; compiler#364, #1244.)
+what it is, a brand over `u32`, not an alias. (spec#22; compiler#364, #1244.)
+
+**Normative — an alias is transparent to visibility: the resolved entity is what is checked
+(Modules §3, §4.1, §11; MOD-15).** A comptime alias binds a *name* to an **entity**; it
+creates no new entity, carries no visibility different from what it names, and launders
+nothing. Creating an alias requires the site to be allowed to name the entity — which is why
+§4.1's own `vec := math::vec` … `vec::length(p)` stays legal, `math` being `pub` and
+reachable — and every later use through the alias is judged against **that entity's**
+visibility, never against the shape of the head; a member's own visibility still governs it.
+Measured on native x86_64 at `compiler@c00eae90` before this change: with `hid` a private
+sibling module, the spelled `hid::secret()` was refused while `h := hid` then `h::secret()`
+was accepted and **ran** (exit 42) — the same leak for a private type, a private global, an
+aliased nested module and an alias declared in a third module. Enforcing against the spelled
+path is a hole, not a loophole: privacy that one line of source defeats is not privacy.
+`pub use other::private_item` therefore does not re-export: the alias is refused at its
+declaration (spec#27). (spec#27; compiler#1429, #1427.)
 
 ## 1.7.0 — 2026-11-03
 

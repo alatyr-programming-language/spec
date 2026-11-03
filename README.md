@@ -3,7 +3,7 @@
 **A systems programming language whose ceiling of expressiveness equals the assembler's —
 with abstractions that stay transparent in code generation.**
 
-![spec version 1.7.0](https://img.shields.io/badge/spec-1.7.0-blue)
+![spec version 1.8.0](https://img.shields.io/badge/spec-1.8.0-blue)
 ![status: draft under review](https://img.shields.io/badge/status-draft%20under%20review-orange)
 ![license CC BY 4.0 / Apache-2.0](https://img.shields.io/badge/license-CC%20BY%204.0%20%2F%20Apache--2.0-green)
 
@@ -23,7 +23,17 @@ contradiction between two files is a defect to be fixed rather than a matter of 
 
 ## Status
 
-**Version `1.7.0` — the Alatyr v1 specification, under review. Not accepted.**
+**Version `1.8.0` — the Alatyr v1 specification, under review. Not accepted.**
+
+Revision 1.8.0 closes two holes 1.7.0 left open, both found by measurement and
+independent review rather than by reading. A `@convert` is now the operation its site
+denotes **checked or `unchecked` alike** — 1.7.0 skipped it under `unchecked`, which for
+a source type outside the numeric lattice left the site with no operation at all, so
+`unchecked u64(b)` compiled checked and refused unchecked; the guard is instead library
+code under `comptime if verify.checked`, comptime-absent where `unchecked` asks (TYP-14).
+And an alias is **transparent to visibility**: it names an entity, so every use through
+it is judged against that entity, never against the spelled head — closing the one-line
+route by which a private sibling module's members were reachable and ran (MOD-15).
 
 Revision 1.7.0 answers a conversion the text answered twice, and answers it once: an in-scope
 `@convert` now fires **before** the builtin brand crossing, so `char(n)` runs the prelude's
@@ -306,7 +316,7 @@ shifted, or repurposed; a decision that changes is superseded by a new entry.
 
 | Repository | What it holds | Status |
 |---|---|---|
-| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.7.0` — under review |
+| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.8.0` — under review |
 | [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain — front end, lowering, GAS / WAT emission, the CLI — together with the prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
 
 The direction of authority runs one way and does not reverse: **the toolchain conforms to
@@ -329,7 +339,7 @@ confer it either: an independent implementation is conforming when it matches *t
 not when it matches the reference. Three things worth knowing before you start:
 
 - The specification is a **draft under review**. Cite the revision you built against
-  (`1.7.0`) — or, until you conform to one, name it as your **target revision** and publish
+  (`1.8.0`) — or, until you conform to one, name it as your **target revision** and publish
   your known deviations (Overview §6) — and expect the text to move under you: during
   review, MINOR is the digit that bumps whenever a norm changes. The leading `1` is the
   *language* version, not a claim that the text is settled — see `CHANGELOG.md`.
