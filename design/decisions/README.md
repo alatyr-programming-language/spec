@@ -40,7 +40,7 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | `comptime.md` | Comptime, generics, protocols, introspection | CT-1..12 |
 | `operators.md` | Operators, indexing, member access, conversions | OP-1..6 |
 | `control-flow.md` | Control flow, labels, errors (`?`/`!`, Tryable) | CF-1..10 |
-| `modules.md` | Modules, visibility, packages, paths | MOD-1..14 |
+| `modules.md` | Modules, visibility, packages, paths | MOD-1..15 |
 | `codegen.md` | Codegen, lowering, optimization, backends, conventions | CG-1..14 |
 | `syntax.md` | Lexis, separators, declaration/expression grammar, `@` | SYN-1..7 |
 | `tooling.md` | Tooling, manifest, packages, tests | TOOL-1..22 |

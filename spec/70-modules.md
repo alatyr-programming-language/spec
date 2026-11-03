@@ -90,6 +90,19 @@ Privacy flows **down** the module tree, exposure flows **up** only through `pub`
   break stops it. Reaching **outside the package** (external/library API) requires
   the `pub` chain all the way to the root — a library's **public API** is exactly the
   `pub`-chain-to-root-reachable surface.
+- **An alias is transparent to visibility.** A comptime alias (§4.1) binds a *name* to
+  an **entity**; it does not create a new entity, carry a visibility **different from
+  what it names** (its own `pub` governs only the reachability of the new path, §4.3),
+  or launder the visibility of what it names. Every use through the alias is checked against the
+  **visibility of the aliased entity** exactly as a use of its spelled path would be —
+  the alias is erased, and what is erased cannot hide anything. So `h := hid` where
+  `hid` is a private sibling module is **not** creatable at all (naming `hid` there
+  already fails this rule), and where the alias *is* creatable — because the site may
+  name the entity — every member reachable through it is reachable by the same right
+  that made the alias legal — a **member's own** visibility still governs it. An
+  implementation that enforces visibility against the
+  **spelled** head and not against the resolved entity has a hole, not a loophole.
+  (MOD-15; spec#27.)
 - A child module (whether file-defined or inline `mod { … }`, §1) is a **descendant
   scope** for this rule: it sees its ancestors' private items, but to expose its own
   items upward it must `pub` them. There is **no** friend / sibling / package-private
@@ -116,7 +129,11 @@ A path resolving to a compile-time namespace entity makes the binding a **compti
 alias**: it is **erased** and emits **no** symbol (§9). What a binding may name
 follows the §3 visibility rule: any `pub` name reachable through the tree, **plus** an
 ancestor's non-`pub` name when the binding site is a **descendant** (down-tree
-privacy, §3); a non-`pub` name of a non-ancestor module is **not** accessible.
+privacy, §3); a non-`pub` name of a non-ancestor module is **not** accessible. Because
+the alias is **erased**, it is transparent to visibility in both directions: creating it
+requires the site to be allowed to name the entity, and every later use through the
+alias is judged against **that entity's** visibility, never against the alias's own name
+or the shape of the head (§3, MOD-15).
 Renaming is automatic — the **left-hand** name is whatever you choose (`len`, `vec`).
 
 A binding to a **runtime** place (e.g. a mutable global) is **not** an import: it is
@@ -573,7 +590,9 @@ A conforming implementation MUST:
    its module and all **descendant** modules but not to ancestors/siblings/unrelated
    modules; make `pub` visible to the parent and require a **continuous `pub` chain**
    for further outward / external visibility; no friend/sibling/package-private access
-   beyond this (§3);
+   beyond this (§3); and check visibility against the **resolved entity**, never against
+   the spelled head — a comptime alias is transparent to visibility, so it neither
+   creates a new entity nor launders the visibility of what it names (§3, §4.1);
 4. provide **no** `use` construct: import / alias / re-export are the ordinary
    declaration `name := path` (a comptime alias of a namespace entity, erased, no
    symbol) and `pub name := path` (re-export); navigate a module-valued binding with
