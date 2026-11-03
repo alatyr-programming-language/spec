@@ -324,10 +324,18 @@ x := u64(b)          # b : bool — dispatches to the in-scope @convert whose
 
 **Dispatch.** A `T(v)` with a **single** argument resolves, in order, to: (1) when `T`
 is a required type `R = @require(pred) U` and `v` is assignable to the immediate `U`,
-the built-in contract gate (§8.1); otherwise (2) a builtin lattice conversion (§4.2)
-when one applies in `T`'s numeric domain; otherwise (3) the **one** in-scope `@convert`
-whose return type is `T` and whose parameter accepts `typeof(v)` (the static type of
-`v`; Stdlib appendix §4.1). Thus an in-scope direct `@convert` from `S` to a required
+the built-in contract gate (§8.1); otherwise (2) the **one** in-scope `@convert` whose
+return type is `T` and whose parameter accepts `typeof(v)` (the static type of `v`;
+Stdlib appendix §4.1), **except in a body carrying the `unchecked` grant** (Concurrency
+§6.2), where the grant suppresses the conversion's declared guard and the builtin crossing
+of §4.2 is taken instead (CG-7); otherwise (3) a builtin lattice conversion (§4.2) when one applies in `T`'s
+numeric domain. A `@convert` therefore **precedes the zero-cost brand crossing** of §4.2
+to a branded target: branding adds identity and its "cost: zero" clause describes the
+crossing's *cost*, not its precedence, and a brand over a numeric type is not one of the
+**numeric classes** the clause below protects. So `char(n)` — `char` being a brand over
+`u32` with a prelude `@convert` in scope — runs that conversion's code-point guard when
+checked, and is the zero-cost brand crossing under `unchecked` (Stdlib appendix §3.2;
+spec#22, TYP-14). Thus an in-scope direct `@convert` from `S` to a required
 `R` remains usable when `S` is not assignable to `U`, but it MUST construct and return
 `R` in its own body under the ordinary rules; dispatch does not compose `S`→`U` with
 the gate. If `v` is assignable to `U`, the gate takes precedence over a competing
@@ -349,7 +357,9 @@ at a site are an **ambiguity error** (no guessing, FND-3).
 
 **Always explicit, never the lattice.** A `@convert` fires **only** through an explicit
 `T(v)`; it is never an implicit conversion (only **widen** is implicit, §4.3), and it
-cannot override a builtin lattice class within that class's domain. Its cost is the
+cannot override a builtin **numeric** lattice class within that class's domain — widen,
+narrow and reinterpret stay the builtin path. A brand over a numeric type is not such a
+class: an in-scope `@convert` to it precedes the brand crossing (§4.6 dispatch, TYP-14). Its cost is the
 cost of its body (I2); **selection** is comptime and monomorphized (zero dispatch
 overhead). A `@convert` is an ordinary function — its body runs at the stage its
 argument is available (a comptime-known argument folds; a runtime argument runs at

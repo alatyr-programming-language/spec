@@ -395,3 +395,52 @@ narrowing. Rejecting integer literals in float contexts — `x : f64 = 1` is the
 unambiguous case and forcing `1.0` buys nothing. Silent truncation or rounding of a float
 literal to an integer type — a silent value change, contradicting I11 and §9.1's
 no-silent-wrap rule.
+
+---
+
+### TYP-14. `@convert` precedence over the brand crossing — spec#22
+
+**Date:** 2026-11-03 · **Chapter:** Types §4.6, §4.2 · **Issues:** spec#22; compiler #364, #1244
+
+**Question.** `char := brand(u32)` (§4.2, Stdlib appendix §3.2), and the prelude declares
+`to_char := @convert fn(n : u32) -> char`. §4.6's dispatch put the **builtin lattice**
+before the **in-scope `@convert`**, and §4.2 calls a brand crossing over the same numeric
+domain **zero-cost**. Read together, `char(n)` was the brand crossing: the conversion's
+body never ran, so the code-point guard never fired and `char(1114112)` answered
+`1114112` silently. Which clause wins — and is the guard free or paid?
+
+**Options.**
+1. **`@convert` takes precedence when it is in scope**; the brand crossing stays the
+   fallback, and remains the whole story in a body carrying `unchecked`.
+2. **The brand path wins**; a library cannot guard its own branded target — the guard
+   moves into the compiler as a builtin code-point check.
+3. **`char(n)` is ambiguous** whenever both apply, as §4.6 already rules for a one-field
+   aggregate against a `@convert`.
+
+**Decision.** **Option 1.** An in-scope `@convert` whose return type is `T` and whose
+parameter accepts `typeof(v)` fires **before** the builtin brand crossing; §4.2's
+"cost: zero" describes that crossing's *cost* and is read only where no such `@convert`
+is in scope. In a body carrying the `unchecked` grant (§Concurrency §6.2) dispatch takes
+the brand crossing instead, so the conversion's body — and any guard written in it — does
+not run: `unchecked char(n)` stays the free reinterpret, as CT-11 and §3.2's
+"no check under `unchecked`" require. The clause "cannot override a builtin lattice
+class" is narrowed to what it was always about: the **numeric** classes, whose
+widen/narrow/reinterpret stay the builtin path.
+
+**Why.** I2 says a construct's cost is its body's cost: a guard the author wrote must
+run when the author asked for the conversion, and a silently-skipped guard is a wrong
+value with no location (I11). Option 2 puts a language rule into the compiler for what
+the library already expresses, and would still leave every *other* branded target
+unguarded — the defect is general, the fix would not be. Option 3 makes the common case
+(`char`) refuse, which is user-hostile for a prelude conversion every call site means.
+Option 1 keeps the lattice whole, costs nothing where no `@convert` exists, and keeps the
+escape hatch exactly where the spec already puts it — under `unchecked`, explicitly.
+
+**Consequences.** §4.6's dispatch order and its "never the lattice" clause are amended in
+place; §4.2's brand row is now read as a cost statement, not a precedence one. The
+stdlib's `to_char` becomes **`pub`** (an unimportable conversion is not "in scope" for
+anyone, so option 1 would be inert otherwise) and its guard becomes **`trap()`**, not
+`panic`: a rejected conversion is a contract failure at the call site, and §3.2 keeps
+`panic` for an unrecoverable abort. Compiler work follows in compiler#364 (the guard
+never firing) and the 20 `REFUSED` cells of compiler#1244's container matrix; both bind
+only after the pin moves to the release that carries this decision.
