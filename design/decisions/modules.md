@@ -430,3 +430,53 @@ which MOD-10 rejected on the merits; it also breaks path dependencies edited in 
 whose only effect is to forbid renaming. Making the name optional with the source's last path segment as
 a default — a git URL's tail is not an identifier (`hal.git`, `libfoo-rs`), so the default would need a
 sanitizing rule, and a silently derived namespace name is worse than a stated one (I3).
+
+### MOD-15. An alias is transparent to visibility — the resolved entity is what is checked
+*provenance: refines MOD-3/MOD-4 (§3 privacy down-tree, `pub` up-tree) and §4.1 (comptime alias of a namespace entity) · spec: Modules §3, §4.1, §11*
+
+**Question.** `h := hid` binds a local name to a **private sibling module**; then
+`h::secret()` names a member of it. The spelled `hid::secret()` is refused, the aliased
+`h::secret()` was accepted and **ran** — measured on native x86_64 at `compiler@c00eae90`
+(the private helper executed; the program exited 42). §3 says a non-`pub` item of a
+sibling is not visible; §4.1 says a path to a namespace entity makes the binding a
+**comptime alias**, **erased**, and gives `vec := math::vec` … `vec::length(p)` as the
+example. The chapter never says whether visibility travels with the **entity** through the
+erasure or attaches to the **spelled head**. Two implementations differ on one line, and
+every `pub` in a library is one alias away from reachable either way round — below FND-3.
+
+**Options.**
+1. **The alias is transparent: the resolved entity is what visibility governs.**
+2. **The alias publishes:** `pub` on the binding makes the name, and through it the
+   entity, reachable — today's behaviour.
+3. **Refuse at the declaration:** `h := hid` is illegal unless `hid` is `pub`, so no
+   name for a private module ever exists.
+
+**Decision.** **Option 1**, the owner's choice (2026-11-03). Visibility is a property of
+the **entity**, not of a name for it. An alias is erased (§4.1, §9) — and what is erased
+cannot launder visibility. So creating the alias requires the site to be allowed to name
+the entity (which is exactly why §4.1's `vec := math::vec` stays legal: `math` is `pub`
+and reachable), and every use through the alias is judged against **that entity's**
+visibility, never against the shape of the head. Enforcing against the spelled path is a
+**hole**, not a loophole: it makes privacy a matter of how a module happens to be written
+down at one call site.
+
+**Why.** It is the only reading under which §3's sentence is true everywhere rather than
+at the spelling: privacy that one line of source defeats is not privacy (I11's honesty,
+I3's nothing-hidden). Option 2 makes every private member of every library module
+reachable by one binding, and turns `pub` into documentation. Option 3 refuses the
+legitimate case for the same reason it refuses the illegitimate one — a descendant may
+name its ancestor's private module (§3 down-tree privacy), so `h := ancestorPrivate` must
+be legal there, and option 3 would forbid it; it also invents a second visibility rule for
+declarations where option 1 decides use-sites with the rule §3 already has (PRIN-1).
+
+**Consequences.** Modules §3 gains the transparency bullet and §4.1 states it where
+aliases are defined; §11's conformance list follows. In the reference compiler the fix is
+one head-resolution on the visibility path — `sema_vis_pair` selects candidates by
+`sema_mod_seg_eq` against the module's **own spelled path** and returns without reaching
+`sema_decl_visible_from`; the resolution it needs already exists unwired
+(`qual_head_alias`, `sema_rec_head_alias`). Blast radius: **296** top-level
+`x := a::b` bindings across `test/ lib/ src/`, so the fix lands with reject fixtures for
+the private shapes and legal controls for `pub`-through-alias and down-tree, after a
+semantic probe of that population. Compiler#1429 carries the defect; spec#27 is the
+`pub use` shape of the same question, answered the same way: the alias governs nothing,
+the entity does.
