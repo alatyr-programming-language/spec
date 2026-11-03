@@ -13,7 +13,7 @@
 > not yet accepted — and the conformance requirements in §6 describe the *completed*
 > specification's intent.
 >
-> **Version — `1.7.0`.** The specification is living and versioned. The MAJOR digit is
+> **Version — `1.8.0`.** The specification is living and versioned. The MAJOR digit is
 > the version of the *language* this document specifies (Alatyr v1); MINOR marks a
 > normative revision of the text, PATCH an editorial one. The number is not a maturity
 > claim — whether the document is accepted is what the Status above states, and it is not
@@ -271,7 +271,7 @@ chapter.)
   the language, which does not by itself fix what an implementation must do.
 - **A target revision is not a conformance claim.** An implementation that conforms to no
   revision MAY instead name the revision it is **answerable to** — its **target revision**
-  ("targets the Alatyr specification 1.7.0"). It then MUST publish its **known
+  ("targets the Alatyr specification 1.8.0"). It then MUST publish its **known
   deviations** from that revision: a list that describes the implementation version naming
   the target and is kept current with that version, each entry stating the rule not met
   (by chapter and section, or decision ID) and the observable difference, publicly

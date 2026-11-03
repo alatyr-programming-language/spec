@@ -455,8 +455,9 @@ lattice" clause are amended in place, together with §4.2's intro and brand row,
 brand bullet, §12 item 5 and §7's `char` line (a brand over `u32`, not an alias). The
 stdlib's `to_char` becomes **`pub`** — an unimportable conversion is in scope for no one,
 so option 1 would be inert otherwise — and its guard becomes **`trap()`**, not `panic`:
-Stdlib appendix §3.2 and Stdlib chapter §4.1 already require a library check that mirrors
-the built-in family to fail through `trap()`, never `panic`, while `panic` stays for
-ordinary library logic (Stdlib chapter §4.1). Compiler work follows in compiler#364 (the guard never
-firing) and the 20 `REFUSED` cells of compiler#1244's container matrix; both bind only
-once the pin moves to the release that carries this text.
+Stdlib chapter §4.1 requires a library check that mirrors a member of the built-in guard
+family to fail through `trap()` and never through `panic`, and appendix §3.2 names
+`char(n)`'s conversion check among them, while `panic` stays for ordinary library logic
+(an explicit `assert`, `unwrap` on `None` / `Err`). Compiler work follows in compiler#364
+(the guard never firing) and the 20 `REFUSED` cells of compiler#1244's container matrix;
+both bind only once the pin moves to the release that carries this text.
