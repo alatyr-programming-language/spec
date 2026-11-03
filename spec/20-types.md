@@ -753,7 +753,8 @@ cost is **visible**.
 - **Target-dependent** `usize` / `isize`: prelude aliases that compile-time-expand
   to the kernel's pointer-width interpretation for the target.
 - **`char`**: a prelude **brand over `u32`** (`char := brand(u32)`, Stdlib appendix
-  §3.2) for a Unicode code point. A byte string
+  §3.2) for a Unicode code point. A byte
+  string
   (`str`) is **UTF-8 bytes** and its length in bytes is not its length in code
   points; text operations are in the standard library (Lexis/Stdlib chapters).
 
