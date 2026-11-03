@@ -183,7 +183,7 @@ written* anonymous tuple/block, never to a type-function's result.
 
 Every conversion between types belongs to exactly one of the following classes. The
 class fixes whether the conversion may be implicit and what it costs. It fixes **cost and
-implicility, not denotation**: where an in-scope `@convert` matches the pair, the site
+whether it may be implicit, not denotation**: where an in-scope `@convert` matches the pair, the site
 denotes that conversion and this table gives the cost of the crossing it stands in front
 of (§4.6, TYP-14):
 
@@ -316,7 +316,7 @@ and never moves the pointee. The supplied address is an ordinary second-class sc
 The conversion lattice (§4.2) is the **builtin** numeric/brand set: it fixes what each
 crossing costs and whether it may be implicit. A library may declare a conversion for any
 other source→target pair — **and for a target that is a brand, where it precedes the
-crossing of that brand (§4.6 dispatch, TYP-14)** — as a **conversion-constructor**: a
+crossing of that brand (the Dispatch paragraph below, TYP-14)** — as a **conversion-constructor**: a
 function marked **`@convert`** whose **single** parameter is the source value and
 whose **return type** is the target.
 
@@ -331,7 +331,9 @@ x := u64(b)          # b : bool — dispatches to the in-scope @convert whose
 is a required type `R = @require(pred) U` and `v` is assignable to the immediate `U`,
 the built-in contract gate (§8.1); otherwise (2) the **one** in-scope `@convert` whose
 return type is `T` and whose parameter **accepts** `typeof(v)` — equal to it, or
-assignable to it per §4.3 (the static type of `v`; Stdlib appendix §4.1); otherwise
+assignable to it per §4.3 (the static type of `v`; Stdlib appendix §4.1) — declaring one
+for a pair §4.2 already fixes, other than a branded target, is ill-formed (the
+eligibility rule, above); otherwise
 (3) a builtin lattice conversion (§4.2) when one applies in `T`'s numeric domain.
 **An in-scope `@convert` therefore precedes the brand crossing** to a branded target:
 §4.2's "cost: zero" states what that crossing *costs*, and a cost statement does not
@@ -342,12 +344,14 @@ check is library code under `comptime if verify.checked` (§4.5, CT-11) and is t
 comptime-absent inside an `unchecked` scope, where the body is an identity crossing and
 costs nothing (Stdlib appendix §3.2). The step is selected **checked or unchecked
 alike**: `unchecked` drops the guard inside the operation the site denotes, and never
-substitutes a different one — CG-7's list of what the mode drops is closed, and
-choosing another operation would let a caller's scope change a value (I1, I11).
+substitutes a different one: each guarded operation takes its **hardware-defined**
+behaviour, the same operation and never another (CG-7), and the guard itself is absent by
+CT-11 — a caller's scope choosing another operation would change a value (I1, I11).
 **Termination.** Step (2) does not re-select the conversion whose own body is being
-compiled: inside a `@convert` to a brand, the crossing is spelled `bitcast(T, v)`, as
-MEM-10 lays down for the derived `Pointer` arm (Stdlib appendix §2.6), so dispatch ends
-at the crossing. Thus an in-scope direct `@convert` from `S` to a required
+compiled: inside a `@convert` to a brand, `T(v)` over the type that brand directly brands
+resolves at step (3) to the **brand** crossing (§4.2) — still `T(v)`, since `bitcast` is
+the only form of **reinterpret** and this is not reinterpret (§4.4) — so dispatch ends
+there. Thus an in-scope direct `@convert` from `S` to a required
 `R` remains usable when `S` is not assignable to `U`, but it MUST construct and return
 `R` in its own body under the ordinary rules; dispatch does not compose `S`→`U` with
 the gate. If `v` is assignable to `U`, the gate takes precedence over a competing
@@ -1205,11 +1209,11 @@ A conforming implementation MUST:
    the operations, and make them available under every limit (§3);
 4. enforce nominal identity per declaration and structural identity only for
    anonymous layouts (§4.1);
-5. classify every conversion into exactly one lattice class — its cost and implicility;
-   where an in-scope `@convert` matches, the site denotes that conversion (§4.6) —
-   make only **widen** implicit (and nothing implicit under `no_abstractions`), and keep
-   `T(value)`
-   (value conversion) and `bitcast` (equal-width bit reinterpretation) as distinct
+5. classify every conversion into exactly one lattice class — its cost and whether it
+   may be implicit; where an in-scope `@convert` matches, the site denotes that
+   conversion (§4.6) — make only **widen** implicit (and nothing implicit under
+   `no_abstractions`), and keep `T(value)` (value conversion) and `bitcast` (equal-width
+   bit reinterpretation) as distinct
    operations (§4.2–4.4);
 6. build all types from the five layout primitives of §5.1 and provide no layout
    outside their composition;

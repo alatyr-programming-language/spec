@@ -61,9 +61,11 @@ and its guard — library code under `comptime if verify.checked` — is comptim
 `unchecked`, where the body is an identity crossing that costs nothing. `unchecked` drops a
 guard inside the operation a site denotes and never substitutes another one (CG-7's list is
 closed; I1, I11). Added: dispatch terminates — step (2) never re-selects the conversion whose
-body is being compiled, and inside that body the crossing is spelled `bitcast(T, v)` per
-MEM-10. §4.2's intro and brand row, §5.4's brand bullet and §12 item 5 now state that the
-table fixes cost and implicility, not denotation; §7 calls `char` what it is, a brand over
+body is being compiled, and inside that body `T(v)` over the directly-branded type
+resolves at step (3) to the brand crossing — still `T(v)`, since `bitcast` is
+reinterpret's only form (§4.4). §4.2's intro and brand row, §5.4's brand bullet and §12 item 5 now state that the
+table fixes cost and whether a crossing may be implicit, not denotation; §7 calls `char`
+what it is, a brand over
 `u32`, not an alias. (spec#22; compiler#364, #1244.)
 
 ## 1.7.0 — 2026-11-03

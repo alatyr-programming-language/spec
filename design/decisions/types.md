@@ -399,7 +399,9 @@ no-silent-wrap rule.
 ---
 
 ### TYP-14. `@convert` precedence over the brand crossing — spec#22
-*provenance: refines TYP-2/TYP-4 (branding) and TYP-6 (§4.6 conversion-constructors), on CT-11 (mode-polymorphic library checks) · spec: Types §4.2, §4.6, §5.4, §7, §12; Stdlib appendix §3.2*
+*provenance: refines TYP-2/TYP-4 (branding) and TYP-6 (§4.6 conversion-constructors),
+  on CT-11 (mode-polymorphic library checks) · spec: Types §4.2, §4.6, §5.4, §7, §12;
+  Stdlib appendix §3.2*
 
 **Question.** `char := brand(u32)` (§4.2, Stdlib appendix §3.2), and the prelude declares
 `to_char := @convert fn(n : u32) -> char`. §4.6's dispatch put the **builtin lattice**
@@ -418,11 +420,13 @@ it must be: it is library code under `comptime if verify.checked` (§4.5, CT-11)
 inside an `unchecked` scope it is comptime-absent and the body is an identity crossing
 that costs nothing — exactly what Stdlib appendix §3.2 said before this decision was
 written down. `unchecked` **drops a guard inside** the operation the site denotes; it
-never **substitutes another operation**: CG-7's list of what the mode drops is closed,
-and letting a caller's scope pick a different operation would change a value from outside
-the site (I1, I11). Dispatch terminates: step (2) does not re-select the conversion whose
-body is being compiled, and inside that body the crossing is spelled `bitcast(T, v)`, as
-MEM-10 lays down for the derived `Pointer` arm (Stdlib appendix §2.6).
+never **substitutes another operation**: each guarded operation takes its
+hardware-defined behaviour, the same operation and never another (CG-7), and the guard is
+absent by CT-11 — letting a caller's scope pick a different operation would change a
+value from outside the site (I1, I11). Dispatch terminates: step (2) does not re-select
+the conversion whose body is being compiled, and inside that body `T(v)` over the
+directly-branded type resolves at step (3) to the **brand** crossing — still `T(v)`,
+since `bitcast` is reinterpret's only form and this is not reinterpret (§4.4).
 
 **Why.** I2 says a construct's cost is its body's cost: a guard the author wrote runs
 when the author asked for the conversion, and a silently-skipped guard is a wrong value
