@@ -27,9 +27,11 @@ contradiction between two files is a defect to be fixed rather than a matter of 
 
 Revision 1.7.0 answers a conversion the text answered twice, and answers it once: an in-scope
 `@convert` now fires **before** the builtin brand crossing, so `char(n)` runs the prelude's
-code-point guard instead of silently reinterpreting `u32` — and stays the free reinterpret in a
-body carrying `unchecked`, where the conversion's body is never selected at all (Types §4.6,
-TYP-14). It also lets an implementation still in development name a **target revision** with its
+code-point guard instead of silently reinterpreting `u32`. Inside an `unchecked` scope the
+conversion is **still selected** — its guard is library code under `comptime if
+verify.checked`, so it is comptime-absent there and the body costs nothing; `unchecked`
+drops a guard inside the operation a site denotes and never substitutes another one
+(Types §4.6, TYP-14). It also lets an implementation still in development name a **target revision** with its
 known deviations published, rather than claim a conformance it does not have (Overview §6).
 
 Revision 1.6.0 replaces a mechanism 1.5.0 had invented with one the language already has: the

@@ -28,12 +28,14 @@ and **deferred (additive) growth**.
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
   closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
-- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-12
+- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-14
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
   integers at multiples of 64 — `u128 ≡ uint(128)`, TYP-10; raw-union members have one
   zero/single/anonymous-tuple payload with fixed construction, layout, copy, comptime/static,
-  and definitely-active access rules, TYP-11).
+  and definitely-active access rules, TYP-11; a float-spelled literal is never an integer
+  initializer, TYP-13; an in-scope `@convert` precedes the brand crossing it guards,
+  TYP-14).
   `@require` is the explicit non-owning-underlying constructor gate with an ordinary ABI
   predicate call (TYP-12).
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,

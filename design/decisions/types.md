@@ -128,8 +128,9 @@ conversions plug into the **same `T(value)` form** via a function marked **`@con
 in-scope name resolution — never a global registry or an orphan rule. The marker is the
 **attribute, not the binding name**, so two conversions to one target can coexist and
 foreign/deeply-nested targets are expressible. A `@convert` is always explicit and cannot
-override a builtin lattice class; multiple matches at a site are an ambiguity error (FND-3,
-no guessing). This is what lets the language **privilege no `bool`↔integer convention**:
+override a builtin lattice class **other than brand**, where a matching in-scope
+`@convert` precedes the crossing (TYP-14); multiple matches at a site are an ambiguity
+error (FND-3, no guessing). This is what lets the language **privilege no `bool`↔integer convention**:
 that conversion becomes a library `@convert` (the author fixing checked-narrow vs
 truthiness-fold by choice), while the base tier still ships the idioms (`n != 0`, `if b
 {1} else {0}`), not the conversions.
@@ -399,8 +400,9 @@ no-silent-wrap rule.
 ---
 
 ### TYP-14. `@convert` precedence over the brand crossing — spec#22
-
-**Date:** 2026-11-03 · **Chapter:** Types §4.6, §4.2 · **Issues:** spec#22; compiler #364, #1244
+*provenance: refines TYP-2/TYP-4 (branding) and TYP-6 (§4.6 conversion-constructors),
+  on CT-11 (mode-polymorphic library checks) · spec: Types §4.2, §4.6, §5.4, §7, §12;
+  Stdlib appendix §3.2, Stdlib chapter §4.1*
 
 **Question.** `char := brand(u32)` (§4.2, Stdlib appendix §3.2), and the prelude declares
 `to_char := @convert fn(n : u32) -> char`. §4.6's dispatch put the **builtin lattice**
@@ -409,38 +411,52 @@ domain **zero-cost**. Read together, `char(n)` was the brand crossing: the conve
 body never ran, so the code-point guard never fired and `char(1114112)` answered
 `1114112` silently. Which clause wins — and is the guard free or paid?
 
-**Options.**
-1. **`@convert` takes precedence when it is in scope**; the brand crossing stays the
-   fallback, and remains the whole story in a body carrying `unchecked`.
-2. **The brand path wins**; a library cannot guard its own branded target — the guard
-   moves into the compiler as a builtin code-point check.
-3. **`char(n)` is ambiguous** whenever both apply, as §4.6 already rules for a one-field
-   aggregate against a `@convert`.
+**Decision.** **Option 1, as amended by its own `(CT-11)` parenthetical.** An in-scope
+`@convert` whose return type is `T` and whose parameter accepts `typeof(v)` is the
+operation a single-argument `T(v)` **denotes**, ahead of the builtin brand crossing, at
+every site — checked or `unchecked` alike. §4.2's "cost: zero" states what the crossing
+*costs*; a cost statement does not settle which operation a site denotes, so §4.2's
+intro, its brand row, §5.4's bullet and §12 item 5 now say so. The guard is free where
+it must be: it is library code under `comptime if verify.checked` (§4.5, CT-11), so
+inside an `unchecked` scope it is comptime-absent and the body is an identity crossing
+that costs nothing — exactly what Stdlib appendix §3.2 said before this decision was
+written down. `unchecked` **drops a guard inside** the operation the site denotes; it
+never **substitutes another operation**: each guarded operation takes its
+hardware-defined behaviour, the same operation and never another (CG-7), and the guard is
+absent by CT-11 — letting a caller's scope pick a different operation would change a
+value from outside the site (I1, I11). Dispatch terminates: step (2) does not re-select
+the conversion whose body is being compiled, and inside that body `T(v)` over the
+directly-branded type resolves at step (3) to the **brand** crossing — still `T(v)`,
+since `bitcast` is reinterpret's only form and this is not reinterpret (§4.4).
 
-**Decision.** **Option 1.** An in-scope `@convert` whose return type is `T` and whose
-parameter accepts `typeof(v)` fires **before** the builtin brand crossing; §4.2's
-"cost: zero" describes that crossing's *cost* and is read only where no such `@convert`
-is in scope. In a body carrying the `unchecked` grant (§Concurrency §6.2) dispatch takes
-the brand crossing instead, so the conversion's body — and any guard written in it — does
-not run: `unchecked char(n)` stays the free reinterpret, as CT-11 and §3.2's
-"no check under `unchecked`" require. The clause "cannot override a builtin lattice
-class" is narrowed to what it was always about: the **numeric** classes, whose
-widen/narrow/reinterpret stay the builtin path.
+**Why.** I2 says a construct's cost is its body's cost: a guard the author wrote runs
+when the author asked for the conversion, and a silently-skipped guard is a wrong value
+with no location (I11). Keeping the conversion selected under `unchecked` rather than
+swapping in the crossing is what makes the decision safe: the first draft of this entry
+made dispatch take the crossing under `unchecked`, and independent review showed that
+breaks a source type outside the numeric lattice — for `to_u64 : bool -> u64`, step (3)
+cannot match `bool`→`u64`, so `unchecked u64(b)` resolved to **nothing** and a program
+that compiled checked refused unchecked. CT-11 already gives the prelude the mechanism to
+be free when unchecked, so nothing is invented here (PRIN-1).
 
-**Why.** I2 says a construct's cost is its body's cost: a guard the author wrote must
-run when the author asked for the conversion, and a silently-skipped guard is a wrong
-value with no location (I11). Option 2 puts a language rule into the compiler for what
-the library already expresses, and would still leave every *other* branded target
-unguarded — the defect is general, the fix would not be. Option 3 makes the common case
-(`char`) refuse, which is user-hostile for a prelude conversion every call site means.
-Option 1 keeps the lattice whole, costs nothing where no `@convert` exists, and keeps the
-escape hatch exactly where the spec already puts it — under `unchecked`, explicitly.
+**Rejected.**
+- *(2) The brand path wins; the guard moves into the compiler.* Puts a language rule in
+  the toolchain for what the library already expresses, and still leaves every *other*
+  branded target unguarded — the defect is general, the fix would not be.
+- *(3) `char(n)` is ambiguous whenever both apply,* as §4.6 already rules for a one-field
+  aggregate against a `@convert`. Makes the common case refuse: a prelude conversion every
+  call site means would need a named spelling everywhere.
+- *(the first wording of option 1: dispatch takes the crossing under `unchecked`).*
+  Rejected on review, not by the owner: it substitutes an operation by caller scope, and
+  for a non-lattice source type it leaves the site with no operation at all.
 
-**Consequences.** §4.6's dispatch order and its "never the lattice" clause are amended in
-place; §4.2's brand row is now read as a cost statement, not a precedence one. The
-stdlib's `to_char` becomes **`pub`** (an unimportable conversion is not "in scope" for
-anyone, so option 1 would be inert otherwise) and its guard becomes **`trap()`**, not
-`panic`: a rejected conversion is a contract failure at the call site, and §3.2 keeps
-`panic` for an unrecoverable abort. Compiler work follows in compiler#364 (the guard
-never firing) and the 20 `REFUSED` cells of compiler#1244's container matrix; both bind
-only after the pin moves to the release that carries this decision.
+**Consequences.** §4.6's dispatch order, its eligibility sentence and its "never the
+lattice" clause are amended in place, together with §4.2's intro and brand row, §5.4's
+brand bullet, §12 item 5 and §7's `char` line (a brand over `u32`, not an alias). The
+stdlib's `to_char` becomes **`pub`** — an unimportable conversion is in scope for no one,
+so option 1 would be inert otherwise — and its guard becomes **`trap()`**, not `panic`:
+Stdlib appendix §3.2 and Stdlib chapter §4.1 already require a library check that mirrors
+the built-in family to fail through `trap()`, never `panic`, while `panic` stays for
+ordinary library logic (Stdlib chapter §4.1). Compiler work follows in compiler#364 (the guard never
+firing) and the 20 `REFUSED` cells of compiler#1244's container matrix; both bind only
+once the pin moves to the release that carries this text.

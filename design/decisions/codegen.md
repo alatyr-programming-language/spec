@@ -216,7 +216,8 @@ over per-operation visibility — and action-at-a-distance is bounded by I11. Th
 on demand**: a function may read the mode via `comptime if verify.checked` (a comptime
 fact, like target/build gating), making it **mode-polymorphic** — instantiated per the
 call site's mode. This is how **library code** — a container, a library-defined numeric
-type such as `uint(N)` — makes its *own* checks drop inside `unchecked` without the
+type such as `uint(N)`, a `@convert`'s target check — makes its *own* checks drop inside
+`unchecked` without the
 compiler recognizing them: the library declares the mode-dependence (CT-11). The built-in
 guard family needs no such declaration — the compiler emits it, so the compiler drops it
 (CG-13). There is **no
