@@ -91,14 +91,16 @@ Privacy flows **down** the module tree, exposure flows **up** only through `pub`
   the `pub` chain all the way to the root — a library's **public API** is exactly the
   `pub`-chain-to-root-reachable surface.
 - **An alias is transparent to visibility.** A comptime alias (§4.1) binds a *name* to
-  an **entity**; it does not create a new entity, carry its own visibility, or launder
-  the visibility of what it names. Every use through the alias is checked against the
+  an **entity**; it does not create a new entity, carry a visibility **different from
+  what it names** (its own `pub` governs only the reachability of the new path, §4.3),
+  or launder the visibility of what it names. Every use through the alias is checked against the
   **visibility of the aliased entity** exactly as a use of its spelled path would be —
   the alias is erased, and what is erased cannot hide anything. So `h := hid` where
   `hid` is a private sibling module is **not** creatable at all (naming `hid` there
   already fails this rule), and where the alias *is* creatable — because the site may
   name the entity — every member reachable through it is reachable by the same right
-  that made the alias legal. An implementation that enforces visibility against the
+  that made the alias legal — a **member's own** visibility still governs it. An
+  implementation that enforces visibility against the
   **spelled** head and not against the resolved entity has a hole, not a loophole.
   (MOD-15; spec#27.)
 - A child module (whether file-defined or inline `mod { … }`, §1) is a **descendant
@@ -130,7 +132,7 @@ ancestor's non-`pub` name when the binding site is a **descendant** (down-tree
 privacy, §3); a non-`pub` name of a non-ancestor module is **not** accessible. Because
 the alias is **erased**, it is transparent to visibility in both directions: creating it
 requires the site to be allowed to name the entity, and every later use through the
-alias is judged against **that entity's** visibility, never against the alias' own name
+alias is judged against **that entity's** visibility, never against the alias's own name
 or the shape of the head (§3, MOD-15).
 Renaming is automatic — the **left-hand** name is whatever you choose (`len`, `vec`).
 

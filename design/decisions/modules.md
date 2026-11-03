@@ -432,12 +432,14 @@ a default — a git URL's tail is not an identifier (`hal.git`, `libfoo-rs`), so
 sanitizing rule, and a silently derived namespace name is worse than a stated one (I3).
 
 ### MOD-15. An alias is transparent to visibility — the resolved entity is what is checked
-*provenance: refines MOD-3/MOD-4 (§3 privacy down-tree, `pub` up-tree) and §4.1 (comptime alias of a namespace entity) · spec: Modules §3, §4.1, §11*
+*provenance: refines MOD-2 (§3 privacy down-tree, `pub` up-tree) and MOD-4 (§4.1 comptime
+  alias of a namespace entity) · spec: Modules §3, §4.1, §11*
 
 **Question.** `h := hid` binds a local name to a **private sibling module**; then
 `h::secret()` names a member of it. The spelled `hid::secret()` is refused, the aliased
 `h::secret()` was accepted and **ran** — measured on native x86_64 at `compiler@c00eae90`
-(the private helper executed; the program exited 42). §3 says a non-`pub` item of a
+(`seed/alatyr run repro.al` → exit 42, the private helper executed; `check` → rc 0, so the
+compiler's own checker calls the program valid). §3 says a non-`pub` item of a
 sibling is not visible; §4.1 says a path to a namespace entity makes the binding a
 **comptime alias**, **erased**, and gives `vec := math::vec` … `vec::length(p)` as the
 example. The chapter never says whether visibility travels with the **entity** through the
@@ -469,12 +471,23 @@ name its ancestor's private module (§3 down-tree privacy), so `h := ancestorPri
 be legal there, and option 3 would forbid it; it also invents a second visibility rule for
 declarations where option 1 decides use-sites with the rule §3 already has (PRIN-1).
 
+**Rejected.**
+- *(2) The alias publishes: `pub` on the binding makes the name, and through it the
+  entity, reachable.* That is today's behaviour, and it makes privacy defeasible by one
+  line of source and `pub` into documentation.
+- *(3) Refuse at the declaration: `h := hid` is illegal unless `hid` is `pub`.* It
+  refuses the legitimate case §3 explicitly grants — a descendant may name its ancestor's
+  private module — and invents a second visibility rule for declarations where §3 already
+  decides use-sites (PRIN-1).
+
 **Consequences.** Modules §3 gains the transparency bullet and §4.1 states it where
 aliases are defined; §11's conformance list follows. In the reference compiler the fix is
 one head-resolution on the visibility path — `sema_vis_pair` selects candidates by
 `sema_mod_seg_eq` against the module's **own spelled path** and returns without reaching
-`sema_decl_visible_from`; the resolution it needs already exists unwired
-(`qual_head_alias`, `sema_rec_head_alias`). Blast radius: **296** top-level
+`sema_decl_visible_from`; the head-resolution it needs exists (`sema_rec_head_alias`,
+`src/sema.al:10100`, called from `:10021` and `:10243`) but is **not consulted on the
+visibility path** — `qual_head_alias` at `:19487` is the label of bit 2 of the head-kind
+mask, a witness name rather than a call site on this path. Blast radius: **296** top-level
 `x := a::b` bindings across `test/ lib/ src/`, so the fix lands with reject fixtures for
 the private shapes and legal controls for `pub`-through-alias and down-tree, after a
 semantic probe of that population. Compiler#1429 carries the defect; spec#27 is the
