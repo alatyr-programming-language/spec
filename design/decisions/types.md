@@ -128,8 +128,9 @@ conversions plug into the **same `T(value)` form** via a function marked **`@con
 in-scope name resolution — never a global registry or an orphan rule. The marker is the
 **attribute, not the binding name**, so two conversions to one target can coexist and
 foreign/deeply-nested targets are expressible. A `@convert` is always explicit and cannot
-override a builtin lattice class; multiple matches at a site are an ambiguity error (FND-3,
-no guessing). This is what lets the language **privilege no `bool`↔integer convention**:
+override a builtin lattice class **other than brand**, where a matching in-scope
+`@convert` precedes the crossing (TYP-14); multiple matches at a site are an ambiguity
+error (FND-3, no guessing). This is what lets the language **privilege no `bool`↔integer convention**:
 that conversion becomes a library `@convert` (the author fixing checked-narrow vs
 truthiness-fold by choice), while the base tier still ships the idioms (`n != 0`, `if b
 {1} else {0}`), not the conversions.
