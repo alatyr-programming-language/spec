@@ -3,7 +3,7 @@
 **A systems programming language whose ceiling of expressiveness equals the assembler's —
 with abstractions that stay transparent in code generation.**
 
-![spec version 1.6.0](https://img.shields.io/badge/spec-1.6.0-blue)
+![spec version 1.7.0](https://img.shields.io/badge/spec-1.7.0-blue)
 ![status: draft under review](https://img.shields.io/badge/status-draft%20under%20review-orange)
 ![license CC BY 4.0 / Apache-2.0](https://img.shields.io/badge/license-CC%20BY%204.0%20%2F%20Apache--2.0-green)
 
@@ -23,7 +23,14 @@ contradiction between two files is a defect to be fixed rather than a matter of 
 
 ## Status
 
-**Version `1.6.0` — the Alatyr v1 specification, under review. Not accepted.**
+**Version `1.7.0` — the Alatyr v1 specification, under review. Not accepted.**
+
+Revision 1.7.0 answers a conversion the text answered twice, and answers it once: an in-scope
+`@convert` now fires **before** the builtin brand crossing, so `char(n)` runs the prelude's
+code-point guard instead of silently reinterpreting `u32` — and stays the free reinterpret in a
+body carrying `unchecked`, where the conversion's body is never selected at all (Types §4.6,
+TYP-14). It also lets an implementation still in development name a **target revision** with its
+known deviations published, rather than claim a conformance it does not have (Overview §6).
 
 Revision 1.6.0 replaces a mechanism 1.5.0 had invented with one the language already has: the
 derived `Pointer` arm is **granted library code** — it expands to `unchecked bitcast(usize, …)`
@@ -297,7 +304,7 @@ shifted, or repurposed; a decision that changes is superseded by a new entry.
 
 | Repository | What it holds | Status |
 |---|---|---|
-| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.6.0` — under review |
+| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.7.0` — under review |
 | [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain — front end, lowering, GAS / WAT emission, the CLI — together with the prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
 
 The direction of authority runs one way and does not reverse: **the toolchain conforms to
@@ -320,7 +327,7 @@ confer it either: an independent implementation is conforming when it matches *t
 not when it matches the reference. Three things worth knowing before you start:
 
 - The specification is a **draft under review**. Cite the revision you built against
-  (`1.6.0`) — or, until you conform to one, name it as your **target revision** and publish
+  (`1.7.0`) — or, until you conform to one, name it as your **target revision** and publish
   your known deviations (Overview §6) — and expect the text to move under you: during
   review, MINOR is the digit that bumps whenever a norm changes. The leading `1` is the
   *language* version, not a claim that the text is settled — see `CHANGELOG.md`.

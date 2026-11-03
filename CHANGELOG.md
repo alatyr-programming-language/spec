@@ -49,6 +49,23 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.7.0 — 2026-11-03
+
+**Normative — an in-scope `@convert` precedes the brand crossing (Types §4.2, §4.6; TYP-14).**
+`char := brand(u32)` with the prelude's `to_char := @convert fn(n : u32) -> char` was answered twice
+and wrongly. §4.6 put the builtin lattice before the in-scope `@convert`, and §4.2 called a brand
+crossing over the same numeric domain zero-cost; read together `char(n)` was the crossing, so the
+conversion's body never ran, its code-point guard never fired, and `char(1114112)` answered
+`1114112` silently. §4.6's dispatch for a single-argument `T(v)` is now: the required-type gate; then
+**the one in-scope `@convert`**, except in a body carrying the `unchecked` grant; then a builtin
+lattice conversion. In an `unchecked` body dispatch takes the crossing, so the conversion's body — and
+any guard written in it — does not run, which is what CT-11 and Stdlib appendix §3.2's "no check under
+`unchecked`" already required. §4.2's "cost: zero" is read as a statement of cost, not of precedence;
+the clause that a `@convert` "cannot override a builtin lattice class" is narrowed to the **numeric**
+classes, which is what it always covered. Consequence for the library: `to_char` becomes `pub` — an
+unimportable conversion is in scope for no one — and guards with `trap()`, not `panic`.
+(spec#22; compiler#364, #1244.)
+
 **Normative — a target revision with published deviations (refines FND-13 and TOOL-21).**
 TOOL-21 required `version` to report "the revision of this specification it conforms to", and
 Overview §6 defines conformance strictly. An implementation still in development conforms to no
