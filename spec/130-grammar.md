@@ -462,7 +462,10 @@ and `V` names one of its variants/members; this semantic classification resolves
 grammar's intentional overlap between `variant-ctor` and postfix call syntax. A raw-union
 member constructor accepts exactly its declared component count as **positional** arguments;
 named arguments, `m()` for a zero-component member, and a tuple supplied as one argument
-for a multi-component member are Semantic diagnostics (Type System §6.3). Otherwise
+for a multi-component member are Semantic diagnostics (Type System §6.3). **An enum variant
+constructor obeys the same arity rule** (TYP-15): exactly its declared component count,
+positionally — a surplus argument is a Semantic diagnostic and is never silently discarded.
+Otherwise
 `a.f(args)` is **always UFCS** — `f(a, args)` (MOD-3) — even when `f` also names a field.
 In particular, `u.m(args)` for a raw-union **value** `u` is UFCS, not a member write; a
 whole-member write is `u.m = payload` (Type System §6.3). To call a **function-valued

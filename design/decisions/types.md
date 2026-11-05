@@ -461,3 +461,36 @@ family to fail through `trap()` and never through `panic`, and appendix §3.2 na
 (an explicit `assert`, `unwrap` on `None` / `Err`). Compiler work follows in compiler#364
 (the guard never firing) and the 20 `REFUSED` cells of compiler#1244's container matrix;
 both bind only once the pin moves to the release that carries this text.
+
+### TYP-15. An enum variant constructor takes exactly its declared component count — compiler#1443
+*provenance: extends TYP-6/TYP-9 (construction) and closes the enum half of the arity rule
+  §6.3 states for raw unions · spec: Types §9.3, §9.4, §6.3; Grammar §3.4*
+
+**Question.** `Pay.B(7, 8, 9)` where `B(u64, u64)` declares two components, and `E.N(5)`
+where `N` declares none. Grammar §3.4 fixes the arity rule for **a raw-union member**
+constructor ("exactly its declared component count"), and Types §9.4 forbids implicit
+zero-filling — which closes the *too-few* direction for enums. Nothing states the *surplus*
+direction for an enum variant: the sentence that would rule it names raw unions, and the
+enum bullet in §9.3 lists the constructor form without an arity rule. Three fixtures sat on
+the gap, and the compiler silently dropped the written argument.
+
+**Decision.** **An enum variant constructor obeys the same arity rule as a raw-union member:
+exactly its declared component count, positionally and in declaration order.** A surplus
+argument is a Semantic diagnostic; so is omitting one, and so is supplying one argument where
+the variant declares several (unless the variant's single component *is* that tuple). The
+rule moves to Types §9.3 beside the enum bullet and is restated in Grammar §3.4, where the
+union-only wording sat.
+
+**Rejected.** *Permitting surplus arguments and discarding them, on the ground that the rule
+was named only for unions.* Rejected on I3 and FND-3: an argument the author wrote that the
+compiler quietly ignores is a hidden operation, and a second implementation would have to guess
+whether the surplus binds, drops, or errors — the exact guessing the bar forbids. The
+asymmetry that produced the gap (a rule stated once, for one of two sibling constructs) is a
+specification defect, not a licence: §6.3's rule is about arity at a constructor, and an enum
+variant constructor is a constructor.
+
+**Consequences.** §9.3's enum bullet and Grammar §3.4 carry the sentence. The three fixtures
+(`*_too_many`, `*_one_surplus`, `*_nullary_surplus`) become refusals the spec mandates, so
+their headers may cite §9.3 without qualification — unlike the #1443 cluster, where the
+refusal is a backend limit. Compiler work: a check-level diagnostic at the variant
+constructor, which is a widening of an existing arity check rather than a new mechanism.
