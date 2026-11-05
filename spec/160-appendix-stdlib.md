@@ -377,6 +377,18 @@ worst-case so it holds on adversarial input — available under `no_alloc`). (A
 **stable** sort and `sort_by` / key-comparator variants are **additive**, FND-6.) A mutable
 slice is `[mut T]` (element mutability via the pointer, Memory §4.1).
 
+**Comparison over `[T]` is elementwise, not the structural derive of its `{ptr, len}`
+pair** (STD-4): `a == b` compares the two runs element by element (`len` equal and every
+pair `eq`), and `<` is the **lexicographic** order over the elements (first differing
+element decides; a shorter equal prefix is less). The §2.6 structural derive would compare
+the *representation* — pointer identity and a length — which is never what "are these two
+contents equal" means and would make equality depend on where a value happens to live; so
+§2.6's walk does not treat a slice as a two-field struct, and this rule is the one that
+governs. The cost is **O(n)** and it is visible in the operator: a slice compares its
+elements, so a caller who wants identity compares `a.ptr` explicitly (under §4.5's grant).
+An empty slice equals an empty slice; comparing `[T]` where `T` itself has no `eq`/`lt`
+is ill-formed for the same reason any un-equatable type is (§2.6).
+
 #### 3.6 `str` (base)
 
 A slice of **UTF-8 bytes** (`[u8]`) with the **validated-UTF-8 invariant** (Type System
@@ -396,6 +408,14 @@ Indexing by **byte** offset is bounds-checked and checked to land on a code-poin
 code rather than the built-in slice read, these checks sit under `comptime if
 verify.checked` and fail through `trap()` (§3, §4.1), exactly as the built-in index does.
 A growable string is `String` (alloc tier, §6).
+
+**`==` / `<` over `str` compare the **content**, not the view** (STD-4): `a == b` holds
+when the two have equal byte length and equal bytes (UTF-8 sequence equality), and `<` is
+the lexicographic order over those bytes — the same rule as `[T]` (§3.5) at `T = u8`, so
+two distinct views of equal content are `==` while their `ptr`s differ. The cost is
+**O(n)** and it is stated here because the operator hides it: `str` equality is content
+equality, and a caller who wants the view compared compares `bytes(a).ptr`. A `str`
+literal and a computed `str` of the same bytes are equal.
 
 `str_at(p, n)` is the **raw inverse of `bytes`**: it reinterprets the `n` bytes at
 address `p` as a `str` (`usize → ptr(u8) → [u8] → str`) in one step, so a scanner

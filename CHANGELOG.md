@@ -49,6 +49,16 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — comparison over `[T]` and `str` is by content, not by the `{ptr, len}`
+derive (Stdlib appendix §3.5, §3.6, §2.6; STD-4).**  §2.6 derives `Eq`/`Ord` structurally
+over `typeinfo(T)`, and a slice is the library pair `{ ptr, len }`: applied to a view that
+walk compares an address and a length, so two slices of equal content at different addresses
+were unequal and `==` asked where the bytes live. §3.5 never listed comparison and §3.6
+defined no equality for `str` anywhere in the specification. `[T]` now compares elementwise
+with `<` lexicographic, and `str` compares UTF-8 bytes by the same rule at `T = u8`; the
+O(n) cost is stated because the operator hides it, and identity stays an explicit `.ptr`
+comparison under §4.5's grant.
+
 **Normative — an enum variant constructor takes exactly its declared component count (Types
 §9.3, §6.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union
 member** constructor; the enum bullet in §9.3 named the constructor form with no arity rule,
