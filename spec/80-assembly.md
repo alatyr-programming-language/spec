@@ -230,6 +230,20 @@ Which kinds a given instruction accepts is **part of its table** (§4); operand-
 validity is **always** checked (§3). Operands are **ordinary expressions** (Type
 System / Declarations) — there is **no** special operand grammar.
 
+Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed**: the
+source is an expression that the backend must evaluate into the operand's register before
+emitting the instruction. A backend that cannot do that lowering **refuses with a located
+diagnostic** — which is the correct interim behaviour under I11 (refuse rather than emit a
+wrong value, the failure mode of silently taking `$0` from an unevaluated tree) — but the
+refusal is an **implementation limit of that backend, not a rejection the specification
+mandates** (CG-15). It is therefore recorded as a deviation naming the open issue that
+tracks the lowering, and its fixture states `## expect: refuse(<backend>)` with that issue
+named — **never** an unqualified `## expect: refuse` citing this chapter as if the language
+forbade the form, and never a header claiming an operand grammar of "register name or
+immediate", which §5 explicitly denies. A backend that *does* lower it and answers right is
+conforming; the difference between backends here is maturity, and the per-arch tables (§4,
+appendix 170) are where a target's accepted operand kinds are actually enumerated.
+
 ---
 
 ### 6. Registers
