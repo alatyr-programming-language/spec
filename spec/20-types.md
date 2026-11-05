@@ -1035,7 +1035,14 @@ privilege a fixed built-in set against the uniformity principle (§5.3).
 
 - **struct** — named fields: `Point(x = 1, y = 2)`;
 - **tuple** — positional: `(1, 2)`; the zero-field unit tuple value is `()`;
-- **enum variant** — `Color.Red`, `Option.Some(v)`;
+- **enum variant** — `Color.Red`, `Option.Some(v)`; the constructor arity is the
+  declared component count of that variant, positionally and in declaration order,
+  exactly as for a raw-union member (§6.3): a surplus argument is ill-formed, as is
+  omitting one or supplying a tuple as a single argument where the variant declares
+  several components. There is no implicit zero-filling of an omitted component (§9.4)
+  and no silent discarding of a written one (I3) — `T.V(a, b)` for a variant declared
+  with one component is a Semantic diagnostic, not a construction that drops `b`
+  (TYP-15);
 - **raw-union member** — `Cell.none`, `Cell.word(v)`, `Cell.pair(a, b)`; the
   constructor produces a whole canonical union value and activates that member
   (§6.3);

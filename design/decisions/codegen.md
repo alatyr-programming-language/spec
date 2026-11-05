@@ -656,3 +656,34 @@ architecture sections would have to describe something that is not an architectu
 some ISA (what the implementation did) — it makes a true statement false and silently selects code written
 for another machine. Making a `target.arch` query a diagnostic on such a backend — it breaks every portable
 `when target.arch == …` gate, which is the construct the facet exists for.
+
+### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
+*provenance: refines CG-4 (per-backend codegen) and CG-13 (the checked-guard family); reads
+  Assembly §5 with §3/§4 · spec: Assembly §5, §3, §4; appendix 170*
+
+**Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
+there is **no special operand grammar**; five fixtures claimed the opposite — that ch. 80
+fixes an operand to "a register name or an immediate" — and asserted a refusal on that
+basis. If `## expect:` directives are generated from fixture prose, the claim turns a
+lowering limit into specified behaviour and the compiler bug disappears behind its own test.
+
+**Decision.** **The form is well-formed: the source operand is an expression the backend must
+evaluate into a register before emitting.** A backend that cannot do that lowering **refuses
+with a located diagnostic** — correct interim behaviour under I11, since the failure mode is
+silently taking `$0` from an unevaluated tree — but the refusal is an **implementation limit
+of that backend**, recorded as a deviation naming the open issue that tracks the lowering, and
+written `## expect: refuse(<backend>)` with that issue named. It is never an unqualified
+`## expect: refuse` citing this chapter, and never a header asserting an operand grammar the
+chapter denies. A backend that lowers it and answers right conforms; the per-arch tables
+(§4, appendix 170) are where accepted operand kinds are actually enumerated per target.
+
+**Rejected.** *Amending §5 to restrict operands to register names and immediates.* Rejected
+because §5's sentence is the general rule that keeps the assembly surface ordinary (I4: the
+assembler's expressiveness, in the language), and narrowing it to match one backend's gap
+would reverse the direction of authority — "the compiler does it" is not a rationale.
+
+**Consequences.** §5 gains the paragraph. The five fixtures' headers are corrected (#1443) and
+become backend-scoped deviations naming the lowering issue; the same correction applies to the
+other five headers in the #1443 cluster that cite chapters contradicting themselves. No new
+mechanism: this is where an existing refusal is *labelled*, which is what makes the eventual
+fix a fix rather than a spec break.

@@ -559,7 +559,15 @@ trigger** that `format`/`print` use and that **any** user-defined comptime-varia
 leading `str` parameter inherits — a documented rule, **not** a hidden reinterpretation
 (I3). `{{`/`}}` escape a literal brace; a lone `{`/`}`, and a hole-count ≠ argument-count
 mismatch, are **comptime errors**; a **non-literal** first argument is **not** a template
-(outside v1). A comptime-variadic that must take a leading `str` *without* templating
+(outside v1) — and **the call is still valid** (FN-13): with no template there are no holes
+to interleave, so the leading value is rendered as **one fragment** by the same
+`Display`/scalar layer (Stdlib §2.7) and the remaining arguments render after it in their
+own order. `print(s, 1)` where `s` is a computed `str` therefore prints `s` and then `1`;
+it is not a comptime error, and the statement is never dropped — deleting a call because
+its first argument was not a literal would discard an effect the author wrote, against I3.
+What stays forbidden is the *template* reading of a non-literal: no hole-splitting, no
+`{{`/`}}` unescaping, no hole-count check, because there is no literal to split.
+A comptime-variadic that must take a leading `str` *without* templating
 therefore takes it as a non-first parameter (or a runtime, non-literal value).
 
 #### 7.2 Slice variadic — the homogeneous case

@@ -140,3 +140,36 @@ distinct, unspecified lifetime; (2) realizing it portably means either capturing
 stack layout at entry (arch/OS-specific, fragile) or holding the bytes in mutable static
 storage — neither is in the v1 implementable surface, and both add a hidden
 whole-program-lifetime resource the explicit-allocator form avoids.
+
+### STD-4. Comparison over `[T]` and `str` is by content, not by the `{ptr, len}` derive — compiler#1443
+*provenance: refines TYP-5 (the structural derive) and §2.6's walk · spec: Stdlib appendix
+  §3.5, §3.6, §2.6; Types §7*
+
+**Question.** Appendix §2.6 derives `Eq`/`Ord` **structurally over `typeinfo(T)`**, and a
+slice is the library pair `struct { ptr : ptr(T), len : usize }` (§3.5). Applied to a
+slice, that walk compares **a pointer's address bits and a length** — so two slices of
+equal content at different addresses are unequal, and `a == b` becomes a question about where
+the bytes live. §3.5's operation list does not name comparison at all, and §3.6 (`str`)
+defines no equality anywhere in the specification. Six fixtures sat on the gap; three more
+compared `str`.
+
+**Decision.** **Comparison over `[T]` is elementwise: `==` holds when the lengths are equal
+and every pair of elements is `eq`; `<` is lexicographic over the elements, a shorter equal
+prefix being less. Over `str` it is the same rule at `T = u8` — UTF-8 byte-sequence
+equality and lexicographic byte order — so a literal and a computed `str` of the same bytes
+are equal while their `ptr`s differ.** §2.6's walk therefore does not treat a slice as a
+two-field struct: this rule governs, and it is written in §3.5 and §3.6 where the operations
+are enumerated. The cost is **O(n)** and it is stated in the text, because the operator hides
+it; a caller who wants identity compares `.ptr` explicitly under §4.5's grant.
+
+**Rejected.** *Leaving comparison undefined over `[T]` and `str` and refusing at the site.*
+It is the cheaper rule and keeps §2.6 uniform, but it makes ordinary code — "does this text
+equal that text" — a compile error, and the fixtures that wanted it are programs authors
+write. *The structural derive as written* was rejected outright: pointer identity as the
+meaning of `==` on a view is a trap, and it is not what any caller means.
+
+**Consequences.** §3.5 and §3.6 gain the rule; §2.6's walk is now explicitly not the last
+word for a view type. The nine fixtures become content-comparisons, and any backend that
+compares the pair is wrong — a wrong value, not a refusal. `Hash` over `[T]`/`str` follows
+content too (equal values hash alike, I11's consistency), which §2.6 already requires of any
+`Eq`/`Hash` pair and now has a defined equality to be consistent with.

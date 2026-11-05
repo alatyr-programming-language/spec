@@ -49,6 +49,41 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
+is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says operands are
+ordinary expressions and there is no special operand grammar, yet five fixtures asserted a
+refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a register name or
+an immediate. The form is well-formed; a backend that cannot evaluate the source into a
+register refuses with a located diagnostic under I11, and records that refusal as a
+backend-scoped deviation naming the open lowering issue — never an unqualified refusal citing
+this chapter as if the language forbade the form.
+
+**Normative — a non-literal first argument to a comptime-variadic is a valid call, rendered
+as one fragment (Functions §7.1; FN-13).**  §7.1 said a non-literal first argument "is not a
+template (outside v1)" without saying whether the call was callable at all, and the compiler
+refused it. With no template there are no holes to interleave, so the leading value renders as
+one fragment through the same `Display`/scalar layer and the rest follow in order; what stays
+forbidden is the template reading — no hole-splitting, no brace unescaping, no hole-count
+check. Refusing was rejected because deleting a call discards an effect the author wrote (I3).
+
+**Normative — comparison over `[T]` and `str` is by content, not by the `{ptr, len}`
+derive (Stdlib appendix §3.5, §3.6, §2.6; STD-4).**  §2.6 derives `Eq`/`Ord` structurally
+over `typeinfo(T)`, and a slice is the library pair `{ ptr, len }`: applied to a view that
+walk compares an address and a length, so two slices of equal content at different addresses
+were unequal and `==` asked where the bytes live. §3.5 never listed comparison and §3.6
+defined no equality for `str` anywhere in the specification. `[T]` now compares elementwise
+with `<` lexicographic, and `str` compares UTF-8 bytes by the same rule at `T = u8`; the
+O(n) cost is stated because the operator hides it, and identity stays an explicit `.ptr`
+comparison under §4.5's grant.
+
+**Normative — an enum variant constructor takes exactly its declared component count (Types
+§9.3, §6.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union
+member** constructor; the enum bullet in §9.3 named the constructor form with no arity rule,
+and §9.4 closed only the too-few direction. `Pay.B(7, 8, 9)` for `B(u64, u64)` therefore had
+no answer in the text, and a compiler that dropped the surplus argument was not contradicting
+anything. An enum variant constructor now obeys the same rule positionally: a surplus argument
+is a Semantic diagnostic and is never silently discarded (I3, FND-3).
+
 ## 1.8.0 — 2026-11-03
 
 **Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike
