@@ -429,3 +429,31 @@ only at entry, so dropping the prologue drops the capability permanently, and ea
 three platform contracts by hand. A dedicated `@entry` **attribute** instead of an ABI selector — the thing
 being selected *is* a lowering mode for a function's frame and return, which is precisely what `@abi`
 already selects (`naked` is one); a second attribute for the same axis is the duplication OP-1 rejects.
+
+### FN-13. A non-literal first argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
+*provenance: refines FN-6/FN-7 (comptime variadic and the `{}` template trigger) · spec:
+  Functions §7.1; Stdlib appendix §2.7*
+
+**Question.** §7.1 says the template trigger is a **literal** first `str` parameter, and that
+"a non-literal first argument is **not** a template (outside v1)". It does not say whether
+the **call** is then valid. `print(s, 1)` with `s` computed: ill-formed, or a call that
+simply does not template? One fixture sat on the gap, and the compiler's existing behaviour
+was to refuse.
+
+**Decision.** **The call is valid.** With no template there are no holes to interleave, so
+the leading value renders as **one fragment** through the same `Display`/scalar layer
+(§2.7) and the remaining arguments render after it in their own order. What stays forbidden
+is the *template reading*: no hole-splitting, no `{{`/`}}` unescaping, no hole-count check —
+there is no literal to split. §7.1 states both halves, because the sentence "is not a
+template" was being read as "is not callable".
+
+**Rejected.** *Refusing the call.* It is the smaller change and preserves the existing
+diagnostic, but refusing a call deletes a statement **and its effect** — the silent class
+this milestone exists to eliminate, and against I3 (nothing hidden: the author wrote a call,
+and it either happens or says why not).
+
+**Consequences.** §7.1 gains the sentence; `reject_variadic_print_nonliteral` becomes a
+positive fixture (`## expect: run 42`) rather than a refusal. The rule is uniform for any
+comptime-variadic with a leading `str`, so no per-function exception is introduced, and the
+existing "take it as a non-first parameter" advice in the same paragraph stays valid for code
+that needs the distinction spelled out.

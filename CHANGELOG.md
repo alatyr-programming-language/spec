@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a non-literal first argument to a comptime-variadic is a valid call, rendered
+as one fragment (Functions §7.1; FN-13).**  §7.1 said a non-literal first argument "is not a
+template (outside v1)" without saying whether the call was callable at all, and the compiler
+refused it. With no template there are no holes to interleave, so the leading value renders as
+one fragment through the same `Display`/scalar layer and the rest follow in order; what stays
+forbidden is the template reading — no hole-splitting, no brace unescaping, no hole-count
+check. Refusing was rejected because deleting a call discards an effect the author wrote (I3).
+
 **Normative — comparison over `[T]` and `str` is by content, not by the `{ptr, len}`
 derive (Stdlib appendix §3.5, §3.6, §2.6; STD-4).**  §2.6 derives `Eq`/`Ord` structurally
 over `typeinfo(T)`, and a slice is the library pair `{ ptr, len }`: applied to a view that
