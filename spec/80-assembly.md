@@ -230,19 +230,20 @@ Which kinds a given instruction accepts is **part of its table** (§4); operand-
 validity is **always** checked (§3). Operands are **ordinary expressions** (Type
 System / Declarations) — there is **no** special operand grammar.
 
-Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed**: the
-source is an expression that the backend must evaluate into the operand's register before
-emitting the instruction. A backend that cannot do that lowering **refuses with a located
-diagnostic** — which is the correct interim behaviour under I11 (refuse rather than emit a
-wrong value, the failure mode of silently taking `$0` from an unevaluated tree) — but the
-refusal is an **implementation limit of that backend, not a rejection the specification
-mandates** (CG-15). It is therefore recorded as a deviation naming the open issue that
-tracks the lowering, and its fixture states `## expect: refuse(<backend>)` with that issue
-named — **never** an unqualified `## expect: refuse` citing this chapter as if the language
-forbade the form, and never a header claiming an operand grammar of "register name or
-immediate", which §5 explicitly denies. A backend that *does* lower it and answers right is
-conforming; the difference between backends here is maturity, and the per-arch tables (§4,
-appendix 170) are where a target's accepted operand kinds are actually enumerated.
+Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed** (CG-15):
+the source operand is an expression, and the implementation evaluates it to the operand's
+value under the kind schema above. `0 - 1` is comptime-known, so it is an **immediate** —
+the value `-1`, range-checked against the instruction's table (§4; appendix 170 gives `mov`
+a reg/mem/imm source) — and the conforming emission is `movq $-1, %rbx`. Nothing here admits an
+operand kind the instruction's table does not list: operand-kind validity is still
+**always** checked (§3). An implementation that cannot yet lower such an operand **refuses
+with a located diagnostic** rather than emit a wrong value (I1: the emitted instruction is
+the one written, with the operand written; silently taking `$0` from an unevaluated tree is
+not). That refusal is a **known deviation** of the implementation (Overview §6) — a defect it
+publishes, naming the rule not met (this section) and the open issue that tracks the
+lowering — **not** a rejection this specification mandates: a header, test or diagnostic
+that cites this chapter as forbidding the form, or as fixing an operand grammar of
+"register name or immediate", contradicts §5.
 
 ---
 

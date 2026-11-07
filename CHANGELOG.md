@@ -51,12 +51,13 @@ several at once (see `CONTRIBUTING.md`).
 
 **Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
 is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says operands are
-ordinary expressions and there is no special operand grammar, yet five fixtures asserted a
-refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a register name or
-an immediate. The form is well-formed; a backend that cannot evaluate the source into a
-register refuses with a located diagnostic under I11, and records that refusal as a
-backend-scoped deviation naming the open lowering issue — never an unqualified refusal citing
-this chapter as if the language forbade the form.
+ordinary expressions and there is no special operand grammar, yet five compiler fixtures
+asserted a refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a
+register name or an immediate. The form is well-formed: `0 - 1` is comptime-known, so under
+§5's kind schema it is the immediate `-1` and the conforming emission is `movq $-1, %rbx`.
+An implementation that cannot yet lower the operand refuses with a located diagnostic rather
+than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) naming
+the open lowering issue — never as a rejection this chapter mandates.
 
 **Normative — a non-literal first argument to a comptime-variadic is a valid call, rendered
 as one fragment (Functions §7.1; FN-13).**  §7.1 said a non-literal first argument "is not a

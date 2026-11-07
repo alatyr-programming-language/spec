@@ -659,31 +659,38 @@ for another machine. Making a `target.arch` query a diagnostic on such a backend
 
 ### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
 *provenance: refines CG-4 (per-backend codegen) and CG-13 (the checked-guard family); reads
-  Assembly §5 with §3/§4 · spec: Assembly §5, §3, §4; appendix 170*
+  Assembly §5 with §3/§4 and Overview §6 (known deviations) · spec: Assembly §5, §3, §4;
+  appendix 170*
 
 **Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
-there is **no special operand grammar**; five fixtures claimed the opposite — that ch. 80
-fixes an operand to "a register name or an immediate" — and asserted a refusal on that
-basis. If `## expect:` directives are generated from fixture prose, the claim turns a
+there is **no special operand grammar**; five compiler fixtures claimed the opposite — that
+ch. 80 fixes an operand to "a register name or an immediate" — and asserted a refusal on that
+basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
-**Decision.** **The form is well-formed: the source operand is an expression the backend must
-evaluate into a register before emitting.** A backend that cannot do that lowering **refuses
-with a located diagnostic** — correct interim behaviour under I11, since the failure mode is
-silently taking `$0` from an unevaluated tree — but the refusal is an **implementation limit
-of that backend**, recorded as a deviation naming the open issue that tracks the lowering, and
-written `## expect: refuse(<backend>)` with that issue named. It is never an unqualified
-`## expect: refuse` citing this chapter, and never a header asserting an operand grammar the
-chapter denies. A backend that lowers it and answers right conforms; the per-arch tables
-(§4, appendix 170) are where accepted operand kinds are actually enumerated per target.
+**Decision.** **The form is well-formed: the source operand is an expression, evaluated to
+the operand's value under §5's kind schema.** `0 - 1` is comptime-known, so it is an
+**immediate** (§5: an immediate is a comptime value, range-checked against the instruction's
+table, §4 / appendix 170), and the conforming emission is `movq $-1, %rbx`. Operand-kind
+validity stays always checked (§3); the decision admits no kind a table does not list. An
+implementation that cannot yet lower the operand **refuses with a located diagnostic** — the
+right interim behaviour, since the alternative failure is silently taking `$0` from an
+unevaluated tree, an instruction other than the one written (I1) — but the refusal is a
+**known deviation** of that implementation (Overview §6: a published defect naming the rule
+not met and the issue tracking the lowering), never a rejection the specification mandates,
+and never a header asserting an operand grammar the chapter denies. How a test harness
+records a known deviation is the implementation's affair; this specification defines no
+fixture directive.
 
 **Rejected.** *Amending §5 to restrict operands to register names and immediates.* Rejected
 because §5's sentence is the general rule that keeps the assembly surface ordinary (I4: the
 assembler's expressiveness, in the language), and narrowing it to match one backend's gap
 would reverse the direction of authority — "the compiler does it" is not a rationale.
 
-**Consequences.** §5 gains the paragraph. The five fixtures' headers are corrected (#1443) and
-become backend-scoped deviations naming the lowering issue; the same correction applies to the
-other five headers in the #1443 cluster that cite chapters contradicting themselves. No new
-mechanism: this is where an existing refusal is *labelled*, which is what makes the eventual
-fix a fix rather than a spec break.
+**Consequences.** §5 gains the paragraph. The five fixtures (`reject_raw_asm_operand_bin`,
+`_bin_first`, `_unchecked`, `_var`, `reject_raw_asm_tmpl_operand`) are corrected in the
+compiler (#1443): the specified outcome is the program's value, and the present refusal is a
+known deviation naming the lowering issue. The same correction applies to the other headers in
+the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
+existing refusal is *labelled*, which is what makes the eventual fix a fix rather than a spec
+break.
