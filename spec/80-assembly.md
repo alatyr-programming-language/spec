@@ -232,17 +232,21 @@ System / Declarations) — there is **no** special operand grammar.
 
 Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed** (CG-15):
 the source operand is an expression, evaluated by the rules that govern any expression —
-its type, its phase (runtime unless marked, Comptime §1.1) and, for a checkable operation,
-its guard (§3) — and the value it yields is the operand the instruction receives. Nothing
-here admits an operand kind the instruction's table does not list: operand-kind validity is
-still **always** checked (§3, §4). An implementation that cannot yet lower such an operand **refuses
-with a located diagnostic** rather than emit a wrong value (I1: the emitted instruction is
-the one written, with the operand written; silently taking `$0` from an unevaluated tree is
-not). That refusal is a **known deviation** of the implementation (Overview §6) — a defect it
-publishes, naming the rule not met (this section) and the open issue that tracks the
-lowering — **not** a rejection this specification mandates: a header, test or diagnostic
-that cites this chapter as forbidding the form, or as fixing an operand grammar of
-"register name or immediate", contradicts §5.
+its type, its phase (runtime unless marked, Comptime §1.1; `0 - 1` is an operator
+application, not a literal, so it is not an immediate) and, for a checkable operation, its
+guard (§3). In an ABI-framed function its value is then **materialized in a register**
+exactly as an operand local is (§2.2) — the instruction is emitted on that register, as it
+would be for `x := 0 - 1; movq(rbx, x)` — so the operand's kind is *register*, and the
+evaluation's instructions belong to the expression, not to the one instruction the
+intrinsic emits (§3). Nothing here admits an operand kind the instruction's table does not
+list: operand-kind validity is still **always** checked (§3, §4). An implementation that
+cannot yet lower such an operand **refuses with a located diagnostic** rather than emit a
+wrong value (I1: silently taking `$0` from an unevaluated tree emits an operand nobody
+wrote). That refusal is a **known deviation** of the implementation (Overview §6: its entry
+states the rule not met, this section, and the observable difference, the refusal) — **not**
+a rejection this specification mandates. A header, test or diagnostic that cites this
+chapter as forbidding the form, or as restricting an operand to a register name or an
+immediate literal, contradicts §5.
 
 ---
 

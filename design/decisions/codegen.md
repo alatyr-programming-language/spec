@@ -659,9 +659,8 @@ for another machine. Making a `target.arch` query a diagnostic on such a backend
 
 ### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
 *provenance: refines CG-2 (instruction intrinsics and their operands), CG-4 (per-backend
-  codegen) and CG-13 (the checked-guard family); reads
-  Assembly §5 with §3/§4 and Overview §6 (known deviations) · spec: Assembly §5, §3, §4;
-  appendix 170*
+  codegen) and CG-13 (the checked-guard family); reads Assembly §5 with §2.2, §3, §4 and
+  Overview §6 (known deviations) · spec: Assembly §5*
 
 **Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
 there is **no special operand grammar**; five compiler fixtures claimed the opposite — that
@@ -670,17 +669,19 @@ basis. If the compiler's test expectations are generated from fixture prose, the
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
 **Decision.** **The form is well-formed: the source operand is an ordinary expression,
-evaluated by the rules for any expression (type, phase — runtime unless marked, Comptime §1.1
-— and checked guard), and its value is the operand the instruction receives.** Operand-kind
-validity stays always checked (§3, §4); the decision admits no kind a table does not list,
-and it does not decide the phase or type of an operand expression, which the general rules
-already do. An
-implementation that cannot yet lower the operand **refuses with a located diagnostic** — the
-right interim behaviour, since the alternative failure is silently taking `$0` from an
-unevaluated tree, an instruction other than the one written (I1) — but the refusal is a
-**known deviation** of that implementation (Overview §6: a published defect naming the rule
-not met and the issue tracking the lowering), never a rejection the specification mandates,
-and never a header asserting an operand grammar the chapter denies. How a test harness
+evaluated by the rules for any expression, and in an ABI-framed function its value is
+materialized in a register exactly as an operand local is (§2.2).** `0 - 1` is an operator
+application, so it is runtime (Comptime §1.1) and not an immediate; `movq(rbx, 0 - 1)` lowers
+as `x := 0 - 1; movq(rbx, x)` does. The evaluation's instructions belong to the expression; the
+intrinsic still emits exactly one instruction (§3). Operand-kind validity stays always checked
+(§3, §4); the decision admits no kind a table does not list, and it decides neither the type
+nor the value of `0 - 1`, which the general rules do. An implementation that cannot yet lower
+the operand **refuses with a located diagnostic** — the right interim behaviour, since the
+alternative failure is silently taking `$0` from an unevaluated tree, an operand nobody wrote
+(I1) — but the refusal is a **known deviation** of that implementation (Overview §6: the rule
+not met and the observable difference; the compiler's entries also name the issue tracking the
+lowering), never a rejection the specification mandates, and never a header asserting an
+operand grammar the chapter denies. How a test harness
 records a known deviation is the implementation's affair; this specification defines no
 fixture directive.
 
@@ -689,10 +690,13 @@ because §5's sentence is the general rule that keeps the assembly surface ordin
 assembler's expressiveness, in the language), and narrowing it to match one backend's gap
 would reverse the direction of authority — "the compiler does it" is not a rationale.
 
-**Consequences.** §5 gains the paragraph. The five fixtures (`reject_raw_asm_operand_bin`,
-`_bin_first`, `_unchecked`, `_var`, `reject_raw_asm_tmpl_operand`) are corrected in the
-compiler (#1443): the specified outcome is the program's value, and the present refusal is a
-known deviation naming the lowering issue. The same correction applies to the other headers in
+**Consequences.** §5 gains the paragraph. Four of the five fixtures
+(`reject_raw_asm_operand_bin`, `_bin_first`, `_unchecked`, `_var` — instruction intrinsics in
+`main`) are corrected in the compiler (#1443): the program is well-formed, its outcome is
+whatever the general rules give the operand expression, and the present refusal is a known
+deviation. The fifth, `reject_raw_asm_tmpl_operand`, passes the expression through
+`asm(…)`, whose operands §4 restricts to §5 kinds; whether such an operand is materialized
+there too is not settled by this decision and is filed as spec#37. The same correction applies to the other headers in
 the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
 existing refusal is *labelled*, which is what makes the eventual fix a fix rather than a spec
 break.

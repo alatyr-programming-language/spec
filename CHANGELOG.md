@@ -54,10 +54,11 @@ is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says op
 ordinary expressions and there is no special operand grammar, yet five compiler fixtures
 asserted a refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a
 register name or an immediate. The form is well-formed: the operand is evaluated by the rules
-for any expression, and operand-kind validity stays checked against the instruction's table.
+for any expression and, in an ABI-framed function, materialized in a register exactly as an
+operand local is (§2.2); operand-kind validity stays checked against the instruction's table.
 An implementation that cannot yet lower the operand refuses with a located diagnostic rather
-than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) naming
-the open lowering issue — never as a rejection this chapter mandates.
+than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) — never
+as a rejection this chapter mandates.
 
 **Normative — a non-literal first argument to a comptime-variadic is a valid call, rendered
 as one fragment (Functions §7.1; Stdlib appendix §2.7; FN-13).**  §7.1 said a non-literal first argument "is not a
