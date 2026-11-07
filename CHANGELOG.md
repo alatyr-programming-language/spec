@@ -53,8 +53,8 @@ several at once (see `CONTRIBUTING.md`).
 is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says operands are
 ordinary expressions and there is no special operand grammar, yet five compiler fixtures
 asserted a refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a
-register name or an immediate. The form is well-formed: `0 - 1` is comptime-known, so under
-§5's kind schema it is the immediate `-1` and the conforming emission is `movq $-1, %rbx`.
+register name or an immediate. The form is well-formed: the operand is evaluated by the rules
+for any expression, and operand-kind validity stays checked against the instruction's table.
 An implementation that cannot yet lower the operand refuses with a located diagnostic rather
 than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) naming
 the open lowering issue — never as a rejection this chapter mandates.

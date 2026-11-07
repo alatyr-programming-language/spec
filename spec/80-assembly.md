@@ -231,12 +231,11 @@ validity is **always** checked (§3). Operands are **ordinary expressions** (Typ
 System / Declarations) — there is **no** special operand grammar.
 
 Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed** (CG-15):
-the source operand is an expression, and the implementation evaluates it to the operand's
-value under the kind schema above. `0 - 1` is comptime-known, so it is an **immediate** —
-the value `-1`, range-checked against the instruction's table (§4; appendix 170 gives `mov`
-a reg/mem/imm source) — and the conforming emission is `movq $-1, %rbx`. Nothing here admits an
-operand kind the instruction's table does not list: operand-kind validity is still
-**always** checked (§3). An implementation that cannot yet lower such an operand **refuses
+the source operand is an expression, evaluated by the rules that govern any expression —
+its type, its phase (runtime unless marked, Comptime §1.1) and, for a checkable operation,
+its guard (§3) — and the value it yields is the operand the instruction receives. Nothing
+here admits an operand kind the instruction's table does not list: operand-kind validity is
+still **always** checked (§3, §4). An implementation that cannot yet lower such an operand **refuses
 with a located diagnostic** rather than emit a wrong value (I1: the emitted instruction is
 the one written, with the operand written; silently taking `$0` from an unevaluated tree is
 not). That refusal is a **known deviation** of the implementation (Overview §6) — a defect it

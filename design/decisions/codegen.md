@@ -658,7 +658,8 @@ for another machine. Making a `target.arch` query a diagnostic on such a backend
 `when target.arch == …` gate, which is the construct the facet exists for.
 
 ### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
-*provenance: refines CG-4 (per-backend codegen) and CG-13 (the checked-guard family); reads
+*provenance: refines CG-2 (instruction intrinsics and their operands), CG-4 (per-backend
+  codegen) and CG-13 (the checked-guard family); reads
   Assembly §5 with §3/§4 and Overview §6 (known deviations) · spec: Assembly §5, §3, §4;
   appendix 170*
 
@@ -668,11 +669,12 @@ ch. 80 fixes an operand to "a register name or an immediate" — and asserted a 
 basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
-**Decision.** **The form is well-formed: the source operand is an expression, evaluated to
-the operand's value under §5's kind schema.** `0 - 1` is comptime-known, so it is an
-**immediate** (§5: an immediate is a comptime value, range-checked against the instruction's
-table, §4 / appendix 170), and the conforming emission is `movq $-1, %rbx`. Operand-kind
-validity stays always checked (§3); the decision admits no kind a table does not list. An
+**Decision.** **The form is well-formed: the source operand is an ordinary expression,
+evaluated by the rules for any expression (type, phase — runtime unless marked, Comptime §1.1
+— and checked guard), and its value is the operand the instruction receives.** Operand-kind
+validity stays always checked (§3, §4); the decision admits no kind a table does not list,
+and it does not decide the phase or type of an operand expression, which the general rules
+already do. An
 implementation that cannot yet lower the operand **refuses with a located diagnostic** — the
 right interim behaviour, since the alternative failure is silently taking `$0` from an
 unevaluated tree, an instruction other than the one written (I1) — but the refusal is a
