@@ -441,10 +441,9 @@ simply does not template? One fixture sat on the gap, and the compiler's existin
 was to refuse.
 
 **Decision.** **The call is valid.** With no template there are no holes to interleave, so
-the pack the body walks is the template shape with one segment and no holes,
-`[s, arg0, …, argN]`: the leading value is **one fragment**, rendered through the same
+the pack the body walks is `[s, arg0, …, argN]`: the leading value is **one fragment**, rendered through the same
 `Display`/scalar layer (§2.7), and the remaining arguments follow it in their own order. A
-user-defined comptime-variadic therefore sees the same pack shape in both cases. What stays forbidden
+user-defined comptime-variadic therefore sees one pack of fragments in both cases. What stays forbidden
 is the *template reading*: no hole-splitting, no `{{`/`}}` unescaping, no hole-count check —
 there is no literal to split. §7.1 states both halves, because the sentence "is not a
 template" was being read as "is not callable".
