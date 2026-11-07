@@ -240,14 +240,13 @@ register, as it would be for `x := 0 - 1; movq(rbx, x)` — and the evaluation's
 belong to the expression, not to the one instruction the intrinsic emits (§3). Either way
 the operand has a kind. Materialization is §2.2's, so it applies in an ABI-framed function;
 a naked body has no such step (Functions §6.4), and there an operand must already be of a
-kind the table lists. Operand-kind validity is still **always** checked (§3, §4). An implementation that
-cannot yet lower such an operand **refuses with a located diagnostic** rather than emit a
+kind the table lists. Operand-kind validity is still **always** checked (§3, §4). An
+implementation that cannot yet lower such an operand **refuses with a located diagnostic** rather than emit a
 wrong value (I1: silently taking `$0` from an unevaluated tree emits an operand nobody
 wrote). That refusal is a **known deviation** of the implementation (Overview §6: its entry
 states the rule not met, this section, and the observable difference, the refusal) — **not**
-a rejection this specification mandates. A header, test or diagnostic that cites this
-chapter as restricting an operand to a register name or an immediate literal contradicts
-§5.
+a rejection this specification mandates. (Informative: this chapter restricts no operand to
+a register name or an immediate literal, so it cannot be cited for such a refusal.)
 
 ---
 

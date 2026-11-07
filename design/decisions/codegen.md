@@ -665,12 +665,12 @@ for another machine. Making a `target.arch` query a diagnostic on such a backend
 **Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
 there is **no special operand grammar**; five compiler fixtures (expression operands: `0 - 1`,
 `1 + 1`, `unchecked 2`, a local `x`, and one through `asm(…)`) claimed the opposite — that
-ch. 80 fixes an operand to "a register name or an immediate" — and asserted a refusal on that
+ch. 80 fixes an operand to "a register name or an immediate literal" — and asserted a refusal on that
 basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
 **Decision.** **In an ABI-framed function the form is well-formed (where its operator is
-admitted — not under `no_abstractions`, §1.1): the source operand is an ordinary expression,
+admitted, e.g. not the value-operators under `no_abstractions`, §1.1): the source operand is an ordinary expression,
 evaluated by the rules for any expression; a comptime value is an immediate, and any other
 value is materialized in a register exactly as an operand local is (§2.2).** So
 `movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
