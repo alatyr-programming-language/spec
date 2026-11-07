@@ -92,6 +92,26 @@ argument was not contradicting anything. An enum variant constructor now takes n
 beyond its declared components — a surplus argument is a Semantic diagnostic and is never
 silently discarded (I3, FND-3) — and positionally declared components exactly, in order.
 
+**Normative — a bare literal binding takes the documented default (Declarations §3.2;
+Memory §5.3.1; TYP-16).** Declarations §3.2 called `x := 5` ill-formed ("a bare integer
+literal with no context … MUST be annotated"), while Declarations §3.4 and Types §9.1 give a
+literal with no context the documented default, the target's native signed integer. The
+default stands and §3.4 and §9.1 are unchanged; §3.2's example now reads "a literal that
+needs a non-default type", and §3.2 states the consequence: `mut i := 0` is the native signed
+integer, a later use never re-types it, and passing it where `usize` is expected is a
+signed→unsigned numeric conversion, refused unless written `usize(i)` (Types §4.2, §4.3;
+I8). Memory §5.3.1's escape example annotates `x : u64` so it shows only the escape error.
+Rejected: annotating every bare literal binding; inferring the type from the first use.
+(spec#25.)
+
+**Normative — `match` arms take no comma (Grammar §3.7; Control Flow §5.3; Tooling §4.3.3;
+SYN-8).** Grammar §2.6 separates `match` arms by a newline or `;`, while Tooling's canonical
+layout ended every expression arm with a trailing comma, so the formatter's own output did
+not parse. The grammar stands: the canonical layout puts no comma after any arm, and a comma
+after an arm, expression, block (`E::B => { return 4 },`) or `comptime for` template,
+including after the last arm, is a Parse diagnostic located at that comma. TOOL-2's
+arm-wrapping note is corrected to match. Rejected: making `,` an arm separator. (spec#24.)
+
 ## 1.8.0 — 2026-11-03
 
 **Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike

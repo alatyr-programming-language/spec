@@ -186,8 +186,16 @@ declaration is ill-formed.
 
 `T` is **inferred from the type of `value`**. Inference is **local** — from the
 initializer alone — not bidirectional or whole-program. A `value` whose type is not
-determinable on its own (e.g. a bare integer literal with no context, §3.4) MUST be
+determinable on its own (e.g. a literal that needs a non-default type, §3.4) MUST be
 annotated.
+
+A bare integer literal is determinable on its own: with no context it takes the documented
+default of §3.4, so `x := 5` is well-formed and `x` has the target's native signed
+integer type. The binding's later uses do not revisit that type. `mut i := 0` is the
+native signed integer (e.g. `i64` on a 64-bit target), and passing `i` where `usize` is
+expected is a signed→unsigned **numeric** conversion, which is never implicit (Type System
+§4.2, §4.3; I8): it is ill-formed unless written `usize(i)`, or unless the binding is
+annotated `mut i : usize = 0`.
 
 #### 3.3 Uninitialized — `name : T`
 

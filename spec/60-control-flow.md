@@ -206,8 +206,8 @@ ill-formed, since the alternatives would bind inconsistently).
 
 #### 5.3 Arms and match order
 
-Arms are separated by a **newline or `;`** (decisions SYN-4); each arm is
-`pattern => ( expr | block )`. `match` is an **expression**: the arm bodies MUST have
+Arms are separated by a **newline or `;`**, never a comma (decisions SYN-4,
+SYN-8); each arm is `pattern => ( expr | block )`. `match` is an **expression**: the arm bodies MUST have
 a compatible type. Arms are tested **top-to-bottom and the first matching arm wins**;
 there is **no implicit fall-through** — after the chosen arm runs, control leaves the
 `match`. An arm that is **wholly unreachable** (every value it would match is already

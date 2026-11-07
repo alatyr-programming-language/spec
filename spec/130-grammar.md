@@ -568,10 +568,17 @@ the inner value. `@` never wraps an
 expression (CG-6).
 
 Conditions are **unparenthesized**; bodies are always braced. `if` and `match` are
-**expressions** (CF-2). A labeled `loop` remains value-bearing; labeled `while`/`for`
-are statement-only, like their unlabeled forms. A leading identifier on `break`/`continue` is a `struct-label`
-**only** if it resolves to an in-scope structured label; otherwise it is part of `expr`
-(CF §7.1).
+**expressions** (CF-2). `match` arms are separated by `sep` only (§2.6): a newline or `;`.
+A `,` is **not** an arm separator. A comma after an arm, whether its body is an `expr`
+(`E::A => 3,`) or a `block` (`E::B => { return 4 },`) or the arm is a `comptime for`
+template, and including after the last arm before `}`, is a **Parse** diagnostic located at
+that comma (SYN-8); the trailing separator §2.6 permits before a closing bracket is, in an
+arm list, a `sep`, never `,`. The diagnostic stays at the comma even though a line ending
+in `,` continues onto the next line (§2.6).
+
+A labeled `loop` remains value-bearing; labeled `while`/`for` are statement-only, like their
+unlabeled forms. A leading identifier on `break`/`continue` is a `struct-label` **only** if it
+resolves to an in-scope structured label; otherwise it is part of `expr` (CF §7.1).
 
 #### 3.8 Comptime and generics (Comptime §10; CT-8)
 

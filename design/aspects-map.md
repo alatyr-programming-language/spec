@@ -39,7 +39,8 @@ and **deferred (additive) growth**.
   `@require` is the explicit non-owning-underlying constructor gate with an ordinary ABI
   predicate call (TYP-12).
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,
-  no `const` (FN-2).
+  no `const` (FN-2); a bare integer literal binding `x := 5` takes the documented literal default, the
+  target's native signed integer, and a later use never re-types it (TYP-16).
 - `[x]` **6. Functions / parameters / ABI.** Result via one output-place model: anonymous projected `-> T` or named `out`, with `in`/`in out` directions + projection (FN-4),
   function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
@@ -93,7 +94,8 @@ and **deferred (additive) growth**.
   deviations (FND-13) — and a bare invocation failing with help on stderr (TOOL-21); an
   **unrecognised argument** is an invocation-level Config diagnostic, never a source path (TOOL-14);
   and **output verbosity** may not affect a build (TOOL-22).
-- `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4), declarations/expressions (SYN-5),
+- `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`
+  only, no comma after an arm, SYN-8), declarations/expressions (SYN-5),
   attributes `@` — flat syntax + a **family taxonomy** (storage/layout/contract/abi/codegen/linkage/build/
   control/test) for docs & diagnostics, no `@family.name` (SYN-7/3B; isolation via the diagnostic, which names
   the family), control/blocks (CF-1), memory word-functions `ptr`/`deref`/`size`/`align` (MEM-7), `snippet`-removed/`@label`-labels (CF-6/CF-4).

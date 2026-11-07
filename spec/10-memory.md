@@ -685,7 +685,7 @@ and the analysis composes.
 
 - well-formed: `{ p := ptr(local); read(p) }` (used within the scope); passing
   such a `p` to a helper that only reads it.
-- ill-formed: `fn leak() -> ptr(u64) { x := 0 ; ptr(x) }` (returns a scoped
+- ill-formed: `fn leak() -> ptr(u64) { x : u64 = 0 ; ptr(x) }` (returns a scoped
   reference upward); storing `ptr(local)` into a module-level `mut` global;
   capturing `ptr(local)` in a closure that is stored beyond the scope.
 - a `scoped` result (with `a : Arena`, `h : Handle(Node)`, §5.4): `deref(get(ptr(a), h)).x = 5`

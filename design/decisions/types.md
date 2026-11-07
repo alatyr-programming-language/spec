@@ -462,6 +462,8 @@ family to fail through `trap()` and never through `panic`, and appendix §3.2 na
 (the guard never firing) and the 20 `REFUSED` cells of compiler#1244's container matrix;
 both bind only once the pin moves to the release that carries this text.
 
+---
+
 ### TYP-15. An enum variant constructor takes exactly its declared component count — compiler#1443
 *provenance: extends TYP-5/TYP-8 (construction) and carries TYP-11's arity rule, stated in
   §6.3 for raw unions, to enum variants · spec: Types §9.3; Grammar §3.4*
@@ -501,3 +503,40 @@ variant constructor is a constructor.
 refusals the spec mandates, so their headers may cite §9.3 without qualification — unlike the
 rest of the #1443 cluster, where the refusal is a known deviation (CG-15). Compiler work: a check-level diagnostic at the variant
 constructor, which is a widening of an existing arity check rather than a new mechanism.
+
+---
+
+### TYP-16. A bare literal binding takes the documented literal default — spec#25
+*provenance: refines TYP-8 (context-typed literals, documented default) on TYP-6 (the
+  conversion lattice) · spec: Declarations §3.2, §3.4; Types §9.1, §4.2, §4.3; Memory §5.3.1*
+
+**Question.** Declarations §3.2 said a `value` whose type is not determinable on its own,
+"e.g. a bare integer literal with no context", MUST be annotated — so `x := 5` was
+ill-formed. Declarations §3.4 and Types §9.1 said an integer literal with no context takes the
+documented default, the target's native signed integer — so `x := 5` was well-formed. Two
+answers to one question, below the FND-3 bar; and the answer decides what an implementation
+refuses at a site like `mut i := 0` followed by `f(i)` with `f` taking `usize`.
+
+**Decision (owner, 2026-11-07).** **The documented default stands** (Declarations §3.4 and
+Types §9.1 unchanged). A bare integer literal is determinable on its own, so `x := 5` is
+well-formed and `x` is the target's native signed integer. §3.2's example now reads "a
+literal that needs a non-default type", which is what §3.4 already requires to be annotated
+or constructed. The consequence is stated in §3.2: inference is local, so later uses never
+revisit the type; `mut i := 0` is the native signed integer (`i64` on a 64-bit target), and
+using it where `usize` is expected is a signed→unsigned **numeric** conversion, never
+implicit (Types §4.2, §4.3; I8) — the site writes `usize(i)`, or the binding is annotated
+`mut i : usize = 0`. Memory §5.3.1's escape example, which used `x := 0` inside a function
+returning `ptr(u64)`, now annotates `x : u64` so it shows only the error it is about.
+
+**Why.** The default is a defined, documented convenience: I3 is met because the
+specification states it, and the explicit form (`x : T = 5`, `T(5)`) stays expressible
+(I1, CG-11). Two chapters already said it; §3.2's parenthetical was the outlier.
+
+**Rejected.**
+- *Annotate every bare literal binding* (drop the default for bindings). The default is
+  still needed wherever else a literal has no context, so the rule would split in two for
+  no gain (PRIN-1).
+- *Infer the binding's type from its first use* (`mut i := 0` becomes `usize` because `i`
+  is later passed to a `usize` parameter). Action at a distance: the type of a binding would
+  depend on lines below it, against §3.2's local inference, and which use counts as "first"
+  would need its own rules that the specification does not have.
