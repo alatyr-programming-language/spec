@@ -50,7 +50,7 @@ several at once (see `CONTRIBUTING.md`).
 ## Unreleased
 
 **Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
-is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says operands are
+is its limit, not the language's (Assembly §5; CG-15).**  §5 says operands are
 ordinary expressions and there is no special operand grammar, yet five compiler fixtures
 refused expression operands such as `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an
 operand to a register name or an immediate. In an ABI-framed function the form is

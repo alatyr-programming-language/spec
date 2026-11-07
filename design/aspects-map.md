@@ -61,7 +61,7 @@ and **deferred (additive) growth**.
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6).
 - `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
   `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2); an operand is an ordinary
-  expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed and an implementation's refusal to lower it is a known deviation, not a
+  expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed where its operator is admitted and an implementation's refusal to lower it is a known deviation, not a
   specified rejection (CG-15). Content — additive data.
 - `[x]` **11. Codegen / lowering / GAS.** Pipeline structured→backend-specific assembly-correspondence→backend emission
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
