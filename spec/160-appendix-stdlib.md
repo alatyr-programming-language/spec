@@ -426,7 +426,8 @@ A growable string is `String` (alloc tier, §6).
 holds when the two have equal byte length and equal bytes, `<` is the lexicographic order over
 those bytes, and `hash` folds them. Two distinct views of the same bytes — a literal and a
 computed `str`, say — are `==` while their `ptr`s differ. The cost is **O(n)**, stated here
-because the operator hides it. A caller who wants the views compared compares `bytes(a).ptr`.
+because the operator hides it. A caller who wants the views compared compares
+`bytes(a).ptr` (and the lengths), as for `[T]`.
 
 `str_at(p, n)` is the **raw inverse of `bytes`**: it reinterprets the `n` bytes at
 address `p` as a `str` (`usize → ptr(u8) → [u8] → str`) in one step, so a scanner
