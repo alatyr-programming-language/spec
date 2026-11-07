@@ -50,8 +50,10 @@ that owns assembly/linking itself — rejected in favour of shelling out to `as`
 inline value-`if` — the three overflowing forms it originally omitted. A single canonical form means the
 wrapped spelling of **every** construct that can overflow is the specification's to fix, not the
 formatter's: with the rule absent, an implementation had to invent one, which is a formatter deciding
-language surface. The arm rule is element-per-line with a trailing comma on expression arms (matching lists)
-and none after a block arm; an OR-pattern breaks before each `|`; the template stays a block even when it
+language surface. The arm rule is arm-per-line with **no** comma after any arm, expression or block —
+the newline is the arm separator (Grammar §2.6), and a comma there is a Parse diagnostic (SYN-8;
+superseded: the trailing comma on expression arms this extension first gave contradicted the
+grammar); an OR-pattern breaks before each `|`; the template stays a block even when it
 would fit, because a template and a plain arm mean different things; and an expression `if` reuses the
 statement `if` layout so no construct has two shapes.)*
 

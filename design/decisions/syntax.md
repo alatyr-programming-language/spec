@@ -92,6 +92,34 @@ declaration's name, e.g. `/ := fn(…)`), so the newline stays a separator. This
 only for the non-prefix operators; the prefix-capable `+`/`-`/`*`/`&`/`~` already start a
 fresh line unambiguously.
 
+### SYN-8. `match` arms take no comma — spec#24
+*provenance: refines SYN-4 (separators) and corrects TOOL-2's arm-wrapping extension ·
+  spec: Grammar §2.6, §3.7; Control Flow §5.3; Tooling §4.3.3*
+
+**Question.** Grammar §2.6 separates `match` arms by `sep ::= newline | ";"`. Tooling's
+canonical layout (§4.3.3) ended every expression arm with a trailing comma, including the
+last, and no block arm. A line ending in `,` is incomplete under §2.6, so `E::A => 3,`
+followed by a newline joined the next arm onto it, and the formatter's own output did not
+parse. Is `,` an arm separator, or does Tooling drop the comma?
+
+**Decision (owner, 2026-11-07).** **Tooling drops the comma, and the grammar stands.**
+`match` arms are separated by a newline or `;` only (Grammar §2.6 unchanged). The canonical
+layout puts no comma after any arm. A comma after an arm, whether its body is an expression
+(`E::A => 3,`) or a block (`E::B => { return 4 },`) or the arm is a `comptime for` template,
+and including after the last arm before `}`, is a **Parse** diagnostic located at that comma
+(Grammar §3.7). It is located at the comma, not at whatever the continuation rule then
+joins from the next line. The trailing separator §2.6 permits before a closing bracket is,
+in an arm list, a `sep`, never `,`.
+
+**Why.** Arms use the separator statements use, so the grammar does not grow (PRIN-1) and
+the trailing-`,` line-continuation trap is gone. Practice already agrees: at the time of
+the decision the compiler's own sources wrote 108 expression arms without a comma and 5
+with one.
+
+**Rejected.** *Make `,` an arm separator* (for expression arms, or for all arms). That
+would give one thing two spellings, `;` and `,`, and blur §2.6's split between the
+statement/arm separator and the sequence-element separator.
+
 ---
 
 ## Declarations and expressions
