@@ -144,7 +144,7 @@ whole-program-lifetime resource the explicit-allocator form avoids.
 ### STD-4. Comparison over `[T]` and `str` is by content, not by the `{ptr, len}` derive — compiler#1443
 *provenance: refines STD-1 (eq/ord/hash derived structurally over `typeinfo`) and the walk it
   rests on, TYP-9/CT-9 (field and variant projection) · spec: Stdlib appendix §3.5, §3.6,
-  §2.6, §8; Types §7*
+  §2.6, §8; Types §7; Comptime §5.4*
 
 **Question.** Appendix §2.6 derives `Eq`/`Ord` **structurally over `typeinfo(T)`**, and a
 slice is the library pair `struct { ptr : ptr(T), len : usize }` (§3.5). Applied to a
