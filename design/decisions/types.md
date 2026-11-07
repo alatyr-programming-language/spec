@@ -474,8 +474,8 @@ constructor arity. Nothing states either direction for an enum variant: the sent
 would rule it names raw unions, and the enum bullet in §9.3 lists the constructor form
 without an arity rule. Three compiler fixtures (`issue513_variant_arity_too_many`,
 `_one_surplus`, `_nullary_surplus`) sat on the surplus gap — the too-few direction is
-exercised by `_too_few`, `_one_empty` and `_generic_too_few` — and the compiler silently dropped the
-written argument.
+exercised by `_too_few`, `_one_empty` and `_generic_too_few` — and the compiler silently
+dropped the written argument.
 
 **Decision.** **An enum variant constructor takes exactly its declared component count: no
 argument beyond the declared components, and, for components declared positionally, exactly
