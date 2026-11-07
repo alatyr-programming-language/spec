@@ -968,7 +968,8 @@ A conforming implementation MUST:
    `Allocator`, `Eq`/`Ord`/`Hash`, `Writer`) as structural comptime predicates (Comptime
    §6.2) — make `bool` truthy, `Option`/`Result` tryable, ranges/slices/arrays iterable,
    the std byte streams writers (§2.7), **derive `eq`/`lt`/`hash` structurally** over
-   `typeinfo`, overridable per type, and provide the v1 `Ord` consumers `min` / `max` /
+   `typeinfo`, overridable per type, with a slice or `str` compared by content (§2.6's
+   view arm, §3.5/§3.6), and provide the v1 `Ord` consumers `min` / `max` /
    `clamp` and in-place slice `sort` (§2.6/§3.5);
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the

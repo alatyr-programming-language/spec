@@ -400,7 +400,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib §3.6): a
   `{ptr, byte-length}` view; its byte length is **not** its code-point count, and indexing is by
-  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13). `String` is the
+  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13);
+  `==`/`<` compare its bytes, not the view (STD-4). `String` is the
   **alloc-tier growable owned** UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
 
 - **Range** — the value `a..b` (**half-open**, `a ≤ x < b`) or `a..=b` (**inclusive**); used in
