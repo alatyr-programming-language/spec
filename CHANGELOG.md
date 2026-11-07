@@ -49,6 +49,18 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a bare literal binding takes the documented default (Declarations §3.2;
+Memory §5.3.1; TYP-16).** Declarations §3.2 called `x := 5` ill-formed ("a bare integer
+literal with no context … MUST be annotated"), while Declarations §3.4 and Types §9.1 give a
+literal with no context the documented default, the target's native signed integer. The
+default stands and §3.4 and §9.1 are unchanged; §3.2's example now reads "a literal that
+needs a non-default type", and §3.2 states the consequence: `mut i := 0` is the native signed
+integer, a later use never re-types it, and passing it where `usize` is expected is a
+signed→unsigned numeric conversion, refused unless written `usize(i)` (Types §4.2, §4.3;
+I8). Memory §5.3.1's escape example annotates `x : u64` so it shows only the escape error.
+Rejected: annotating every bare literal binding; inferring the type from the first use.
+(spec#25.)
+
 ## 1.8.0 — 2026-11-03
 
 **Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike
