@@ -431,8 +431,8 @@ being selected *is* a lowering mode for a function's frame and return, which is 
 already selects (`naked` is one); a second attribute for the same axis is the duplication OP-1 rejects.
 
 ### FN-13. A non-literal first argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
-*provenance: refines FN-6/FN-7 (comptime variadic and the `{}` template trigger) · spec:
-  Functions §7.1; Stdlib appendix §2.7*
+*provenance: refines FN-5 (variadics: the comptime-variadic and its `{}` template trigger) ·
+  spec: Functions §7.1; Stdlib appendix §2.7*
 
 **Question.** §7.1 says the template trigger is a **literal** first `str` parameter, and that
 "a non-literal first argument is **not** a template (outside v1)". It does not say whether
@@ -452,8 +452,10 @@ diagnostic, but refusing a call deletes a statement **and its effect** — the s
 this milestone exists to eliminate, and against I3 (nothing hidden: the author wrote a call,
 and it either happens or says why not).
 
-**Consequences.** §7.1 gains the sentence; `reject_variadic_print_nonliteral` becomes a
-positive fixture (`## expect: run 42`) rather than a refusal. The rule is uniform for any
+**Consequences.** §7.1 gains the sentence, and Stdlib appendix §2.7's "a non-literal template
+is outside v1" points at it. The compiler fixture `reject_variadic_print_nonliteral`
+(`print(t)` with `t : str = "hi\n"`, then `return 7`) becomes a positive one: it prints `t`'s
+bytes and exits with 7, rather than being refused. The rule is uniform for any
 comptime-variadic with a leading `str`, so no per-function exception is introduced, and the
 existing "take it as a non-first parameter" advice in the same paragraph stays valid for code
 that needs the distinction spelled out.

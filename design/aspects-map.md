@@ -44,7 +44,8 @@ and **deferred (additive) growth**.
   function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
-  overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5).
+  overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
+  a non-literal first argument to a comptime-variadic is a valid, untemplated call, FN-13).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8.
 - `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
