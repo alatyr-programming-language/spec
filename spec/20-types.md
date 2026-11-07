@@ -785,7 +785,9 @@ parameter, return value or array element holds the **two-word pair itself** (poi
 length — 16 bytes on a 64-bit target, aligned as a pointer), and `[T].size()` /
 `str.size()` report **that pair**, never the length of the run it points at (which is a
 run-time property, not a type property). A view therefore has the same size wherever it
-appears; nothing about it is a special case of layout.
+appears; nothing about it is a special case of layout. That is its *representation*:
+comparison over a view is by content, not over the pair (Stdlib appendix §3.5, §3.6;
+STD-4).
 
 A **raw code address** (a code-point label's address, Control Flow §2.1) needs **no
 dedicated type**: it is the target's **pointer-width raw block** — `bits64` on a

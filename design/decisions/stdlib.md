@@ -144,7 +144,7 @@ whole-program-lifetime resource the explicit-allocator form avoids.
 ### STD-4. Comparison over `[T]` and `str` is by content, not by the `{ptr, len}` derive — compiler#1443
 *provenance: refines STD-1 (eq/ord/hash derived structurally over `typeinfo`) and the walk it
   rests on, TYP-9/CT-9 (field and variant projection) · spec: Stdlib appendix §3.5, §3.6,
-  §2.6*
+  §2.6, §8; Types §7*
 
 **Question.** Appendix §2.6 derives `Eq`/`Ord` **structurally over `typeinfo(T)`**, and a
 slice is the library pair `struct { ptr : ptr(T), len : usize }` (§3.5). Applied to a
@@ -154,7 +154,9 @@ the bytes live. §3.5's operation list does not name comparison at all, and §3.
 defines no equality anywhere in the specification. Four compiler fixtures sat on the gap —
 three over `[T]` (`reject_slice_float_compare`, `reject_slice_ordering`,
 `reject_slice_struct_elem_compare`) and one over arrays of `str` (`reject_tuple_str_compare`) —
-while `slice_eq` already asserted content comparison over `[T]` in its header.
+and a fifth, `reject_agg_elem_compare`, compares a struct with a `str` field, the
+view-as-field case. `slice_eq`, `slice_field_compare`, `str_field_eq` and
+`review_slice_str_eq` already expect content comparison.
 
 **Decision.** **Comparison over `[T]` is elementwise: `==` holds when the lengths are equal
 and every pair of elements is `eq`; `<` is lexicographic over the elements, a shorter equal
@@ -177,7 +179,7 @@ meaning of `==` on a view is a trap, and it is not what any caller means.
 
 **Consequences.** §3.5 and §3.6 gain the rule and §2.6 the view arm. It is an arm of the
 structural default, not a per-type override: FN-7 allows one generic definition per name, so a
-second generic `eq` over `[T]` could not carry it. The four fixtures become
+second generic `eq` over `[T]` could not carry it. The five fixtures become
 content-comparisons, and an implementation that compares the pair answers a wrong value.
 `Hash` over `[T]`/`str` follows content too (equal values hash alike), which §2.6 already
 requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with.
