@@ -670,7 +670,7 @@ basis. If the compiler's test expectations are generated from fixture prose, the
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
 **Decision.** **In an ABI-framed function the form is well-formed (where its operator is
-admitted, e.g. not the value-operators under `no_abstractions`, §1.1): the source operand is an ordinary expression,
+admitted — not the value-operators under `no_abstractions`, Assembly §1.1): the source operand is an ordinary expression,
 evaluated by the rules for any expression; a comptime value is an immediate, and any other
 value is materialized in a register exactly as an operand local is (§2.2).** So
 `movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
