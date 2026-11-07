@@ -73,9 +73,10 @@ over `typeinfo(T)`, and a slice is the library pair `{ ptr, len }`: applied to a
 walk compares an address and a length, so two slices of equal content at different addresses
 were unequal and `==` asked where the bytes live. §3.5 never listed comparison and §3.6
 defined no equality for `str` anywhere in the specification. `[T]` now compares elementwise
-with `<` lexicographic, and `str` compares UTF-8 bytes by the same rule at `T = u8`; the
-O(n) cost is stated because the operator hides it, and identity stays an explicit `.ptr`
-comparison under §4.5's grant.
+through `T`'s own `eq`/`lt`, with `<` lexicographic, and `str` compares its bytes by the same
+rule at `T = u8`; `hash` follows content. §2.6 gains a view arm so the rule holds wherever
+the walk meets a view, including inside an aggregate. The O(n) cost is stated because the
+operator hides it; identity stays an explicit `.ptr` comparison, which needs no grant.
 
 **Normative — an enum variant constructor takes exactly its declared component count (Types
 §9.3, §6.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union

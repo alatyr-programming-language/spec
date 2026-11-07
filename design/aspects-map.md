@@ -56,7 +56,8 @@ and **deferred (additive) growth**.
 - `[x]` **9. Comptime and generics.** Boundary (CT-7), generics (CT-3), constraint-predicates (CT-4),
   comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
-  `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler),
+  `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`
+  compares by content through the derive's view arm, STD-4),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6).
 - `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
   `at()` (arch surface)/UFCS-SIMD (CG-2) — an operand is an ordinary expression, so `movq(rbx, 0 - 1)` is well-formed and an

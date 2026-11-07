@@ -150,17 +150,23 @@ slice is the library pair `struct { ptr : ptr(T), len : usize }` (§3.5). Applie
 slice, that walk compares **a pointer's address bits and a length** — so two slices of
 equal content at different addresses are unequal, and `a == b` becomes a question about where
 the bytes live. §3.5's operation list does not name comparison at all, and §3.6 (`str`)
-defines no equality anywhere in the specification. Six fixtures sat on the gap; three more
-compared `str`.
+defines no equality anywhere in the specification. Four compiler fixtures sat on the gap —
+three over `[T]` (`reject_slice_float_compare`, `reject_slice_ordering`,
+`reject_slice_struct_elem_compare`) and one over arrays of `str` (`reject_tuple_str_compare`) —
+while `slice_eq` already asserted content comparison over `[T]` in its header.
 
 **Decision.** **Comparison over `[T]` is elementwise: `==` holds when the lengths are equal
 and every pair of elements is `eq`; `<` is lexicographic over the elements, a shorter equal
 prefix being less. Over `str` it is the same rule at `T = u8` — UTF-8 byte-sequence
 equality and lexicographic byte order — so a literal and a computed `str` of the same bytes
-are equal while their `ptr`s differ.** §2.6's walk therefore does not treat a slice as a
-two-field struct: this rule governs, and it is written in §3.5 and §3.6 where the operations
-are enumerated. The cost is **O(n)** and it is stated in the text, because the operator hides
-it; a caller who wants identity compares `.ptr` explicitly under §4.5's grant.
+are equal while their `ptr`s differ.** Each element pair goes through `T`'s own `eq`/`lt`,
+never a bytewise compare of the runs (wrong for a float or a padded element). §2.6 gains a
+**view arm**: wherever its walk meets a slice or a `str` — as an operand, or as a field,
+element or component of an aggregate — the default `eq`/`lt`/`hash` are these content rules,
+never a descent into the `{ptr, len}` pair. The rule itself is written in §3.5 and §3.6 where
+the operations are enumerated. The cost is **O(n)** and it is stated in the text, because the
+operator hides it; a caller who wants identity compares `.ptr` explicitly, an ordinary pointer
+comparison that needs no grant (Memory §4.5).
 
 **Rejected.** *Leaving comparison undefined over `[T]` and `str` and refusing at the site.*
 It is the cheaper rule and keeps §2.6 uniform, but it makes ordinary code — "does this text
@@ -168,8 +174,9 @@ equal that text" — a compile error, and the fixtures that wanted it are progra
 write. *The structural derive as written* was rejected outright: pointer identity as the
 meaning of `==` on a view is a trap, and it is not what any caller means.
 
-**Consequences.** §3.5 and §3.6 gain the rule; §2.6's walk is now explicitly not the last
-word for a view type. The nine fixtures become content-comparisons, and any backend that
-compares the pair is wrong — a wrong value, not a refusal. `Hash` over `[T]`/`str` follows
-content too (equal values hash alike, I11's consistency), which §2.6 already requires of any
-`Eq`/`Hash` pair and now has a defined equality to be consistent with.
+**Consequences.** §3.5 and §3.6 gain the rule and §2.6 the view arm. It is an arm of the
+structural default, not a per-type override: FN-7 allows one generic definition per name, so a
+second generic `eq` over `[T]` could not carry it. The four fixtures become
+content-comparisons, and an implementation that compares the pair answers a wrong value.
+`Hash` over `[T]`/`str` follows content too (equal values hash alike), which §2.6 already
+requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with.
