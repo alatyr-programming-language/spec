@@ -429,3 +429,37 @@ only at entry, so dropping the prologue drops the capability permanently, and ea
 three platform contracts by hand. A dedicated `@entry` **attribute** instead of an ABI selector — the thing
 being selected *is* a lowering mode for a function's frame and return, which is precisely what `@abi`
 already selects (`naked` is one); a second attribute for the same axis is the duplication OP-1 rejects.
+
+### FN-13. A non-literal first argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
+*provenance: refines FN-5 (variadics) and the `{}` template trigger of Functions §7.1 ·
+  spec: Functions §7.1; Stdlib appendix §2.7*
+
+**Question.** §7.1 says the template trigger is a **literal** first `str` parameter, and that
+"a non-literal first argument is **not** a template (outside v1)". It does not say whether
+the **call** is then valid. `print(s, 1)` with `s` computed: ill-formed, or a call that
+simply does not template? One fixture sat on the gap, and the compiler's existing behaviour
+was to refuse.
+
+**Decision.** **The call is valid.** With no template there are no holes to interleave, so
+the pack the body walks is `[s, arg0, …, argN]`: the leading value is **one fragment**, rendered through the same
+`Display`/scalar layer (Stdlib appendix §2.7), and the remaining arguments follow it in their own order. A
+user-defined comptime-variadic therefore sees one pack of fragments in both cases. What stays forbidden
+is the *template reading*: no hole-splitting, no `{{`/`}}` unescaping, no hole-count check —
+there is no literal to split. §7.1 states both halves, because the sentence "is not a
+template" was being read as "is not callable".
+
+**Rejected.** *Refusing the call with a diagnostic.* It is the smaller change and keeps the
+existing diagnostic, and it hides nothing. It was rejected because it makes an ordinary
+program ill-formed when the call has one obvious meaning: printing a computed string is
+what authors write, and "is not a template" never meant "is not callable". (What I3 forbids
+is the earlier compiler's behaviour, which dropped the call with no diagnostic. Both options
+end that.)
+
+**Consequences.** §7.1 gains the sentence, and Stdlib appendix §2.7 (which said "a
+non-literal template is outside v1") now says a non-literal is never split and points at it. The compiler fixture `reject_variadic_print_nonliteral`
+(`print(t)` with `t : str = "hi\n"`, then `return 7`) becomes a positive one: it prints `t`'s
+bytes and exits with 7, rather than being refused. The rule is uniform for any
+comptime-variadic with a leading `str`, so no per-function exception is introduced, and the
+existing advice in the same paragraph stays valid as advice about *templating*: a leading
+`str` taken as a non-first parameter, or passed as a runtime value, is not split. A runtime
+value in the leading place becomes the pack's first fragment, as decided above.

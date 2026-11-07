@@ -110,7 +110,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Protocol (comptime form)** — a structural contract by which a language construct works with a type, **not**
   depending on its name: a condition requires *truthy* (`bool` and types providing `is_true`; numeric scalars are **not** truthy — write `n != 0`), `?` requires *tryable* (`Option`/`Result` and
   user-defined), `for`/iteration requires an *iterator* (a `next` yielding an *optional* shape — present/absent, no error payload; ranges/slices/arrays and user-defined),
-  the comparison operators and `HashMap` keys require *eq*/*ord*/*hash* (derived structurally over `typeinfo`, overridable), and output targets a *writer* (a byte sink, whose `write` returns the writer's **own** tier-appropriate error — `IoError` for a std stream, `AllocError` for an in-memory buffer; never a protocol-fixed error, STD-2) — STD-1.
+  the comparison operators and `HashMap` keys require *eq*/*ord*/*hash* (derived structurally over `typeinfo`, overridable; a slice or `str` compares by content, STD-4), and output targets a *writer* (a byte sink, whose `write` returns the writer's **own** tier-appropriate error — `IoError` for a std stream, `AllocError` for an in-memory buffer; never a protocol-fixed error, STD-2) — STD-1.
   Implemented via predicates/`resolves` (CT-4/CT-6); the prelude supplies the canonical types (CF-8).
 
 - **Overload set / overloading by signature** (FN-7) — several **function values** bound to the **same name** in one
@@ -400,7 +400,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib §3.6): a
   `{ptr, byte-length}` view; its byte length is **not** its code-point count, and indexing is by
-  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13). `String` is the
+  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13);
+  `==`/`<` compare its bytes, not the view (STD-4). `String` is the
   **alloc-tier growable owned** UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
 
 - **Range** — the value `a..b` (**half-open**, `a ≤ x < b`) or `a..=b` (**inclusive**); used in

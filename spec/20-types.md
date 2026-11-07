@@ -785,7 +785,9 @@ parameter, return value or array element holds the **two-word pair itself** (poi
 length — 16 bytes on a 64-bit target, aligned as a pointer), and `[T].size()` /
 `str.size()` report **that pair**, never the length of the run it points at (which is a
 run-time property, not a type property). A view therefore has the same size wherever it
-appears; nothing about it is a special case of layout.
+appears; nothing about it is a special case of layout. That is its *representation*:
+comparison over a view is by content, not over the pair (Stdlib appendix §3.5, §3.6;
+STD-4).
 
 A **raw code address** (a code-point label's address, Control Flow §2.1) needs **no
 dedicated type**: it is the target's **pointer-width raw block** — `bits64` on a
@@ -1035,7 +1037,17 @@ privilege a fixed built-in set against the uniformity principle (§5.3).
 
 - **struct** — named fields: `Point(x = 1, y = 2)`;
 - **tuple** — positional: `(1, 2)`; the zero-field unit tuple value is `()`;
-- **enum variant** — `Color.Red`, `Option.Some(v)`;
+- **enum variant** — `Color.Red`, `Option.Some(v)`; the constructor takes **no argument
+  beyond the variant's declared components**: an argument with no component to bind —
+  `T.V(a, b)` for a variant declared with one component, or any argument to a variant
+  declared with none — is a Semantic diagnostic, never a construction that silently drops
+  it (I3; TYP-15). For components declared positionally (the Grammar's `variant`
+  production), the arguments bind in declaration order and their count is **exact**, as
+  for a raw-union member (§6.3): omitting one is ill-formed, since the language supplies
+  no value the author did not write (§9.4), and so is a tuple supplied as one argument
+  where the variant declares several components. A variant whose one declared component
+  is a tuple type takes that tuple as its one argument; a pattern that binds a
+  multi-component payload as one tuple (Grammar §3.5) is a pattern, not a constructor;
 - **raw-union member** — `Cell.none`, `Cell.word(v)`, `Cell.pair(a, b)`; the
   constructor produces a whole canonical union value and activates that member
   (§6.3);
@@ -1170,7 +1182,7 @@ struct-ctor   ::= type-expr "(" [ field-init { "," field-init } ] ")"  (* Point(
 field-init    ::= ident "=" expr
 tuple-ctor    ::= "(" ")"                                               (* unit value; type `()` *)
                 | "(" expr "," [ expr { "," expr } ] ")"              (* (1, 2) *)
-variant-ctor  ::= type-expr "." ident [ "(" arg-list ")" ]            (* Color.Red | Option.Some(v) | Cell.pair(a,b); union arity §6.3 *)
+variant-ctor  ::= type-expr "." ident [ "(" arg-list ")" ]            (* Color.Red | Option.Some(v) | Cell.pair(a,b); arity §9.3, §6.3 *)
 array-ctor    ::= "[" expr { "," expr } "]"                          (* [1, 2, 3] — listed *)
                 | "[" expr ";" expr "]"                              (* [v; N] — replicated *)
                 | array-type "(" [ expr { "," expr } ] ")"          (* [T = v; N]() all defaulted to v;

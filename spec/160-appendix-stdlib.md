@@ -159,6 +159,15 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 - **`Hash`** — `hash(in self : T) -> u64`, **consistent with `Eq`** (equal values hash
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
+**The view arm (STD-4).** A slice `[T]` (§3.5, the library pair `{ ptr, len }`) and `str`
+(§3.6; `typeinfo` kind `Str{}`, Comptime §5.1) are the one place the walk does not go by the
+`typeinfo` shape: their default `eq` / `lt` / `hash` are the **content** rules of §3.5 and
+§3.6, never a descent into the `{ ptr, len }` pair. That holds wherever the walk meets a view —
+as the operand of `==` or `<`, or as a field, element or component of an aggregate being
+walked — so a view never reaches the `Pointer` arm above. The arm is keyed on the prelude's
+own `Slice` and `str` types (a `[mut T]` view included), not on a shape: an author's struct that happens to hold a
+pointer and a length is not a view and keeps the field walk.
+
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
 the compiler-known **pointer↔integer** pair and the site sits inside an `unchecked` grant, where the
@@ -182,7 +191,8 @@ never the comparison, which is determined by the two `usize` values it is given 
 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
-from the operands** (TYP-1/CT-2; Comptime §5.4 shows the body) — so `a == b` applies it without
+from the operands** (TYP-1/CT-2; Comptime §5.4 shows the struct arm of the body; the view arm
+above takes a slice or `str` before it) — so `a == b` applies it without
 naming `T`. (The conformance shape above is that generic instantiated at one `T`; there is
 no implicit-type-parameter form — every generic names `T : type`, Functions §1.4.) A type
 **overrides** the structural default by defining its own **concrete** `eq` / `lt` / `hash`
@@ -242,7 +252,8 @@ layer does not need — adding them changes neither the protocol shape nor the m
   `Display` layer below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
   `}` is a **comptime error**. The number of `{}` holes **MUST equal** the argument count — a
   mismatch is a comptime error (never a silently empty hole or a dropped argument). A non-literal
-  template is outside v1. A `float` hole renders in base-10 with a bounded fractional part (an
+  template is never split: a non-literal in the template's place is rendered as one fragment
+  and the call stays valid (Functions §7.1, FN-13). A `float` hole renders in base-10 with a bounded fractional part (an
   interim layer; a shortest-round-trip formatter is additive);
 - a **`Display`** protocol + a **structural derive** rendering an aggregate field-by-field — needs
   **`typeinfo`** field introspection (Comptime §5);
@@ -377,6 +388,20 @@ worst-case so it holds on adversarial input — available under `no_alloc`). (A
 **stable** sort and `sort_by` / key-comparator variants are **additive**, FND-6.) A mutable
 slice is `[mut T]` (element mutability via the pointer, Memory §4.1).
 
+**Comparison over `[T]` is by content** (STD-4; the view arm of §2.6): `a == b` holds when
+the lengths are equal and every pair of elements at the same index is equal by `T`'s own
+`eq`; `<` is the **lexicographic** order by `T`'s `lt` (the first unequal pair decides; a
+proper prefix is less) — precisely, `a < b` when at the first index `i` where
+`eq(a[i], b[i])` fails, `lt(a[i], b[i])` holds; or, when no such index exists below the
+shorter length, when `a` is the shorter. Each pair goes through `T`'s `eq` / `lt`, never a
+bytewise compare of the two runs, which would be wrong for a float element (`NaN`, `-0.0`) or a padded one. The
+pointer and the length are the *representation*: comparing them would make equality depend
+on where a value happens to live, so the derive does not descend into the pair. The cost is
+**O(n)** in the shorter length, stated here because the operator hides it. `hash` over `[T]`
+folds the element hashes in order, so equal contents hash alike. Two empty slices are equal.
+A caller who wants identity compares `a.ptr == b.ptr` (and the lengths) explicitly — a
+pointer comparison, legal in checked code (Memory §4.5).
+
 #### 3.6 `str` (base)
 
 A slice of **UTF-8 bytes** (`[u8]`) with the **validated-UTF-8 invariant** (Type System
@@ -396,6 +421,13 @@ Indexing by **byte** offset is bounds-checked and checked to land on a code-poin
 code rather than the built-in slice read, these checks sit under `comptime if
 verify.checked` and fail through `trap()` (§3, §4.1), exactly as the built-in index does.
 A growable string is `String` (alloc tier, §6).
+
+**Comparison over `str` is by content** (STD-4): it is §3.5's rule at `T = u8` — `a == b`
+holds when the two have equal byte length and equal bytes, `<` is the lexicographic order over
+those bytes, and `hash` folds them. Two distinct views of the same bytes — a literal and a
+computed `str`, say — are `==` while their `ptr`s differ. The cost is **O(n)**, stated here
+because the operator hides it. A caller who wants the views compared compares
+`bytes(a).ptr` (and the lengths), as for `[T]`.
 
 `str_at(p, n)` is the **raw inverse of `bytes`**: it reinterprets the `n` bytes at
 address `p` as a `str` (`usize → ptr(u8) → [u8] → str`) in one step, so a scanner
@@ -936,7 +968,8 @@ A conforming implementation MUST:
    `Allocator`, `Eq`/`Ord`/`Hash`, `Writer`) as structural comptime predicates (Comptime
    §6.2) — make `bool` truthy, `Option`/`Result` tryable, ranges/slices/arrays iterable,
    the std byte streams writers (§2.7), **derive `eq`/`lt`/`hash` structurally** over
-   `typeinfo`, overridable per type, and provide the v1 `Ord` consumers `min` / `max` /
+   `typeinfo`, overridable per type, with a slice or `str` compared by content (§2.6's
+   view arm, §3.5/§3.6), and provide the v1 `Ord` consumers `min` / `max` /
    `clamp` and in-place slice `sort` (§2.6/§3.5);
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the

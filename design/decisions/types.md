@@ -464,6 +464,48 @@ both bind only once the pin moves to the release that carries this text.
 
 ---
 
+### TYP-15. An enum variant constructor takes exactly its declared component count — compiler#1443
+*provenance: extends TYP-5/TYP-8 (construction) and carries TYP-11's arity rule, stated in
+  §6.3 for raw unions, to enum variants · spec: Types §9.3; Grammar §3.4*
+
+**Question.** `Pay.B(7, 8, 9)` where `B(u64, u64)` declares two components, and `E.N(5)`
+where `N` declares none. Types §6.3 (TYP-11) fixes the arity rule for **a raw-union member**
+constructor, and Grammar §3.4 restates it ("exactly its declared component count"). Types §9.4 forbids an implicit,
+language-imposed default, which argues against the *too-few* direction but names no
+constructor arity. Nothing states either direction for an enum variant: the sentence that
+would rule it names raw unions, and the enum bullet in §9.3 lists the constructor form
+without an arity rule. Three compiler fixtures (`issue513_variant_arity_too_many`,
+`_one_surplus`, `_nullary_surplus`) sat on the surplus gap — the too-few direction is
+exercised by `_too_few`, `_one_empty` and `_generic_too_few` — and the compiler silently
+dropped the written argument.
+
+**Decision.** **An enum variant constructor takes exactly its declared component count: no
+argument beyond the declared components, and, for components declared positionally, exactly
+their count in declaration order.** A surplus argument is a Semantic diagnostic, never
+discarded; for positional components so is omitting one, and so is supplying one argument
+where the variant declares several (unless the variant's single component *is* that tuple).
+The rule sits in Types §9.3 beside the enum bullet and is restated in Grammar §3.4, where
+the union-only wording sat. It does **not** import §6.3's other raw-union prohibitions
+(named arguments, `m()`): whether a variant may declare named, defaulted components, as the
+manifest appendix's `Machine` does, and whether `E.N()` spells a parenthesis-less `E.N`, are
+separate questions filed as spec#36.
+
+**Rejected.** *Permitting surplus arguments and discarding them, on the ground that the rule
+was named only for unions.* Rejected on I3 and FND-3: an argument the author wrote that the
+compiler quietly ignores is a hidden operation, and a second implementation would have to guess
+whether the surplus binds, drops, or errors — the exact guessing the bar forbids. The
+asymmetry that produced the gap (a rule stated once, for one of two sibling constructs) is a
+specification defect, not a licence: §6.3's rule is about arity at a constructor, and an enum
+variant constructor is a constructor.
+
+**Consequences.** §9.3's enum bullet and Grammar §3.4 carry the sentence, and the
+`variant-ctor` comments in Grammar §3.4 and Types §11 point at §9.3. The three fixtures become
+refusals the spec mandates, so their headers may cite §9.3 without qualification — unlike the
+rest of the #1443 cluster, where the refusal is a known deviation (CG-15). Compiler work: a check-level diagnostic at the variant
+constructor, which is a widening of an existing arity check rather than a new mechanism.
+
+---
+
 ### TYP-16. A bare literal binding takes the documented literal default — spec#25
 *provenance: refines TYP-8 (context-typed literals, documented default) on TYP-6 (the
   conversion lattice) · spec: Declarations §3.2, §3.4; Types §9.1, §4.2, §4.3; Memory §5.3.1*

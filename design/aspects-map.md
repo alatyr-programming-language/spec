@@ -28,14 +28,14 @@ and **deferred (additive) growth**.
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
   closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
-- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-14
+- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
   integers at multiples of 64 — `u128 ≡ uint(128)`, TYP-10; raw-union members have one
   zero/single/anonymous-tuple payload with fixed construction, layout, copy, comptime/static,
   and definitely-active access rules, TYP-11; a float-spelled literal is never an integer
   initializer, TYP-13; an in-scope `@convert` precedes the brand crossing it guards,
-  TYP-14).
+  TYP-14; an enum variant constructor takes exactly its declared component count, TYP-15).
   `@require` is the explicit non-owning-underlying constructor gate with an ordinary ABI
   predicate call (TYP-12).
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,
@@ -45,7 +45,8 @@ and **deferred (additive) growth**.
   function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
-  overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5).
+  overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
+  a non-literal first argument to a comptime-variadic is a valid, untemplated call, FN-13).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8.
 - `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
@@ -56,10 +57,13 @@ and **deferred (additive) growth**.
 - `[x]` **9. Comptime and generics.** Boundary (CT-7), generics (CT-3), constraint-predicates (CT-4),
   comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
-  `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler),
+  `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`
+  compares by content through the derive's view arm, STD-4),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6).
 - `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
-  `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2). Content — additive data.
+  `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2); an operand is an ordinary
+  expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed where its operator is admitted and an implementation's refusal to lower it is a known deviation, not a
+  specified rejection (CG-15). Content — additive data.
 - `[x]` **11. Codegen / lowering / GAS.** Pipeline structured→backend-specific assembly-correspondence→backend emission
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
   determinism; centralized emission; containers by target (CG-1).

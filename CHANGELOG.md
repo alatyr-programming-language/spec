@@ -49,6 +49,49 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
+is its limit, not the language's (Assembly §5; CG-15).**  §5 says operands are
+ordinary expressions and there is no special operand grammar, yet five compiler fixtures
+refused expression operands such as `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an
+operand to a register name or an immediate. In an ABI-framed function the form is
+well-formed (where its operator is admitted): a comptime operand is an immediate, and any other
+is materialized in a register exactly as an operand local is (§2.2); operand-kind validity
+stays checked against the instruction's table.
+An implementation that cannot yet lower the operand refuses with a located diagnostic rather
+than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) — never
+as a rejection this chapter mandates.
+
+**Normative — a non-literal first argument to a comptime-variadic is a valid call, rendered
+as one fragment (Functions §7.1; Stdlib appendix §2.7; FN-13).**  §7.1 said a non-literal first argument "is not a
+template (outside v1)" without saying whether the call was callable at all, and the compiler
+refused it. With no template there are no holes to interleave, so the leading value renders as
+one fragment through the same `Display`/scalar layer and the rest follow in order; what stays
+forbidden is the template reading — no hole-splitting, no brace unescaping, no hole-count
+check. Refusing was rejected because it would make an ordinary program — printing a computed
+string — ill-formed when the call has one obvious meaning; the call is never silently dropped (I3).
+
+**Normative — comparison over `[T]` and `str` is by content, not by the `{ptr, len}`
+derive (Stdlib appendix §3.5, §3.6, §2.6; STD-4).**  §2.6 derives `Eq`/`Ord` structurally
+over `typeinfo(T)`, and a slice is the library pair `{ ptr, len }`: applied to a view that
+walk compares an address and a length, so two slices of equal content at different addresses
+were unequal and `==` asked where the bytes live. §3.5 never listed comparison and §3.6
+defined no equality for `str` anywhere in the specification. `[T]` now compares elementwise
+through `T`'s own `eq`/`lt`, with `<` lexicographic, and `str` compares its bytes by the same
+rule at `T = u8`; `hash` follows content. §2.6 gains a view arm so the rule holds wherever
+the walk meets a view, including inside an aggregate. The O(n) cost is stated because the
+operator hides it; identity stays an explicit `.ptr` comparison, which needs no grant. This
+changes the result 1.8.0's derive gave `==` over a view: code that relied on pair identity must
+now compare `.ptr` explicitly.
+
+**Normative — an enum variant constructor takes exactly its declared component count (Types
+§9.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union
+member** constructor; the enum bullet in §9.3 named the constructor form with no arity rule,
+and §9.4's no-implicit-default rule names no constructor arity. `Pay.B(7, 8, 9)` for
+`B(u64, u64)` therefore had no answer in the text, and a compiler that dropped the surplus
+argument was not contradicting anything. An enum variant constructor now takes no argument
+beyond its declared components — a surplus argument is a Semantic diagnostic and is never
+silently discarded (I3, FND-3) — and positionally declared components exactly, in order.
+
 **Normative — a bare literal binding takes the documented default (Declarations §3.2;
 Memory §5.3.1; TYP-16).** Declarations §3.2 called `x := 5` ill-formed ("a bare integer
 literal with no context … MUST be annotated"), while Declarations §3.4 and Types §9.1 give a

@@ -140,3 +140,46 @@ distinct, unspecified lifetime; (2) realizing it portably means either capturing
 stack layout at entry (arch/OS-specific, fragile) or holding the bytes in mutable static
 storage — neither is in the v1 implementable surface, and both add a hidden
 whole-program-lifetime resource the explicit-allocator form avoids.
+
+### STD-4. Comparison over `[T]` and `str` is by content, not by the `{ptr, len}` derive — compiler#1443
+*provenance: refines STD-1 (eq/ord/hash derived structurally over `typeinfo`) and the walk it
+  rests on, TYP-9/CT-9 (field and variant projection) · spec: Stdlib appendix §3.5, §3.6,
+  §2.6, §8; Types §7; Comptime §5.4*
+
+**Question.** Appendix §2.6 derives `Eq`/`Ord` **structurally over `typeinfo(T)`**, and a
+slice is the library pair `struct { ptr : ptr(T), len : usize }` (§3.5). Applied to a
+slice, that walk compares **a pointer's address bits and a length** — so two slices of
+equal content at different addresses are unequal, and `a == b` becomes a question about where
+the bytes live. §3.5's operation list does not name comparison at all, and §3.6 (`str`)
+defines no equality anywhere in the specification. Four compiler fixtures sat on the gap —
+three over `[T]` (`reject_slice_float_compare`, `reject_slice_ordering`,
+`reject_slice_struct_elem_compare`) and one over arrays of `str` (`reject_tuple_str_compare`) —
+and a fifth, `reject_agg_elem_compare`, compares a struct with a `str` field, the
+view-as-field case. `slice_eq`, `slice_field_compare`, `str_field_eq` and
+`review_slice_str_eq` already expect content comparison.
+
+**Decision.** **Comparison over `[T]` is elementwise: `==` holds when the lengths are equal
+and every pair of elements is `eq`; `<` is lexicographic over the elements, a shorter equal
+prefix being less. Over `str` it is the same rule at `T = u8` — UTF-8 byte-sequence
+equality and lexicographic byte order — so a literal and a computed `str` of the same bytes
+are equal while their `ptr`s differ.** Each element pair goes through `T`'s own `eq`/`lt`,
+never a bytewise compare of the runs (wrong for a float or a padded element). §2.6 gains a
+**view arm**: wherever its walk meets a slice or a `str` — as an operand, or as a field,
+element or component of an aggregate — the default `eq`/`lt`/`hash` are these content rules,
+never a descent into the `{ptr, len}` pair. The rule itself is written in §3.5 and §3.6 where
+the operations are enumerated. The cost is **O(n)** and it is stated in the text, because the
+operator hides it; a caller who wants identity compares `.ptr` explicitly, an ordinary pointer
+comparison that needs no grant (Memory §4.5).
+
+**Rejected.** *Leaving comparison undefined over `[T]` and `str` and refusing at the site.*
+It is the cheaper rule and keeps §2.6 uniform, but it makes ordinary code — "does this text
+equal that text" — a compile error, and the fixtures that wanted it are programs authors
+write. *The structural derive as written* was rejected outright: pointer identity as the
+meaning of `==` on a view is a trap, and it is not what any caller means.
+
+**Consequences.** §3.5 and §3.6 gain the rule and §2.6 the view arm. It is an arm of the
+structural default, not a per-type override: FN-7 allows one generic definition per name, so a
+second generic `eq` over `[T]` could not carry it. The five fixtures become
+content-comparisons, and an implementation that compares the pair answers a wrong value.
+`Hash` over `[T]`/`str` follows content too (equal values hash alike), which §2.6 already
+requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with.

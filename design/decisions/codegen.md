@@ -656,3 +656,51 @@ architecture sections would have to describe something that is not an architectu
 some ISA (what the implementation did) — it makes a true statement false and silently selects code written
 for another machine. Making a `target.arch` query a diagnostic on such a backend — it breaks every portable
 `when target.arch == …` gate, which is the construct the facet exists for.
+
+### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
+*provenance: refines CG-2 (instruction intrinsics and their operands), CG-4 (per-backend
+  codegen) and CG-13 (the checked-guard family); reads Assembly §5 with §2.2, §3, §4 and
+  Overview §6 (known deviations) · spec: Assembly §5*
+
+**Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
+there is **no special operand grammar**; five compiler fixtures (expression operands: `0 - 1`,
+`1 + 1`, `unchecked 2`, a local `x`, and one through `asm(…)`) claimed the opposite — that
+ch. 80 fixes an operand to "a register name or an immediate literal" — and asserted a refusal on that
+basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
+lowering limit into specified behaviour and the compiler bug disappears behind its own test.
+
+**Decision.** **In an ABI-framed function the form is well-formed (where its operator is
+admitted — not the value-operators under `no_abstractions`, Assembly §1.1): the source operand is an ordinary expression,
+evaluated by the rules for any expression; a comptime value is an immediate, and any other
+value is materialized in a register exactly as an operand local is (§2.2).** So
+`movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
+one depends on the phase of `0 - 1`, a general question this decision does not settle (filed
+as spec#39) — the form is well-formed in both. The evaluation's instructions belong to the
+expression; the intrinsic still emits exactly one instruction (§3). A naked body has no §2.2
+materialization, so there an operand must already be of a listed kind. Operand-kind validity
+stays always checked (§3, §4); the decision admits no kind a table does not list, and decides
+neither the type nor the value of `0 - 1`. An implementation that cannot yet lower
+the operand **refuses with a located diagnostic** — the right interim behaviour, since the
+alternative failure is silently taking `$0` from an unevaluated tree, an operand nobody wrote
+(I1) — but the refusal is a **known deviation** of that implementation (Overview §6: the rule
+not met and the observable difference; the compiler's entries also name the issue tracking the
+lowering), never a rejection the specification mandates, and never a header asserting an
+operand grammar the chapter denies. How a test harness
+records a known deviation is the implementation's affair; this specification defines no
+fixture directive.
+
+**Rejected.** *Amending §5 to restrict operands to register names and immediates.* Rejected
+because §5's sentence is the general rule that keeps the assembly surface ordinary (I4: the
+assembler's expressiveness, in the language), and narrowing it to match one backend's gap
+would reverse the direction of authority — "the compiler does it" is not a rationale.
+
+**Consequences.** §5 gains the paragraph. Four of the five fixtures
+(`reject_raw_asm_operand_bin`, `_bin_first`, `_unchecked`, `_var` — instruction intrinsics in
+`main`) are corrected in the compiler (#1443): the program is well-formed, its outcome is
+whatever the general rules give the operand expression, and the present refusal is a known
+deviation. The fifth, `reject_raw_asm_tmpl_operand`, passes the expression through
+`asm(…)`, whose operands §4 restricts to §5 kinds; whether such an operand is materialized
+there too is not settled by this decision and is filed as spec#37. The same correction applies to the other headers in
+the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
+existing refusal is *labelled*, which is what makes the eventual fix a fix rather than a spec
+break.
