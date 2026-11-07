@@ -424,7 +424,7 @@ array-ctor   ::= "[" expr { item-sep expr } "]"                (* [1, 2, 3] — 
                | array-type "(" [ expr { item-sep expr } ] ")" (* [T = v; N](…) — defaulted/partly explicit *)
 struct-ctor  ::= type-expr "(" [ field-init { item-sep field-init } ] ")"  (* Point(x = 1, y = 2) *)
 field-init   ::= ident "=" expr
-variant-ctor ::= type-expr "." ident [ "(" [ call-args ] ")" ] (* Color.Red | Option.Some(v) | Cell.pair(a,b); union arity is checked semantically (Type System §6.3) *)
+variant-ctor ::= type-expr "." ident [ "(" [ call-args ] ")" ] (* Color.Red | Option.Some(v) | Cell.pair(a,b); variant and member arity are checked semantically (Type System §9.3, §6.3) *)
 
 call-args    ::= arg { item-sep arg }
 arg          ::= expr                                          (* positional *)
@@ -465,8 +465,7 @@ named arguments, `m()` for a zero-component member, and a tuple supplied as one 
 for a multi-component member are Semantic diagnostics (Type System §6.3). **An enum variant
 constructor obeys the same arity rule** (TYP-15): exactly its declared component count,
 positionally — a surplus argument is a Semantic diagnostic and is never silently discarded.
-Otherwise
-`a.f(args)` is **always UFCS** — `f(a, args)` (MOD-3) — even when `f` also names a field.
+Otherwise `a.f(args)` is **always UFCS** — `f(a, args)` (MOD-3) — even when `f` also names a field.
 In particular, `u.m(args)` for a raw-union **value** `u` is UFCS, not a member write; a
 whole-member write is `u.m = payload` (Type System §6.3). To call a **function-valued
 field**, parenthesize: `(a.f)(args)`. A `.`-postfix without a following call is field/member

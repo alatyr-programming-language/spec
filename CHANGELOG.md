@@ -81,7 +81,8 @@ operator hides it; identity stays an explicit `.ptr` comparison, which needs no 
 **Normative — an enum variant constructor takes exactly its declared component count (Types
 §9.3, §6.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union
 member** constructor; the enum bullet in §9.3 named the constructor form with no arity rule,
-and §9.4 closed only the too-few direction. `Pay.B(7, 8, 9)` for `B(u64, u64)` therefore had
+and §9.4's no-implicit-default rule names no constructor arity. `Pay.B(7, 8, 9)` for
+`B(u64, u64)` therefore had
 no answer in the text, and a compiler that dropped the surplus argument was not contradicting
 anything. An enum variant constructor now obeys the same rule positionally: a surplus argument
 is a Semantic diagnostic and is never silently discarded (I3, FND-3).

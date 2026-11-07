@@ -1039,10 +1039,12 @@ privilege a fixed built-in set against the uniformity principle (§5.3).
   declared component count of that variant, positionally and in declaration order,
   exactly as for a raw-union member (§6.3): a surplus argument is ill-formed, as is
   omitting one or supplying a tuple as a single argument where the variant declares
-  several components. There is no implicit zero-filling of an omitted component (§9.4)
-  and no silent discarding of a written one (I3) — `T.V(a, b)` for a variant declared
-  with one component is a Semantic diagnostic, not a construction that drops `b`
-  (TYP-15);
+  several components (a variant whose one declared component is a tuple type takes that
+  tuple as its one argument; a pattern binding a multi-component payload as one tuple,
+  Grammar §3.5, is a pattern, not a constructor). The language supplies no value the
+  author did not write (§9.4) and silently discards none the author did (I3) — `T.V(a, b)`
+  for a variant declared with one component is a Semantic diagnostic, not a
+  construction that drops `b` (TYP-15);
 - **raw-union member** — `Cell.none`, `Cell.word(v)`, `Cell.pair(a, b)`; the
   constructor produces a whole canonical union value and activates that member
   (§6.3);
@@ -1177,7 +1179,7 @@ struct-ctor   ::= type-expr "(" [ field-init { "," field-init } ] ")"  (* Point(
 field-init    ::= ident "=" expr
 tuple-ctor    ::= "(" ")"                                               (* unit value; type `()` *)
                 | "(" expr "," [ expr { "," expr } ] ")"              (* (1, 2) *)
-variant-ctor  ::= type-expr "." ident [ "(" arg-list ")" ]            (* Color.Red | Option.Some(v) | Cell.pair(a,b); union arity §6.3 *)
+variant-ctor  ::= type-expr "." ident [ "(" arg-list ")" ]            (* Color.Red | Option.Some(v) | Cell.pair(a,b); arity §9.3, §6.3 *)
 array-ctor    ::= "[" expr { "," expr } "]"                          (* [1, 2, 3] — listed *)
                 | "[" expr ";" expr "]"                              (* [v; N] — replicated *)
                 | array-type "(" [ expr { "," expr } ] ")"          (* [T = v; N]() all defaulted to v;
