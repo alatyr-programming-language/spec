@@ -442,16 +442,18 @@ was to refuse.
 
 **Decision.** **The call is valid.** With no template there are no holes to interleave, so
 the pack the body walks is `[s, arg0, …, argN]`: the leading value is **one fragment**, rendered through the same
-`Display`/scalar layer (§2.7), and the remaining arguments follow it in their own order. A
+`Display`/scalar layer (Stdlib appendix §2.7), and the remaining arguments follow it in their own order. A
 user-defined comptime-variadic therefore sees one pack of fragments in both cases. What stays forbidden
 is the *template reading*: no hole-splitting, no `{{`/`}}` unescaping, no hole-count check —
 there is no literal to split. §7.1 states both halves, because the sentence "is not a
 template" was being read as "is not callable".
 
-**Rejected.** *Refusing the call.* It is the smaller change and preserves the existing
-diagnostic, but refusing a call deletes a statement **and its effect** — the silent class
-this milestone exists to eliminate, and against I3 (nothing hidden: the author wrote a call,
-and it either happens or says why not).
+**Rejected.** *Refusing the call with a diagnostic.* It is the smaller change and keeps the
+existing diagnostic, and it hides nothing. It was rejected because it makes an ordinary
+program ill-formed when the call has one obvious meaning: printing a computed string is
+what authors write, and "is not a template" never meant "is not callable". (What I3 forbids
+is the earlier compiler's behaviour, which dropped the call with no diagnostic. Both options
+end that.)
 
 **Consequences.** §7.1 gains the sentence, and Stdlib appendix §2.7's "a non-literal template
 is outside v1" points at it. The compiler fixture `reject_variadic_print_nonliteral`

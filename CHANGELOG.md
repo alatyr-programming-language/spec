@@ -67,7 +67,8 @@ template (outside v1)" without saying whether the call was callable at all, and 
 refused it. With no template there are no holes to interleave, so the leading value renders as
 one fragment through the same `Display`/scalar layer and the rest follow in order; what stays
 forbidden is the template reading — no hole-splitting, no brace unescaping, no hole-count
-check. Refusing was rejected because deleting a call discards an effect the author wrote (I3).
+check. Refusing was rejected because it would make an ordinary program — printing a computed
+string — ill-formed when the call has one obvious meaning; the call is never silently dropped (I3).
 
 **Normative — comparison over `[T]` and `str` is by content, not by the `{ptr, len}`
 derive (Stdlib appendix §3.5, §3.6, §2.6; STD-4).**  §2.6 derives `Eq`/`Ord` structurally

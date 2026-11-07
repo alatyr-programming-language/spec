@@ -252,8 +252,8 @@ layer does not need — adding them changes neither the protocol shape nor the m
   `Display` layer below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
   `}` is a **comptime error**. The number of `{}` holes **MUST equal** the argument count — a
   mismatch is a comptime error (never a silently empty hole or a dropped argument). A non-literal
-  template is outside v1: a non-literal in the template's place is not split, and the call
-  stays valid, rendering it as one fragment (Functions §7.1, FN-13). A `float` hole renders in base-10 with a bounded fractional part (an
+  template is never split: a non-literal in the template's place is rendered as one fragment
+  and the call stays valid (Functions §7.1, FN-13). A `float` hole renders in base-10 with a bounded fractional part (an
   interim layer; a shortest-round-trip formatter is additive);
 - a **`Display`** protocol + a **structural derive** rendering an aggregate field-by-field — needs
   **`typeinfo`** field introspection (Comptime §5);
