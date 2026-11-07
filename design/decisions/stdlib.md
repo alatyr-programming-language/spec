@@ -142,7 +142,8 @@ storage — neither is in the v1 implementable surface, and both add a hidden
 whole-program-lifetime resource the explicit-allocator form avoids.
 
 ### STD-4. Comparison over `[T]` and `str` is by content, not by the `{ptr, len}` derive — compiler#1443
-*provenance: refines TYP-5 (the structural derive) and §2.6's walk · spec: Stdlib appendix
+*provenance: refines STD-1 (the eq/ord/hash protocols), TYP-5 (the structural derive) and
+  §2.6's walk · spec: Stdlib appendix
   §3.5, §3.6, §2.6; Types §7*
 
 **Question.** Appendix §2.6 derives `Eq`/`Ord` **structurally over `typeinfo(T)`**, and a

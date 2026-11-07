@@ -164,7 +164,9 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 `typeinfo` shape: their default `eq` / `lt` / `hash` are the **content** rules of §3.5 and
 §3.6, never a descent into the `{ ptr, len }` pair. That holds wherever the walk meets a view —
 as the operand of `==` or `<`, or as a field, element or component of an aggregate being
-walked — so a view never reaches the `Pointer` arm above.
+walked — so a view never reaches the `Pointer` arm above. The arm is keyed on the prelude's
+own `Slice` and `str` types, not on a shape: an author's struct that happens to hold a
+pointer and a length is not a view and keeps the field walk.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
@@ -189,7 +191,8 @@ never the comparison, which is determined by the two `usize` values it is given 
 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
-from the operands** (TYP-1/CT-2; Comptime §5.4 shows the body) — so `a == b` applies it without
+from the operands** (TYP-1/CT-2; Comptime §5.4 shows the struct arm of the body; the view arm
+above takes a slice or `str` before it) — so `a == b` applies it without
 naming `T`. (The conformance shape above is that generic instantiated at one `T`; there is
 no implicit-type-parameter form — every generic names `T : type`, Functions §1.4.) A type
 **overrides** the structural default by defining its own **concrete** `eq` / `lt` / `hash`
@@ -388,7 +391,9 @@ slice is `[mut T]` (element mutability via the pointer, Memory §4.1).
 **Comparison over `[T]` is by content** (STD-4; the view arm of §2.6): `a == b` holds when
 the lengths are equal and every pair of elements at the same index is equal by `T`'s own
 `eq`; `<` is the **lexicographic** order by `T`'s `lt` (the first unequal pair decides; a
-proper prefix is less). Each pair goes through `T`'s `eq` / `lt`, never a bytewise compare of
+proper prefix is less) — precisely, `a < b` when at the first index `i` where
+`eq(a[i], b[i])` fails, `lt(a[i], b[i])` holds; or, when no such index exists below the
+shorter length, when `a` is the shorter. Each pair goes through `T`'s `eq` / `lt`, never a bytewise compare of
 the two runs, which would be wrong for a float element (`NaN`, `-0.0`) or a padded one. The
 pointer and the length are the *representation*: comparing them would make equality depend
 on where a value happens to live, so the derive does not descend into the pair. The cost is
