@@ -431,7 +431,7 @@ being selected *is* a lowering mode for a function's frame and return, which is 
 already selects (`naked` is one); a second attribute for the same axis is the duplication OP-1 rejects.
 
 ### FN-13. A non-literal first argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
-*provenance: refines FN-5 (variadics: the comptime-variadic and its `{}` template trigger) ·
+*provenance: refines FN-5 (variadics) and the `{}` template trigger of Functions §7.1 ·
   spec: Functions §7.1; Stdlib appendix §2.7*
 
 **Question.** §7.1 says the template trigger is a **literal** first `str` parameter, and that
@@ -458,5 +458,6 @@ is outside v1" points at it. The compiler fixture `reject_variadic_print_nonlite
 (`print(t)` with `t : str = "hi\n"`, then `return 7`) becomes a positive one: it prints `t`'s
 bytes and exits with 7, rather than being refused. The rule is uniform for any
 comptime-variadic with a leading `str`, so no per-function exception is introduced, and the
-existing "take it as a non-first parameter" advice in the same paragraph stays valid for code
-that needs the distinction spelled out.
+existing advice in the same paragraph stays valid as advice about *templating*: a leading
+`str` taken as a non-first parameter, or passed as a runtime value, is not split. A runtime
+value in the leading place becomes the pack's first fragment, as decided above.
