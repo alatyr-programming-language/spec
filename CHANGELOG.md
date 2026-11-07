@@ -61,6 +61,14 @@ I8). Memory §5.3.1's escape example annotates `x : u64` so it shows only the es
 Rejected: annotating every bare literal binding; inferring the type from the first use.
 (spec#25.)
 
+**Normative — `match` arms take no comma (Grammar §3.7; Control Flow §5.3; Tooling §4.3.3;
+SYN-8).** Grammar §2.6 separates `match` arms by a newline or `;`, while Tooling's canonical
+layout ended every expression arm with a trailing comma, so the formatter's own output did
+not parse. The grammar stands: the canonical layout puts no comma after any arm, and a comma
+after an arm, expression, block (`E::B => { return 4 },`) or `comptime for` template,
+including after the last arm, is a Parse diagnostic located at that comma. TOOL-2's
+arm-wrapping note is corrected to match. Rejected: making `,` an arm separator. (spec#24.)
+
 ## 1.8.0 — 2026-11-03
 
 **Normative — a `@convert` is the operation a site denotes, checked or `unchecked` alike

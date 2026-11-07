@@ -627,9 +627,10 @@ function of width (never of the input's original line breaks):
 - A **binary-operator chain** that overflows breaks **before** each operator at the
   continuation indent (one level), the operator beginning the continuation line.
 - A **`match` arm list** wraps with **each arm on its own line**, indented one level beyond
-  the `match` line, the closing `}` at the `match`'s indent. An arm whose body is an `expr`
-  ends with a **trailing comma** — including the last (as for a wrapped list above); an arm
-  whose body is a `block` ends with its `}` and takes **no** comma. An **OR-pattern**
+  the `match` line, the closing `}` at the `match`'s indent. Arms are separated by the
+  newline alone, so **no** arm takes a comma: an arm whose body is an `expr` ends with that
+  expression, and an arm whose body is a `block` ends with its `}` (a comma after an arm is a
+  Parse diagnostic, Grammar §3.7; SYN-8). An **OR-pattern**
   (`p1 | p2 | …`, Grammar §3.5) that still overflows breaks **before** each `|` at one
   further level, the `|` beginning the continuation line, with `=>` and the body following
   the last alternative. An arm **body** that still overflows wraps by its own construct's
