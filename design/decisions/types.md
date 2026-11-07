@@ -467,8 +467,8 @@ both bind only once the pin moves to the release that carries this text.
   §6.3 for raw unions, to enum variants · spec: Types §9.3; Grammar §3.4*
 
 **Question.** `Pay.B(7, 8, 9)` where `B(u64, u64)` declares two components, and `E.N(5)`
-where `N` declares none. Grammar §3.4 fixes the arity rule for **a raw-union member**
-constructor ("exactly its declared component count"). Types §9.4 forbids an implicit,
+where `N` declares none. Types §6.3 (TYP-11) fixes the arity rule for **a raw-union member**
+constructor, and Grammar §3.4 restates it ("exactly its declared component count"). Types §9.4 forbids an implicit,
 language-imposed default, which argues against the *too-few* direction but names no
 constructor arity. Nothing states either direction for an enum variant: the sentence that
 would rule it names raw unions, and the enum bullet in §9.3 lists the constructor form
