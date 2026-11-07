@@ -52,10 +52,11 @@ several at once (see `CONTRIBUTING.md`).
 **Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
 is its limit, not the language's (Assembly §5, §3, §4; CG-15).**  §5 says operands are
 ordinary expressions and there is no special operand grammar, yet five compiler fixtures
-asserted a refusal of `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an operand to a
-register name or an immediate. The form is well-formed: the operand is evaluated by the rules
-for any expression and, in an ABI-framed function, materialized in a register exactly as an
-operand local is (§2.2); operand-kind validity stays checked against the instruction's table.
+refused expression operands such as `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an
+operand to a register name or an immediate. In an ABI-framed function the form is
+well-formed (where its operator is admitted): a comptime operand is an immediate, and any other
+is materialized in a register exactly as an operand local is (§2.2); operand-kind validity
+stays checked against the instruction's table.
 An implementation that cannot yet lower the operand refuses with a located diagnostic rather
 than emit a wrong value, and publishes that refusal as a known deviation (Overview §6) — never
 as a rejection this chapter mandates.

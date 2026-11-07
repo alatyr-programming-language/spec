@@ -663,19 +663,23 @@ for another machine. Making a `target.arch` query a diagnostic on such a backend
   Overview §6 (known deviations) · spec: Assembly §5*
 
 **Question.** `movq(rbx, 0 - 1)`. Assembly §5 says operands are **ordinary expressions** and
-there is **no special operand grammar**; five compiler fixtures claimed the opposite — that
+there is **no special operand grammar**; five compiler fixtures (expression operands: `0 - 1`,
+`1 + 1`, `unchecked 2`, a local `x`, and one through `asm(…)`) claimed the opposite — that
 ch. 80 fixes an operand to "a register name or an immediate" — and asserted a refusal on that
 basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
-**Decision.** **The form is well-formed: the source operand is an ordinary expression,
-evaluated by the rules for any expression, and in an ABI-framed function its value is
-materialized in a register exactly as an operand local is (§2.2).** `0 - 1` is an operator
-application, so it is runtime (Comptime §1.1) and not an immediate; `movq(rbx, 0 - 1)` lowers
-as `x := 0 - 1; movq(rbx, x)` does. The evaluation's instructions belong to the expression; the
-intrinsic still emits exactly one instruction (§3). Operand-kind validity stays always checked
-(§3, §4); the decision admits no kind a table does not list, and it decides neither the type
-nor the value of `0 - 1`, which the general rules do. An implementation that cannot yet lower
+**Decision.** **In an ABI-framed function the form is well-formed (where its operator is
+admitted — not under `no_abstractions`, §1.1): the source operand is an ordinary expression,
+evaluated by the rules for any expression; a comptime value is an immediate, and any other
+value is materialized in a register exactly as an operand local is (§2.2).** So
+`movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
+one depends on the phase of `0 - 1`, a general question this decision does not settle (filed
+as spec#39) — the form is well-formed in both. The evaluation's instructions belong to the
+expression; the intrinsic still emits exactly one instruction (§3). A naked body has no §2.2
+materialization, so there an operand must already be of a listed kind. Operand-kind validity
+stays always checked (§3, §4); the decision admits no kind a table does not list, and decides
+neither the type nor the value of `0 - 1`. An implementation that cannot yet lower
 the operand **refuses with a located diagnostic** — the right interim behaviour, since the
 alternative failure is silently taking `$0` from an unevaluated tree, an operand nobody wrote
 (I1) — but the refusal is a **known deviation** of that implementation (Overview §6: the rule

@@ -230,23 +230,24 @@ Which kinds a given instruction accepts is **part of its table** (§4); operand-
 validity is **always** checked (§3). Operands are **ordinary expressions** (Type
 System / Declarations) — there is **no** special operand grammar.
 
-Because operands are ordinary expressions, `movq(rbx, 0 - 1)` is **well-formed** (CG-15):
-the source operand is an expression, evaluated by the rules that govern any expression —
-its type, its phase (runtime unless marked, Comptime §1.1; `0 - 1` is an operator
-application, not a literal, so it is not an immediate) and, for a checkable operation, its
-guard (§3). In an ABI-framed function its value is then **materialized in a register**
-exactly as an operand local is (§2.2) — the instruction is emitted on that register, as it
-would be for `x := 0 - 1; movq(rbx, x)` — so the operand's kind is *register*, and the
-evaluation's instructions belong to the expression, not to the one instruction the
-intrinsic emits (§3). Nothing here admits an operand kind the instruction's table does not
-list: operand-kind validity is still **always** checked (§3, §4). An implementation that
+Because operands are ordinary expressions, `movq(rbx, 0 - 1)` in an ABI-framed function is
+**well-formed** (CG-15), wherever its operator is admitted (`no_abstractions` forbids the
+value-operators, §1.1). The source operand is evaluated by the rules that govern any
+expression — its type, its phase and, for a checkable operation, its guard (§3). If its
+value is comptime it is an **immediate** (the table above); if not, it is **materialized in
+a register** exactly as an operand local is (§2.2) — the instruction is emitted on that
+register, as it would be for `x := 0 - 1; movq(rbx, x)` — and the evaluation's instructions
+belong to the expression, not to the one instruction the intrinsic emits (§3). Either way
+the operand has a kind. Materialization is §2.2's, so it applies in an ABI-framed function;
+a naked body has no such step (Functions §6.4), and there an operand must already be of a
+kind the table lists. Operand-kind validity is still **always** checked (§3, §4). An implementation that
 cannot yet lower such an operand **refuses with a located diagnostic** rather than emit a
 wrong value (I1: silently taking `$0` from an unevaluated tree emits an operand nobody
 wrote). That refusal is a **known deviation** of the implementation (Overview §6: its entry
 states the rule not met, this section, and the observable difference, the refusal) — **not**
 a rejection this specification mandates. A header, test or diagnostic that cites this
-chapter as forbidding the form, or as restricting an operand to a register name or an
-immediate literal, contradicts §5.
+chapter as restricting an operand to a register name or an immediate literal contradicts
+§5.
 
 ---
 
