@@ -165,7 +165,7 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 §3.6, never a descent into the `{ ptr, len }` pair. That holds wherever the walk meets a view —
 as the operand of `==` or `<`, or as a field, element or component of an aggregate being
 walked — so a view never reaches the `Pointer` arm above. The arm is keyed on the prelude's
-own `Slice` and `str` types, not on a shape: an author's struct that happens to hold a
+own `Slice` and `str` types (a `[mut T]` view included), not on a shape: an author's struct that happens to hold a
 pointer and a length is not a view and keeps the field walk.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
@@ -393,8 +393,8 @@ the lengths are equal and every pair of elements at the same index is equal by `
 `eq`; `<` is the **lexicographic** order by `T`'s `lt` (the first unequal pair decides; a
 proper prefix is less) — precisely, `a < b` when at the first index `i` where
 `eq(a[i], b[i])` fails, `lt(a[i], b[i])` holds; or, when no such index exists below the
-shorter length, when `a` is the shorter. Each pair goes through `T`'s `eq` / `lt`, never a bytewise compare of
-the two runs, which would be wrong for a float element (`NaN`, `-0.0`) or a padded one. The
+shorter length, when `a` is the shorter. Each pair goes through `T`'s `eq` / `lt`, never a
+bytewise compare of the two runs, which would be wrong for a float element (`NaN`, `-0.0`) or a padded one. The
 pointer and the length are the *representation*: comparing them would make equality depend
 on where a value happens to live, so the derive does not descend into the pair. The cost is
 **O(n)** in the shorter length, stated here because the operator hides it. `hash` over `[T]`

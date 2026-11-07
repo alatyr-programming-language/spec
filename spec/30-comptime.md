@@ -315,7 +315,8 @@ struct type; otherwise it is a **defined compile error**. In a **runtime** body 
 occurs inside a `comptime for` **unrolling** (§8.3), so each unrolled copy projects **one
 concrete field** and the projection is comptime-known by construction. This is the form
 that makes the v1 structural derives (`eq` / `lt` / `hash`, Stdlib appendix §2.6) ordinary
-**library code over `typeinfo`** (TYP-9).
+**library code over `typeinfo`** (TYP-9). The body below is the struct arm; a slice or `str`
+is compared by content instead (Stdlib appendix §2.6's view arm, STD-4).
 
 ```alatyr
 eq := fn(T : type, in a : T, in b : T) -> bool {

@@ -79,7 +79,9 @@ defined no equality for `str` anywhere in the specification. `[T]` now compares 
 through `T`'s own `eq`/`lt`, with `<` lexicographic, and `str` compares its bytes by the same
 rule at `T = u8`; `hash` follows content. §2.6 gains a view arm so the rule holds wherever
 the walk meets a view, including inside an aggregate. The O(n) cost is stated because the
-operator hides it; identity stays an explicit `.ptr` comparison, which needs no grant.
+operator hides it; identity stays an explicit `.ptr` comparison, which needs no grant. This
+changes the result 1.8.0's derive gave `==` over a view: code that relied on pair identity must
+now compare `.ptr` explicitly.
 
 **Normative — an enum variant constructor takes exactly its declared component count (Types
 §9.3; Grammar §3.4; TYP-15).**  The arity rule was stated once, for **a raw-union
