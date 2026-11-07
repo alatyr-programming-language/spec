@@ -455,8 +455,8 @@ what authors write, and "is not a template" never meant "is not callable". (What
 is the earlier compiler's behaviour, which dropped the call with no diagnostic. Both options
 end that.)
 
-**Consequences.** §7.1 gains the sentence, and Stdlib appendix §2.7's "a non-literal template
-is outside v1" points at it. The compiler fixture `reject_variadic_print_nonliteral`
+**Consequences.** §7.1 gains the sentence, and Stdlib appendix §2.7 (which said "a
+non-literal template is outside v1") now says a non-literal is never split and points at it. The compiler fixture `reject_variadic_print_nonliteral`
 (`print(t)` with `t : str = "hi\n"`, then `return 7`) becomes a positive one: it prints `t`'s
 bytes and exits with 7, rather than being refused. The rule is uniform for any
 comptime-variadic with a leading `str`, so no per-function exception is introduced, and the

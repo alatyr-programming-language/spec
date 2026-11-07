@@ -560,11 +560,12 @@ leading `str` parameter inherits — a documented rule, **not** a hidden reinter
 (I3). `{{`/`}}` escape a literal brace; a lone `{`/`}`, and a hole-count ≠ argument-count
 mismatch, are **comptime errors**; a **non-literal** first argument is **not** a template,
 and **the call is still valid** (FN-13): with no template there are no holes to
-interleave, so the pack the body walks is `[s, arg0, …, argN]`: the leading value is **one
-fragment**, rendered by the same `Display`/scalar layer (Stdlib §2.7), and the remaining
-arguments follow it in their own order. `print(s, 1)` where `s` is a computed `str`
-therefore prints `s` and then `1`; it is not a comptime error, and the statement is never dropped — deleting a call because
-its first argument was not a literal would discard an effect the author wrote, against I3.
+interleave, so for a leading value `s` the pack the body walks is `[s, arg0, …, argN]`:
+`s` is **one fragment**, rendered by the same `Display`/scalar layer (Stdlib §2.7), and
+the remaining arguments follow it in their own order. `print(s, 1)` where `s` is a
+computed `str` therefore prints `s` and then `1`; it is not a comptime error, and the
+statement is never dropped — deleting a call because its first argument was not a literal
+would discard an effect the author wrote, against I3.
 What stays forbidden is the *template* reading of a non-literal: no hole-splitting, no
 `{{`/`}}` unescaping, no hole-count check, because there is no literal to split. Since such
 a call has this v1 meaning, a later revision cannot make a non-literal a template without
