@@ -1035,16 +1035,17 @@ privilege a fixed built-in set against the uniformity principle (§5.3).
 
 - **struct** — named fields: `Point(x = 1, y = 2)`;
 - **tuple** — positional: `(1, 2)`; the zero-field unit tuple value is `()`;
-- **enum variant** — `Color.Red`, `Option.Some(v)`; the constructor arity is the
-  declared component count of that variant, positionally and in declaration order,
-  exactly as for a raw-union member (§6.3): a surplus argument is ill-formed, as is
-  omitting one or supplying a tuple as a single argument where the variant declares
-  several components (a variant whose one declared component is a tuple type takes that
-  tuple as its one argument; a pattern binding a multi-component payload as one tuple,
-  Grammar §3.5, is a pattern, not a constructor). The language supplies no value the
-  author did not write (§9.4) and silently discards none the author did (I3) — `T.V(a, b)`
-  for a variant declared with one component is a Semantic diagnostic, not a
-  construction that drops `b` (TYP-15);
+- **enum variant** — `Color.Red`, `Option.Some(v)`; the constructor takes **no argument
+  beyond the variant's declared components**: an argument with no component to bind —
+  `T.V(a, b)` for a variant declared with one component, or any argument to a variant
+  declared with none — is a Semantic diagnostic, never a construction that silently drops
+  it (I3; TYP-15). For components declared positionally (the Grammar's `variant`
+  production), the arguments bind in declaration order and their count is **exact**, as
+  for a raw-union member (§6.3): omitting one is ill-formed, since the language supplies
+  no value the author did not write (§9.4), and so is a tuple supplied as one argument
+  where the variant declares several components. A variant whose one declared component
+  is a tuple type takes that tuple as its one argument; a pattern that binds a
+  multi-component payload as one tuple (Grammar §3.5) is a pattern, not a constructor;
 - **raw-union member** — `Cell.none`, `Cell.word(v)`, `Cell.pair(a, b)`; the
   constructor produces a whole canonical union value and activates that member
   (§6.3);

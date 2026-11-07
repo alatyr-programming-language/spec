@@ -464,7 +464,7 @@ both bind only once the pin moves to the release that carries this text.
 
 ### TYP-15. An enum variant constructor takes exactly its declared component count — compiler#1443
 *provenance: extends TYP-5/TYP-8 (construction) and carries TYP-11's arity rule, stated in
-  §6.3 for raw unions, to enum variants · spec: Types §9.3, §9.4, §6.3; Grammar §3.4*
+  §6.3 for raw unions, to enum variants · spec: Types §9.3; Grammar §3.4*
 
 **Question.** `Pay.B(7, 8, 9)` where `B(u64, u64)` declares two components, and `E.N(5)`
 where `N` declares none. Grammar §3.4 fixes the arity rule for **a raw-union member**
@@ -476,12 +476,16 @@ without an arity rule. Three compiler fixtures (`issue513_variant_arity_too_many
 `_one_surplus`, `_nullary_surplus`) sat on the gap, and the compiler silently dropped the
 written argument.
 
-**Decision.** **An enum variant constructor obeys the same arity rule as a raw-union member:
-exactly its declared component count, positionally and in declaration order.** A surplus
-argument is a Semantic diagnostic; so is omitting one, and so is supplying one argument where
-the variant declares several (unless the variant's single component *is* that tuple). The
-rule moves to Types §9.3 beside the enum bullet and is restated in Grammar §3.4, where the
-union-only wording sat.
+**Decision.** **An enum variant constructor takes exactly its declared component count: no
+argument beyond the declared components, and, for components declared positionally, exactly
+their count in declaration order.** A surplus argument is a Semantic diagnostic, never
+discarded; for positional components so is omitting one, and so is supplying one argument
+where the variant declares several (unless the variant's single component *is* that tuple).
+The rule sits in Types §9.3 beside the enum bullet and is restated in Grammar §3.4, where
+the union-only wording sat. It does **not** import §6.3's other raw-union prohibitions
+(named arguments, `m()`): whether a variant may declare named, defaulted components, as the
+manifest appendix's `Machine` does, and whether `E.N()` spells a parenthesis-less `E.N`, are
+separate questions filed as spec#36.
 
 **Rejected.** *Permitting surplus arguments and discarding them, on the ground that the rule
 was named only for unions.* Rejected on I3 and FND-3: an argument the author wrote that the
