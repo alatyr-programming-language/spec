@@ -150,19 +150,21 @@ to nothing else in that function, nor any register sharing storage with it (`al`
 an `@inline` body (spec#93). Rejected: both kinds of binding as
 register operands; neither; reservation left to the programmer; per statement span. (spec#52.)
 
-**Normative — an immediate slot and an `at(…)` field take a signed per-width slot type from the
-arch table (Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch appendix §2(f), §3.6–§8.6, §9;
-CG-18).**  Nothing named the type of an immediate slot or of `disp`, so since CT-13 nothing fixed
-whether `movb(al, 200 + 100)` or `disp = -0x80000001` is well-formed. Each such slot now has a
-**slot type**, the signed type of the width its form encodes (`i8` for `movb`, `i32` for a 64-bit
-`add`, `i64` for `movq` into a register, `disp : i32` on x86_64 and i386); an immediate must be
-assignable to it, a constant expression takes it as context and is checked against it, and every
-value of it is encodable. A positive value above the maximum is written as its two's-complement
-negative (`movb(al, -56)`). The arch appendix gains a slot-type table per architecture; the fields
-no v1 type describes — sub-native, zero-extended and pattern-encoded ones, which are every slot of
-aarch64, aarch32 and RISC-V and x86's shift counts, `int` vector, SSE selectors and `scale` — are
-listed as open (spec#80). Rejected: the native signed integer as context with a separate per-arch
-range; no context type. (spec#63.)
+**Normative — an immediate slot and an `at(…)` field take the native signed integer as context;
+the arch table alone decides encodability (Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch
+appendix §2(f), §3.6–§8.6, §9; CG-18).**  Nothing named the type of an immediate slot or of `disp`,
+so since CT-13 nothing fixed whether `movb(al, 200 + 100)` or `disp = -0x80000001` is well-formed.
+An immediate now takes the target's native signed integer as its context type (a constant
+expression is exact, then checked, CT-14), and each slot has an **encodable set** in the arch
+table — a signed range, an unsigned range, a bitmask pattern or a rotated immediate — which alone
+decides whether the value is encodable. Every slot of all six architectures has its set
+(`movb` −128 … 127, a vector number of `int` 0 … 255, RISC-V `imm12` −2048 … 2047, aarch64 logical
+immediates as a bitmask pattern, aarch32 modified immediates as a rotated one). A value above the
+native signed maximum is written as its two's-complement negative (`movq(rax, -1)`). Superseded:
+a signed per-width slot type per slot (this cycle's first answer, spec#63), which no v1 type could
+give sub-native, zero-extended or pattern-encoded fields. Rejected: the operand width's signed
+type plus an encodable-set column; x86 types with the native integer elsewhere; sub-native types
+for immediates. (spec#63, spec#80.)
 
 **Normative — a `str` index is the built-in slice read plus the code-point-boundary check, a
 read-only place (Stdlib appendix §3, §3.6; Memory §1.6; Type System §4.5; Stdlib §4.1; OP-9).**
