@@ -242,7 +242,7 @@ of the writer's **own error type `E`**. Per tier discipline (Stdlib §1), `E` is
 error, of the **writer's tier or below** — there is **no** protocol-fixed error type (a fixed
 std-tier `IoError` here would be a tier inversion for a lower-tier sink, STD-2): the std byte streams
 `stdout` / `stderr` and `File` (§7, std) fail with the std-tier **`IoError`**, while an **in-memory
-buffer** (`String` / `StrBuf`, alloc) fails with the base-tier **`AllocError`** (§5.1) — its only
+buffer** (`String`, alloc) fails with the base-tier **`AllocError`** (§5.1) — its only
 real failure is exhausting its allocator (`OutOfMemory`). A `Writer` is the **sink** output composes
 against: formatting, serialization, and logging target *any* writer rather than a fixed stream, and
 compose **generically over `E`**. `?`-propagation works because the result is `Tryable` (§2.2) for
@@ -933,7 +933,7 @@ versioned addition (FND-6), not silent growth. A fallible operation returns `Res
 hidden failure, I11/I3); an allocation failure surfaces as `AllocError` (§5.1). Because the
 language has **no unit type** (Grammar §3.1), a fallible mutator with no natural result
 carries a **`usize` count** in its `Ok` arm — the new length for `push`/`push_str` (matching
-the count convention of `write` → `Result(usize, …)` §4.2 and `StrBuf::push_*`); this fixes
+the count convention of `Writer.write` → `Result(usize, …)`, §2.7); this fixes
 the success type unambiguously for an independent implementation (FND-3).
 
 **Comparison over `Vec(T)` and `String` is by content** (STD-6; §2.6's arm for the owning

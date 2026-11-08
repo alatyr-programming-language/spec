@@ -584,7 +584,7 @@ non-configurable canonical** (the gofmt model, TOOL-2): there is **no** style op
 the manifest or on the CLI — one well-formed program has exactly **one** formatted text.
 This is **normative** (FND-3): two conforming `fmt` implementations produce **byte-identical**
 output for the same input. `fmt` is **semantics-preserving** (the reformatted text parses to
-the same AST modulo formatting) and **comment-preserving** (§4.2.4), and it is
+the same AST modulo formatting) and **comment-preserving** (§4.3.4), and it is
 **idempotent** — `fmt(fmt(x)) == fmt(x)`. It operates per `.al` file; with no path argument
 it formats every `.al` file under the package root. A file that does not parse is **left
 unchanged** and reported as a diagnostic (`fmt` never emits ill-formed source).
