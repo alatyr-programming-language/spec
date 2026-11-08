@@ -44,5 +44,5 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | `codegen.md` | Codegen, lowering, optimization, backends, conventions | CG-1..16 |
 | `syntax.md` | Lexis, separators, declaration/expression grammar, `@` | SYN-1..8 |
 | `tooling.md` | Tooling, manifest, packages, tests | TOOL-1..22 |
-| `stdlib.md` | Prelude/stdlib definitions, streams, process inputs | STD-1..4 |
+| `stdlib.md` | Prelude/stdlib definitions, streams, process inputs | STD-1..5 |
 | `concurrency.md` | Concurrency | CC-1..9 |

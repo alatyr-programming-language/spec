@@ -550,28 +550,31 @@ into a **comptime tuple**: the function is **monomorphized** over their types, s
 **type-safe and heterogeneous**, and the body walks them with `comptime for`
 (Comptime §8.3). This is the primary, checked-code variadic.
 
-**Format-template shape (the specified trigger).** When a comptime-variadic's **first
-fixed parameter is `str`** and its argument is a **comptime string literal**, that literal
+**Format-template shape (the specified trigger).** When a comptime-variadic has a fixed
+parameter of type `str`, its **first fixed parameter of type `str`** — wherever it stands
+among the fixed parameters, so `format(w, "…", args…)` with a leading writer `w` is covered
+— is the template parameter; when its argument is a **comptime string literal**, that literal
 is a `{}`-**template**: it is split on `{}` holes and **interleaved** with the remaining
 (pack) arguments — the pack the body walks becomes `[seg0, arg0, seg1, …, segN]`, each
 piece rendered by the `Display`/scalar layer (Stdlib §2.7). This is the **single, normative
-trigger** that `format`/`print` use and that **any** user-defined comptime-variadic with a
-leading `str` parameter inherits — a documented rule, **not** a hidden reinterpretation
+trigger** that `format` and `print` use (Stdlib appendix §2.7) and that **any** user-defined
+comptime-variadic with a fixed `str` parameter inherits — a documented rule, **not** a hidden reinterpretation
 (I3). `{{`/`}}` escape a literal brace; a lone `{`/`}`, and a hole-count ≠ argument-count
-mismatch, are **comptime errors**; a **non-literal** first argument is **not** a template,
+mismatch, are **comptime errors**; a **non-literal** argument in the template's place is **not** a template,
 and **the call is still valid** (FN-13): with no template there are no holes to
-interleave, so for a leading value `s` the pack the body walks is `[s, arg0, …, argN]`:
+interleave, so for a value `s` in the template's place the pack the body walks is `[s, arg0, …, argN]`:
 `s` is **one fragment**, rendered by the same `Display`/scalar layer (Stdlib §2.7), and
 the remaining arguments follow it in their own order. `print(s, 1)` where `s` is a
 computed `str` therefore prints `s` and then `1`; it is not a comptime error, and the
-statement is never dropped — deleting a call because its first argument was not a literal
+statement is never dropped — deleting a call because its template argument was not a literal
 would discard an effect the author wrote, against I3.
 What stays forbidden is the *template* reading of a non-literal: no hole-splitting, no
 `{{`/`}}` unescaping, no hole-count check, because there is no literal to split. Since such
 a call has this v1 meaning, a later revision cannot make a non-literal a template without
 changing a valid program's output (I10).
-A comptime-variadic that must take a leading `str` *without* templating
-therefore takes it as a non-first parameter (or a runtime, non-literal value).
+A comptime-variadic that must take a `str` *without* templating therefore takes it in a
+fixed parameter after its first `str` one, or in the pack (or passes a runtime, non-literal
+value).
 
 #### 7.2 Slice variadic — the homogeneous case
 

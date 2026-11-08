@@ -49,7 +49,8 @@ and **deferred (additive) growth**.
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
   overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
-  a non-literal first argument to a comptime-variadic is a valid, untemplated call, FN-13).
+  a non-literal argument in a comptime-variadic's template place — its first fixed `str` parameter — is a valid,
+  untemplated call, FN-13/STD-5).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8.
 - `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
@@ -74,7 +75,9 @@ and **deferred (additive) growth**.
 - `[x]` **12. Standard library / built-ins.** Prelude tiering (base/alloc/std) + auto-DCE;
   intrinsics vs builtins; panic/exit/assert, `trap()` (CG-13); allocators `@alloc(value)` (STD-1); the
   Concurrency families (atomics, `volatile`, the 20 overflow policy functions, `fma`, `saturating_convert`, the constants
-  `NaN`/`Infinity`) enumerated by name and signature in the appendix (STD-1/CC-2/CG-8/CG-9).
+  `NaN`/`Infinity`) enumerated by name and signature in the appendix (STD-1/CC-2/CG-8/CG-9); output: the
+  `{}` template `format(w, "…", args…)` over any `Writer` and `print` as `format` to standard output, hosted only
+  (STD-5).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),
   per-module compilation + the output-neutral content-addressable cache / incremental build (TOOL-6).
@@ -124,7 +127,7 @@ verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
   `Send`/`Sync` library predicates (CC-5), a **volatile-qualified pointer** `ptr(volatile T)` (CC-2),
   **non-GAS backends** (WASM/WAT, …; the abstraction is fixed by CG-4, the backend itself is additive),
   **prelude convenience catalogs** over the v1 protocol shapes (STD-1): iterator adapters
-  (`map`/`filter`/…), `format`-template (gated on comptime-variadics) / `Display`+derive (gated on `typeinfo`) / `format->String` (gated on alloc) / `write_all` over `Writer` — *the minimal alloc-free scalar rendering is v1*, broader structural derives
+  (`map`/`filter`/…), `Display`+derive (gated on `typeinfo`) / `format->String` (gated on alloc) / `write_all` over `Writer` — *the minimal alloc-free scalar rendering, the `{}` template `format(w, …)` and the hosted `print` are v1 (STD-5)*, broader structural derives
   (`clone`/three-way `compare`/streaming `Hasher`/serialization), field-level `typeinfo` annotations.
   Implementation details: the `gen` provider surface (its generational-ref representation) + the OS-backed region provider (contracts set by MEM-1; the
   region/handle v1 surface is now specified by **MEM-3** — `Handle(T)`, `@alloc`→handle/trap, access via `get`).
