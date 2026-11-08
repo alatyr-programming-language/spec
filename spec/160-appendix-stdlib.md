@@ -243,18 +243,26 @@ the label, then the value, then a newline) — no allocation and no format strin
 freestanding target. This is the layer that lets a program print a **computed** value (TOOL-5 note:
 distinct from a compile-time-known string, which is just a literal).
 
-The conveniences over this shape are **additive** (FND-6), each gated on a capability the minimal
-layer does not need — adding them changes neither the protocol shape nor the minimal layer:
-- **`write_all`** (loop until the whole slice is consumed) — rides the shape directly;
-- **`format(w, "…", args…)`** with a **comptime-checked** template — needs **comptime-variadics**
-  (a heterogeneous argument pack, Functions §7.1). The template is a **comptime string literal**:
-  `{}` is a **hole** (filled, in order, by the trailing arguments, each rendered by the scalar/
-  `Display` layer below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
+**The `{}` template is v1** (STD-1), over that layer, through the comptime-variadic of Functions
+§7.1 (itself v1):
+- **`format(w, "…", args…)`** with a **comptime-checked** template — writes to any `Writer` `w`.
+  Its template is the argument of its **first fixed parameter of type `str`** (the trigger of
+  Functions §7.1; the writer `w` before it is not a `str`). The template is a **comptime string literal**:
+  `{}` is a **hole** (filled, in order, by the trailing arguments, each rendered by the scalar
+  layer above / the `Display` protocol below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
   `}` is a **comptime error**. The number of `{}` holes **MUST equal** the argument count — a
   mismatch is a comptime error (never a silently empty hole or a dropped argument). A non-literal
   template is never split: a non-literal in the template's place is rendered as one fragment
   and the call stays valid (Functions §7.1, FN-13). A `float` hole renders in base-10 with a bounded fractional part (an
   interim layer; a shortest-round-trip formatter is additive);
+- **`print("…", args…)`** is **`format` to standard output**: `print(t, args…)` ≡
+  `format(stdout, t, args…)` (the std stream of §7), with the same template rules — its first
+  fixed parameter is the `str` template — and the same result. It is **hosted only**: it is a
+  **std-tier** facility (§7), so it does not exist under `freestanding` (Stdlib §1).
+
+The other conveniences over this shape are **additive** (FND-6), each gated on a capability the
+minimal layer does not need — adding them changes neither the protocol shape nor the minimal layer:
+- **`write_all`** (loop until the whole slice is consumed) — rides the shape directly;
 - a **`Display`** protocol + a **structural derive** rendering an aggregate field-by-field — needs
   **`typeinfo`** field introspection (Comptime §5);
 - **`format(…) -> String`** (rendering into a returned growable string instead of a sink) — needs
@@ -933,6 +941,7 @@ Explicitly imported (Stdlib §1); forbidden under `freestanding`. The v1 std sur
   **Semantic** diagnostic naming that entry — never a silent empty result.
 - **I/O** — `stdin` / `stdout` / `stderr` byte streams (`read(buf)` / `write(buf)` /
   `flush()`; `stdout` / `stderr` and `File` satisfy the **`Writer`** protocol, §2.7);
+  **`print("…", args…)`** ≡ `format(stdout, "…", args…)` (§2.7);
   files: `open(path, mode) → Result(File, IoError)`, then `File.read(buf)` /
   `File.write(buf)` / `File.seek(pos)` / `File.close()`;
 - **time** — `now() → Instant` (wall clock); `monotonic() → Instant` (steady, for

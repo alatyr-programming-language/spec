@@ -61,9 +61,10 @@ scalars are not `Truthy`** — a numeric condition must be an explicit compariso
 ships the derived `eq`/`lt`/`hash` plus real consumers (`min`/`max`/`clamp`, in-place
 slice `sort`) so the `Ord` shape is not a dangling predicate. A **minimal, alloc-free
 scalar-rendering layer over `Writer`** is v1 so a program can print a *computed* value on
-a freestanding target; the richer catalogs over the shapes (iterator adapters, the
-`format` template, `Display`, `format->String`) are explicitly additive and gated on the
-features they need. **Error enums** are **closed v1 sets**: they grow only through an `Other`
+a freestanding target, and so is the **`{}` template** over it — `format(w, "…", args…)` to any
+`Writer`, and `print` as `format` to standard output on a hosted target (STD-5); the richer
+catalogs over the shapes (iterator adapters, `write_all`, `Display`, `format->String`) are
+explicitly additive and gated on the features they need. **Error enums** are **closed v1 sets**: they grow only through an `Other`
 variant or a versioned change, **never by adding variants** — so an exhaustive `match` over
 an error type stays valid across versions.
 
@@ -183,3 +184,54 @@ second generic `eq` over `[T]` could not carry it. The five fixtures become
 content-comparisons, and an implementation that compares the pair answers a wrong value.
 `Hash` over `[T]`/`str` follows content too (equal values hash alike), which §2.6 already
 requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with.
+
+### STD-5. The `{}` template is v1; its trigger is the first fixed `str` parameter; `print` is `format` to standard output — spec#38
+*provenance: refines STD-1 (which listed the `format` template as additive) and FN-13 (the
+  template trigger of Functions §7.1); defines the `print` that §7.1 and FN-13 named · spec:
+  Functions §7.1; Stdlib appendix §2.7, §7*
+
+**Question.** Three defects around one feature. Functions §7.1 called the `{}` template "the
+single, normative trigger" that `format`/`print` use, while Stdlib appendix §2.7, STD-1 and the
+aspect map's deferred list called the `format` template an **additive** convenience — v1 and
+not v1 at once. §7.1's trigger was "a comptime-variadic's **first fixed parameter is `str`**",
+but §2.7 spells `format(w, "…", args…)`, whose first fixed parameter is the writer `w`, so the
+function said to use the trigger did not meet it. And `print`, named by §7.1 and FN-13's
+example, was defined nowhere: no signature, tier or sink.
+
+**Decision (owner, 2026-11-08).** **(a) The `{}` template is v1**, not additive. **(b) The
+trigger is "the first fixed parameter of type `str`"**, wherever it stands among the fixed
+parameters, which covers `format(w, "…", args…)`. **(c) `print` is defined in Stdlib appendix
+§2.7 as `format` to standard output** — `print(t, args…)` ≡ `format(stdout, t, args…)`, with the
+same template rules and result — **hosted only**: a std-tier facility, absent under
+`freestanding`. The other conveniences (`write_all`, `Display` + derive, `format->String`) stay
+additive.
+
+**Why.** The template is already fully specified (holes, escapes, the count check, FN-13's
+non-literal rule) over two v1 mechanisms — comptime-variadics and the scalar rendering layer —
+so calling it additive left a specified, implementable feature in limbo and two answers to
+"must an implementation provide it?". Naming the trigger by the parameter's **type** rather than
+its **position** lets the writer come first, which is the shape every sink-generic output takes,
+without reshaping `format`. Defining `print` through `format` adds no mechanism: it fixes the
+sink (standard output, a std stream), and so the tier, and nothing else (PRIN-1).
+
+**Rejected.**
+- *Keep the template additive and drop the "normative trigger" wording from §7.1*: it leaves the
+  most common output form unspecified for v1 and every program that prints a value non-portable.
+- *Reshape `format` to `format("…", w, args…)`* so that "first fixed parameter is `str`" holds
+  literally: the template would stop being next to its holes' arguments only to satisfy a
+  wording, and every writer-generic signature would have to put the writer second.
+- *Drop `print` from §7.1 instead of defining it*: the most-written call in example code would
+  remain a name with no definition, and FN-13's example would have to change.
+
+**Consequences.** Functions §7.1 states the trigger by type and points at §2.7; Stdlib appendix
+§2.7 lists the template and `print` as v1 and the rest as additive; §7 lists `print` among the
+std I/O; STD-1's summary and the aspect map's deferred list drop the template. A comptime-variadic
+that must take a `str` without templating takes it in a fixed parameter after its first `str`
+one, or in the pack. This changes the meaning of the shape the former §7.1 advice recommended:
+a comptime-variadic whose first `str` fixed parameter is not its first fixed parameter
+(`f(x : u32, s : str, args : ...)`) now templates a literal there, so such a function moves that
+`str` into the pack or after another `str` parameter. A second, non-template `print(s : str)`
+beside the template one does not conform (a call `print("{}")` would have two readings);
+compiler#1515 tracks the compiler's. `format`'s own result type and failure behaviour, which
+`print` inherits, its tier, the module paths of `format` and `print`, and the v1 set of types a
+hole renders are not decided here (spec#46).

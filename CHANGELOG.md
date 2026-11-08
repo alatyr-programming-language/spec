@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the `{}` template is v1, its trigger is the first fixed `str` parameter, and
+`print` is `format` to standard output (Functions §7.1; Stdlib appendix §2.7, §7; STD-5).**
+The template was called the normative trigger in Functions §7.1 but an additive convenience in
+Stdlib appendix §2.7, STD-1 and the aspect map; it is v1. §7.1's trigger, "the first fixed
+parameter is `str`", missed `format(w, "…", args…)`, whose first parameter is the writer; it is
+now the first fixed parameter **of type** `str`, wherever it stands. `print`, named but never
+defined, is `format(stdout, …)` with the same template rules and result, a std-tier facility
+absent under `freestanding`. `write_all`, `Display` and `format->String` stay additive. A
+comptime-variadic whose first `str` fixed parameter is not its first fixed parameter — the shape
+the former §7.1 advice recommended for an untemplated `str` — now templates a literal there.
+
 **Normative — variant components may take the struct field form, and a nullary variant has
 one spelling (Types §6.2, §9.3, §9.4; Grammar §3.3, §3.4; manifest appendix §3.1, Tooling §2.2,
 ABI appendix §2, per-arch appendix §1; TYP-17).**  The manifest appendix's `Machine` enum

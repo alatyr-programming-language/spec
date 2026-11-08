@@ -430,11 +430,12 @@ three platform contracts by hand. A dedicated `@entry` **attribute** instead of 
 being selected *is* a lowering mode for a function's frame and return, which is precisely what `@abi`
 already selects (`naked` is one); a second attribute for the same axis is the duplication OP-1 rejects.
 
-### FN-13. A non-literal first argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
+### FN-13. A non-literal template argument to a comptime-variadic is a valid call, rendered as one fragment — compiler#1443
 *provenance: refines FN-5 (variadics) and the `{}` template trigger of Functions §7.1 ·
   spec: Functions §7.1; Stdlib appendix §2.7*
 
-**Question.** §7.1 says the template trigger is a **literal** first `str` parameter, and that
+**Question.** §7.1 says the template trigger is a **literal** argument to the first fixed `str`
+parameter (the parameter is named by type since STD-5), and that
 "a non-literal first argument is **not** a template (outside v1)". It does not say whether
 the **call** is then valid. `print(s, 1)` with `s` computed: ill-formed, or a call that
 simply does not template? One fixture sat on the gap, and the compiler's existing behaviour
@@ -459,7 +460,8 @@ end that.)
 non-literal template is outside v1") now says a non-literal is never split and points at it. The compiler fixture `reject_variadic_print_nonliteral`
 (`print(t)` with `t : str = "hi\n"`, then `return 7`) becomes a positive one: it prints `t`'s
 bytes and exits with 7, rather than being refused. The rule is uniform for any
-comptime-variadic with a leading `str`, so no per-function exception is introduced, and the
-existing advice in the same paragraph stays valid as advice about *templating*: a leading
-`str` taken as a non-first parameter, or passed as a runtime value, is not split. A runtime
-value in the leading place becomes the pack's first fragment, as decided above.
+comptime-variadic with a fixed `str` parameter, so no per-function exception is introduced, and the
+existing advice in the same paragraph stays valid as advice about *templating*: a `str` taken
+in a fixed parameter after the first `str` one, in the pack, or passed as a runtime value, is
+not split. A runtime value in the template's place becomes the pack's first fragment, as decided
+above.
