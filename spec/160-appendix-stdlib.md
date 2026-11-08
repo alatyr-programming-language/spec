@@ -296,6 +296,9 @@ distinct from a compile-time-known string, which is just a literal).
 **The `{}` template is v1** (STD-1), over that layer, through the comptime-variadic of Functions
 §7.1 (itself v1):
 - **`format(w, "…", args…)`** with a **comptime-checked** template — writes to any `Writer` `w`.
+  It is **base tier**, injected unqualified with the base prelude: it neither allocates nor reaches
+  the OS, the two things that place an item in the alloc or std tier (Stdlib §1), and it rides the
+  alloc-free layer above, so it exists on a freestanding target too (STD-1).
   Its template is the argument of its **first fixed parameter of type `str`** (the trigger of
   Functions §7.1; the writer `w` before it is not a `str`). The template is a **comptime string literal**:
   `{}` is a **hole** (filled, in order, by the trailing arguments, each rendered by the v1 hole
@@ -984,7 +987,14 @@ visible (I2).
   sub-slice `self[a..b]` → `[T]`; `iter` (Iterator); `clear` / `truncate(n)` / `reserve(n)`;
   the element exchanges `replace(i, x)` → `T` / `swap(i, j)` and the scoped element
   references `at_ptr(i)` → `scoped ptr(T)` / `at_mut(i)` → `scoped ptr(mut T)` (below).
-  Reallocation cost is visible (I2). The indexing surface is the **index operator** (OP-3 /
+  Reallocation cost is visible (I2). The two reads the rest of this entry builds on:
+
+  ```alatyr
+  len(in self : ptr(Vec(T))) -> usize               # the number of live elements
+  at(in self : ptr(Vec(T)), in i : usize) -> T      # the bounds-checked by-value read behind self[i]
+  ```
+
+  The indexing surface is the **index operator** (OP-3 /
   Type System §4.5): `self[i]` is `self.at(i)` (the bounds-checked trapping read — `Vec`'s
   established named read `at`, distinct from `get`'s `Option`; no separate `index` shim, OP-1),
   `self[i] = v` is `self.index_set(i, v)`, `self[i] ⊕= x` is `self.index_set(j, self.at(j) ⊕ x)`

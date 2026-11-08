@@ -147,7 +147,7 @@ A multi-name binding whose right-hand side is a **module / namespace path** proj
 each listed name onto the **same-named member** of that module:
 
 ```
-(fmt, vec) := std              # ≡  fmt := std::fmt ;  vec := std::vec
+(trig, stats) := math          # ≡  trig := math::trig ;  stats := math::stats
 (sin, cos) := math::trig       # ≡  sin := math::trig::sin ; cos := math::trig::cos
 ```
 
@@ -158,7 +158,7 @@ binding — there is no `const`), or a **type** — exactly what a single `name 
 aliases; projection is the symmetric *N*-name form of that one declaration:
 
 ```
-(println, eprintln) := std::io     # functions
+(mean, median) := math::stats      # functions
 (MAX, MIN) := i64::limits          # comptime constants
 (Vec3, Quat) := math::types        # types
 ```
