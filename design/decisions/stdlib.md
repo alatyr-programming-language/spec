@@ -235,8 +235,8 @@ a comptime-variadic whose first `str` fixed parameter is not its first fixed par
 `str` into the pack or after another `str` parameter. A second, non-template `print(s : str)`
 beside the template one does not conform (a call `print("{}")` would have two readings);
 compiler#1515 tracks the compiler's. `format`'s own result type and failure behaviour, which
-`print` inherits, its tier, the module paths of `format` and `print`, and the v1 set of types a
-hole renders are not decided here (spec#46).
+`print` inherits, and the v1 set of types a hole renders were not decided here (spec#46; decided
+by STD-7); `format`'s tier and the module paths of `format` and `print` are spec#74.
 
 ### STD-6. `Vec(T)` and `String` compare by content, not by buffer identity — spec#40
 *provenance: extends STD-4 (content comparison over views) to the alloc-tier owning containers;
@@ -279,6 +279,50 @@ open as spec#55. Appendix §2.6 gains the containers' arm, §6 the rule with its
 identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
 is filed as spec#50.
+
+---
+
+### STD-7. `format` returns `Result(usize, E)`, writes every fragment, stops at the first failure; the v1 hole set — spec#46
+*provenance: refines STD-5 (`format` / `print` are v1) and STD-2 (`Writer` and its own error
+  `E`); rewords FN-13's rendering clause · spec: Stdlib appendix §2.7; Functions §7.1*
+
+**Question.** With the `{}` template v1 (STD-5), `format(w, …)` had no stated result type, and
+nothing said whether it loops over short writes or stops at a failed one — so a hosted `print`
+to a closed stdout had no defined outcome. And the set of types a hole renders was the scalar
+layer (integers, `bool`, `char`) "or the `Display` protocol", which is additive: `str` was not
+listed though FN-13 renders a non-literal `str` as one fragment, a float rendered "with a
+bounded fractional part" without the bound, and `print("{}", p)` for a struct had no answer.
+
+**Decision (owner, 2026-11-08).** (1) `format(w, …) -> Result(usize, E)`: it writes every
+fragment completely, looping over short writes, stops at the first failed write and returns it;
+on success, the total byte count. `print` is the same, with `E = IoError`. (2) The v1 hole set:
+integers, `bool`, `char`, `str` as its bytes, and floats as the shortest decimal that reads
+back to the same value; any other type is a compile-time error until `Display` is provided.
+Consequences, not separate decisions: after a short write, the unconsumed remainder is offered
+again (a writer that keeps returning `Ok(0)` keeps being called); a result over an owning `E`
+is consumed like any owning value, not discarded (Memory §5.9); and, by Grammar §3.1 and
+Functions §3.3, a call to `print` as the final element of a procedure body is a
+value-expression there and makes the body ill-formed — the result is bound (`r := print(…)`) or
+handled. Left open: whether a user brand or `@require` type over a hole type is in the set
+(spec#99); which `write` calls carry the fragments (spec#100).
+
+**Why.** The result mirrors `Writer.write` and STD-2's `?` story, so a failure is a value the
+caller sees (I3, I11) and the count is kept at no cost; `print` stays exactly `format` to
+stdout, as STD-5 made it. A closed hole set fixes the bytes of every v1 call (FND-3) and
+leaves `Display` additive without changing any v1 program's output (I10).
+
+**Rejected.** *A result without the count* — loses information for no gain. *`print` alone
+traps or ignores a stdout failure* — a hidden failure policy (I3/I11), and `print` would stop
+being `format` to stdout. *`Display` in v1* — it needs the structural derive over `typeinfo`
+and was kept additive by STD-5. *A float with a fixed number of fractional digits* — loses
+values or prints noise; shortest round-trip is exact and minimal.
+
+**Left open.** The exact text of a float hole (notation, ties, integral values, non-finite and
+signed zero): spec#75. `format`'s tier and the module paths of `format`, `print` and the §7 std
+surface: spec#74. An explicit discard form for a value in final position: spec#81. A writer
+returning `Ok(k)` beyond its slice, and a total count past `usize`: spec#82. Whether a user
+brand or `@require` type over a hole type is in the hole set: spec#99. Which `write` calls carry
+the fragments (an empty fragment, joining fragments): spec#100.
 
 ---
 
