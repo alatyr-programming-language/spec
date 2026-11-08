@@ -68,8 +68,12 @@ and **deferred (additive) growth**.
   changing nothing, a floating-point one per operation in its IEEE format, CT-14; open: spec#86, #87, #88, #91), generics (CT-3), constraint-predicates (CT-4),
   comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
-  `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`
-  compares by content through the derive's view arm, STD-4, and so do the owning `Vec(T)` and `String`, STD-6),
+  `typeinfo` for **every** type, struct/array/enum, with no comparison built into the compiler's checker or
+  code generator — the derives are prelude code, and the owning-container arm that names alloc-tier types lives
+  in the compiler-provided prelude built per translation unit with its limits, STD-8; a slice or `str`
+  compares by content through the derive's view arm, STD-4, and so do the owning `Vec(T)` and `String`, STD-6;
+  a `HashMap` compares its entries for `==`, and `<` / `hash` over it are ill-formed, STD-9;
+  open: spec#101, #102, #103),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6;
   `a[i] ⊕= rhs` on a library aggregate = `index_set(a, j, at(a, j) ⊕ rhs)`, `a` and `i` each evaluated once, OP-7;
   a write into the element through it, `a[i].f = x`, is refused, OP-8; a `str` index is the built-in slice read

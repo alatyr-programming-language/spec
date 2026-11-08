@@ -177,10 +177,39 @@ address take no part. Like the view arm, this one is keyed on the prelude's own 
 types, wherever the walk meets them (as an operand, or as a field, element or component); it is an
 arm of the structural default rather than a per-type override, because FN-7 admits one generic
 definition per name and `Vec(T)` is generic. The arm exists exactly when the alloc tier does:
-under `no_alloc` there is no `Vec` or `String` for it to meet, and the base-tier signature of
+under `no_alloc` there is no `Vec`, `String` or `HashMap` for it to meet, and the base-tier signature of
 `eq` / `lt` / `hash` names no alloc-tier type, so it is no tier inversion (Stdlib §1).
-How a base-tier library body names the alloc-tier types is open as spec#55; the observable
-rule above does not depend on it.
+
+**`HashMap(K, V)` takes the arm for equality only (STD-9).** The third owning container of §6
+holds a pointer to its table, so the plain walk would compare table addresses; a map has no
+element order, so its content is the set of its entries. Its default **`eq`** is content
+equality: `a == b` holds when `a.len() == b.len()` and, for every entry `(k, v)` of `a`, `b`
+holds a value `w` under a key equal to `k` (by `K`'s `eq`) with `eq(v, w)` — capacity,
+allocator, table address and iteration order take no part; `!=` is its negation. `==` over a
+`HashMap(K, V)` therefore **requires** `V`'s `eq` (the lookup uses `K`'s `eq` and `hash`, which
+every `HashMap` already requires). **`lt` and `hash` over a `HashMap` are ill-formed**: a `<` /
+`<=` / `>` / `>=` or a `hash` whose operand is a `HashMap`, or whose structural walk reaches one
+as a field, element or component, is a **Semantic diagnostic at that site** — never an answer by
+address. The refusal is the structural default's: the default `lt` / `hash` has no body for a
+`HashMap`, so `resolves(lt, …)` / `resolves(hash, …)` is false for it and for a type whose walk
+reaches one. A containing type that provides its own concrete `lt` / `hash` (the override of
+this section) is not walked, so the refusal does not reach it; whether a concrete `lt` / `hash`
+declared over a `HashMap` type itself lifts the refusal is open, spec#102. So a `HashMap` cannot
+be a `HashMap` key, nor can a type whose walk reaches one without its own `hash`: such a `K`
+fails §6's requirement at the `HashMap(K, V)` that names it. The order in which `V`'s `eq` is
+called over the entries, and whether the comparison stops at the first mismatch, are open,
+spec#103.
+
+**Where the arm lives (STD-8).** The owning-container arm (STD-6, STD-9) is part of the
+**compiler-provided prelude** (Stdlib §1), which is built **per translation unit with that unit's
+limits**: for a unit where the alloc tier is present, the default `eq` / `lt` / `hash` body the
+unit sees includes this arm and names the alloc-tier `Vec`, `String` and `HashMap`; for a unit
+without it (`no_alloc`, or no allocator), the body has no such arm and names nothing absent. No
+language construct tests for a tier: the selection is the toolchain building the prelude a unit
+is given, as it already omits the `alloc` root for that unit (Stdlib §1). The arm remains prelude
+code over `typeinfo`, not a compiler-internal comparison. Whether a unit without the alloc tier
+may use, and so compare, a type from another unit whose layout reaches an alloc-tier type — where
+its body would have no arm to meet it — is open, spec#101.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
@@ -206,7 +235,8 @@ never the comparison, which is determined by the two `usize` values it is given 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
 from the operands** (TYP-1/CT-2; Comptime §5.4 shows the struct arm of the body; the view arm
-and the owning-container arm above take a slice, `str`, `Vec(T)` or `String` before it) — so `a == b` applies it without
+and the owning-container arm above take a slice, `str`, `Vec(T)`, `String` or — for `eq` —
+`HashMap(K, V)` before it) — so `a == b` applies it without
 naming `T`. (The conformance shape above is that generic instantiated at one `T`; there is
 no implicit-type-parameter form — every generic names `T : type`, Functions §1.4.) A type
 **overrides** the structural default by defining its own **concrete** `eq` / `lt` / `hash`
@@ -1014,7 +1044,8 @@ visible (I2).
 - **`HashMap(K, V)`** — a hash map. v1 operations: `new` / `with_capacity(n)`;
   `insert(k, v)` → `Result(Option(V), AllocError)` / `get(k)` → `Option(...)` /
   `remove(k)` → `Option(V)` / `contains(k)` → `bool`; `len` / `is_empty` / `iter` / `clear`.
-  Requires `K` to satisfy the **`Hash` and `Eq`** protocols (§2.6).
+  Requires `K` to satisfy the **`Hash` and `Eq`** protocols (§2.6). `==` / `!=` over a
+  `HashMap` compare its entries (below; STD-9); `<` and `hash` over one are ill-formed.
 
 These operation sets are the **closed v1 surface** of each type; a further method is a
 versioned addition (FND-6), not silent growth. A fallible operation returns `Result` (no
@@ -1035,6 +1066,13 @@ buffers, capacities or allocators. The cost is **O(n)** (in the shorter length f
 `<`, in its own length for `hash`), stated here because the operator hides it. A caller who wants identity compares the **data pointers**
 explicitly — `v[0..v.len()].ptr` for a `Vec`, `bytes(s.as_str()).ptr` for a `String` (and the
 lengths) — an ordinary pointer comparison, legal in checked code (Memory §4.5).
+
+**Equality over `HashMap(K, V)` is by content; ordering and hashing are refused** (STD-9; §2.6).
+`a == b` holds when the lengths are equal and every key of `a` maps in `b` to a value equal to
+its own by `V`'s `eq` — so `==` **requires** `V`'s `eq`. The cost is **O(n)** expected: one
+lookup in `b` per entry of `a`, each degrading with collisions as any lookup does. `<` / `<=` /
+`>` / `>=` and `hash` over a `HashMap`, directly or reached through an aggregate's walk, are a
+Semantic diagnostic at the site.
 
 ---
 
@@ -1095,7 +1133,8 @@ A conforming implementation MUST:
    the std byte streams writers (§2.7), **derive `eq`/`lt`/`hash` structurally** over
    `typeinfo`, overridable per type, with a slice or `str` compared by content (§2.6's
    view arm, §3.5/§3.6) and a `Vec(T)` or `String` likewise (§2.6, §6;
-   STD-6), and provide the v1 `Ord` consumers `min` / `max` /
+   STD-6), a `HashMap` by its entries for `==` / `!=` with `<` and `hash` over it rejected at
+   the site (STD-9), and provide the v1 `Ord` consumers `min` / `max` /
    `clamp` and in-place slice `sort` (§2.6/§3.5);
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the

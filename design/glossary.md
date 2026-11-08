@@ -111,7 +111,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Protocol (comptime form)** — a structural contract by which a language construct works with a type, **not**
   depending on its name: a condition requires *truthy* (`bool` and types providing `is_true`; numeric scalars are **not** truthy — write `n != 0`), `?` requires *tryable* (`Option`/`Result` and
   user-defined), `for`/iteration requires an *iterator* (a `next` yielding an *optional* shape — present/absent, no error payload; ranges/slices/arrays and user-defined),
-  the comparison operators and `HashMap` keys require *eq*/*ord*/*hash* (derived structurally over `typeinfo`, overridable; a slice or `str` compares by content, STD-4, and so do `Vec(T)` and `String`, STD-6), and output targets a *writer* (a byte sink, whose `write` returns the writer's **own** tier-appropriate error — `IoError` for a std stream, `AllocError` for an in-memory buffer; never a protocol-fixed error, STD-2) — STD-1.
+  the comparison operators and `HashMap` keys require *eq*/*ord*/*hash* (derived structurally over `typeinfo`, overridable; a slice or `str` compares by content, STD-4, and so do `Vec(T)` and `String`, STD-6, and a `HashMap` for `==` only, STD-9), and output targets a *writer* (a byte sink, whose `write` returns the writer's **own** tier-appropriate error — `IoError` for a std stream, `AllocError` for an in-memory buffer; never a protocol-fixed error, STD-2) — STD-1.
   Implemented via predicates/`resolves` (CT-4/CT-6); the prelude supplies the canonical types (CF-8).
 
 - **Overload set / overloading by signature** (FN-7) — several **function values** bound to the **same name** in one

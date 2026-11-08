@@ -416,7 +416,8 @@ concrete field** and the projection is comptime-known by construction. This is t
 that makes the v1 structural derives (`eq` / `lt` / `hash`, Stdlib appendix §2.6) ordinary
 **library code over `typeinfo`** (TYP-9). The body below is the struct arm; a slice or `str`
 is compared by content instead (Stdlib appendix §2.6's view arm, STD-4), and so is a `Vec(T)` or
-`String` (Stdlib appendix §2.6's arm for the owning containers, STD-6).
+`String` (Stdlib appendix §2.6's arm for the owning containers, STD-6), and a `HashMap` for `==`,
+with `<` and `hash` over it refused (STD-9).
 
 ```alatyr
 eq := fn(T : type, in a : T, in b : T) -> bool {
@@ -460,7 +461,9 @@ match a {
 
 Both compose existing syntax (the variant-pattern `.`-spelling, the `comptime for` unrolling) with the comptime
 universe — **no new keyword** (OP-1) — so the **enum** case of the v1 structural derives (Stdlib appendix §2.6) is
-ordinary library code over `typeinfo`, and the compiler keeps **no** built-in structural-comparison knowledge.
+ordinary library code over `typeinfo`, and the compiler keeps **no** built-in structural-comparison knowledge: the
+derives are prelude code, and the one arm that names alloc-tier types (the owning containers) sits in the
+compiler-provided prelude built per translation unit with its limits (Stdlib appendix §2.6; STD-8).
 
 ---
 

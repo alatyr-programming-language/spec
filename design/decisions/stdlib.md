@@ -274,11 +274,12 @@ prelude's `Vec` and `String`, beside the view arm, not by a per-type override: F
 generic definition per name, and `Vec(T)` is generic, so a second generic `eq` over it could not
 exist (the mechanism follows from "as STD-4 does for views" and FN-7; it is not a separate
 choice). The arm exists only where the alloc tier does, and the base-tier `eq` signature names
-no alloc type, so there is no tier inversion; how the base body names the alloc types is
-open as spec#55. Appendix §2.6 gains the containers' arm, §6 the rule with its cost and the
+no alloc type, so there is no tier inversion; how the base body names the alloc types was
+open as spec#55 and is decided by STD-8 (the arm lives in the compiler-provided prelude built per
+translation unit). Appendix §2.6 gains the containers' arm, §6 the rule with its cost and the
 identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
-is filed as spec#50.
+was filed as spec#50 and is decided by STD-9.
 
 ---
 
@@ -323,6 +324,72 @@ surface: spec#74. An explicit discard form for a value in final position: spec#8
 returning `Ok(k)` beyond its slice, and a total count past `usize`: spec#82. Whether a user
 brand or `@require` type over a hole type is in the hole set: spec#99. Which `write` calls carry
 the fragments (an empty fragment, joining fragments): spec#100.
+
+---
+
+### STD-8. The owning-container comparison arm lives in the compiler-provided prelude, built per translation unit — spec#55
+*provenance: refines STD-6 (its mechanism) on STD-1's tiering (Stdlib §1: the tiers are
+  compiler-provided) and FND-10/FND-11 (limits are per translation unit) · spec: Stdlib appendix
+  §2.6; Comptime §5.5*
+
+**Question.** STD-6 puts the content arm for `Vec(T)` / `String` inside the base-tier generic
+`eq` / `lt` / `hash`, described as ordinary library code over `typeinfo` with "no built-in
+comparison in the compiler". That body must name `alloc::Vec` / `alloc::String`, but under
+`no_alloc` the `alloc` root does not exist (Stdlib §1), so the name would be an unresolved-name
+error. The observable rule was settled; the mechanism a conforming base library uses to name an
+absent tier's type conditionally was not.
+
+**Decision (owner, 2026-11-08).** Option 1. **The container arm lives in the compiler-provided
+prelude, built per translation unit with its limits**: a unit with the alloc tier gets a default
+body with the arm, a unit without it gets one without. The aspects-map line "no built-in
+comparison in the compiler" is reworded accordingly. **No tier predicate is introduced** (PRIN-1).
+
+**Why.** Stdlib §1 already makes all three tiers compiler-provided and already builds what a
+unit sees from its limits (the `alloc` root is absent under `no_alloc`), so choosing the prelude
+body per unit is the same act, not a new entity. The comparison stays prelude code over
+`typeinfo`; the compiler's checker and code generator gain no comparison knowledge.
+
+**Rejected.** *A comptime tier-presence predicate* (`comptime if tier(alloc)`) usable in library
+code — explicit and general, but a new language entity for one arm (PRIN-1). *The alloc tier
+contributes the arm through an extension point in the base walk* — needs an extension
+mechanism that FN-7's one-generic-definition rule does not obviously admit, and v1 has none.
+
+**Left open.** Whether a unit without the alloc tier may use, and so compare, a type from
+another unit whose layout reaches an alloc-tier type (STD-6's "no `Vec` for it to meet" has no
+rule behind it yet): spec#101.
+
+---
+
+### STD-9. `==` over `HashMap(K, V)` compares entries; `<` and `hash` over it are ill-formed — spec#50
+*provenance: extends STD-6 (content comparison over the owning containers) to the third
+  container of appendix §6, with STD-8's arm · spec: Stdlib appendix §2.6, §6, §8; Comptime §5.4*
+
+**Question.** STD-6 covers `String` and `Vec(T)` only. Over a `HashMap(K, V)`, `==` / `<` /
+`hash` took the plain field walk, which reaches the `Pointer` leaf of its table and compares
+**addresses** — the trap STD-4 and STD-6 rejected — also when the map is a field of a struct
+being compared. A map has no element order, so "content" means its set of entries, and `<` has
+no natural meaning.
+
+**Decision (owner, 2026-11-08).** Option 1. **`==` / `!=` over `HashMap(K, V)` compare
+content**: equal `len`, and every key of one maps in the other to an `eq` value — which needs
+`V`'s `eq`. **`<` and `hash` over a `HashMap` are ill-formed at the site.** Consequences, not
+separate decisions: "over a `HashMap`" covers a map reached by the structural walk of an
+aggregate, as STD-6's arm does, so a struct holding a map compares by `==` and refuses `<` and
+`hash` unless it overrides them; the derived `<=` / `>` / `>=` go with `lt`; and a map cannot be
+a `HashMap` key (it fails §6's `Hash` requirement, since the default `hash` does not resolve
+for it). The cost (O(n) expected lookups) is stated, as STD-6 does.
+
+**Why.** It mirrors STD-6 where an order exists neither in the map nor in its meaning: the
+useful relation is defined by content, and the meaningless ones are refused rather than
+answered by address. One direction suffices once the lengths match, because keys are unique.
+
+**Rejected.** *Content `==` plus an order-independent `hash`* (a commutative fold of entry
+hashes) — weaker against collisions, and its exact definition would have to be fixed for FND-3.
+*All comparison over a `HashMap` ill-formed* — smallest, but equality of two maps is a
+reasonable question to ask.
+
+**Left open.** Whether a concrete user `lt` / `hash` declared over a `HashMap` type itself lifts
+the refusal: spec#102. The order of `V`'s `eq` calls over the entries and early exit: spec#103.
 
 ---
 
