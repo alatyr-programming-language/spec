@@ -153,7 +153,7 @@ There is no separate keyword per kind of thing:
 Point   := struct { x : u64, y : u64 }
 Meters  := brand(u64)
 add     := fn(a : u64, b : u64) -> u64 { a + b }
-Vec     := fn(T : type) -> type { struct { ptr : ptr(T), len : usize } }
+Run     := fn(T : type) -> type { struct { ptr : ptr(T), len : usize } }
 comptime PI : f64 = 3.14159
 mut count : u64 = 0
 ```

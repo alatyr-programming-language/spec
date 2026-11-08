@@ -114,9 +114,12 @@ The fundamental operations relating values and places are:
 
 A store's left operand MUST be a place-expression; assigning to a value-expression
 is ill-formed — so a store into a field or index of a value-expression, `f().x = 1` with `f`
-returning a struct by value, is ill-formed, not a write into a discarded copy. Whether a
-call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target is open as spec#84:
-Grammar §3.3 does not derive one. A field or raw-union member, tuple component or array index reaching into the storage of a
+returning a struct by value, is ill-formed, not a write into a discarded copy. A
+call-rooted place (`make_slice()[0]`, `make_ptr().x`) is not a store target: Grammar §3.3's `place`
+roots a target at a name, a path or `deref(…)`, so such a store has no derivation and is a syntax
+error (Grammar §5 item 3); the place-expression MUST above is a necessary condition, not a
+sufficient one, so it agrees; `deref(make_ptr()).x = 1`, or binding the slice first, is the derivable
+form. A field or raw-union member, tuple component or array index reaching into the storage of a
 library aggregate's element through its index is not a place either, so a store into the
 element (`a[i].f = x`) is ill-formed (Type System §4.5; OP-8); a dereference out of the
 element (through a pointer- or slice-typed element or component of it) still yields a place. `a[i] = v` on a library

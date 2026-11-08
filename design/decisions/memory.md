@@ -384,8 +384,8 @@ pointer-typed base auto-derefs and `make_ptr().x` is a field of a dereference, a
 
 **Not decided here.** The **owning** case was decided afterwards by MEM-12: an owning value-expression
 at a read-only receiver slot gets no temporary and the call is ill-formed, and `Vec(T)` and `String`
-are `@owning` — so this decision's `make_vec().len()` example is now ill-formed. Whether a call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target
-is spec#84 (Grammar §3.3 derives none). (An owning element of a `Vec` is not read by value at all, STD-10, so `vv[i]` with
+are `@owning` — so this decision's `make_vec().len()` example is now ill-formed. A call-rooted place (`make_slice()[0]`, `make_ptr().x`) is no store target: Grammar §3.3 derives
+none, so the store is a syntax error (Grammar §5 item 3; Memory §1.6; spec#84). (An owning element of a `Vec` is not read by value at all, STD-10, so `vv[i]` with
 an owning element — over a `Vec(Vec(T))` too, MEM-12 — never reaches this case.)
 
 **Why.** A read-only receiver only needs *an* address to read through; the caller can always supply one

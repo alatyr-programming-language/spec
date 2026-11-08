@@ -108,7 +108,7 @@ shortest decimal that reads back to the same value); any other type is a comptim
 `Display` is added. Because a procedure body may not end in a value-expression (Functions
 §3.3), `print(…)` as the last element of a function with no result is now ill-formed there;
 discard the result (`_ := print(…)`, SYN-9), bind it or handle it. Open: the exact text of a float (spec#75);
-`format`'s tier and the module paths (spec#74); a writer
+the module paths (spec#74); a writer
 over-reporting its count, and a total past `usize` (spec#82); a user brand or `@require` type
 in a hole (spec#99); which `write` calls carry the fragments (spec#100). Rejected: a count-less
 result; a `print` that traps or ignores a stdout failure; `Display` in v1; a fixed-fraction float. (spec#46.)

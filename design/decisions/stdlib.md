@@ -236,7 +236,9 @@ a comptime-variadic whose first `str` fixed parameter is not its first fixed par
 beside the template one does not conform (a call `print("{}")` would have two readings);
 compiler#1515 tracks the compiler's. `format`'s own result type and failure behaviour, which
 `print` inherits, and the v1 set of types a hole renders were not decided here (spec#46; decided
-by STD-7); `format`'s tier and the module paths of `format` and `print` are spec#74.
+by STD-7); `format`'s tier (base, so injected unqualified) follows from existing text (Stdlib §1;
+appendix §2.7); `print`'s module
+path is spec#74.
 
 ### STD-6. `Vec(T)` and `String` compare by content, not by buffer identity — spec#40
 *provenance: extends STD-4 (content comparison over views) to the alloc-tier owning containers;
@@ -321,8 +323,9 @@ and was kept additive by STD-5. *A float with a fixed number of fractional digit
 values or prints noise; shortest round-trip is exact and minimal.
 
 **Left open.** The exact text of a float hole (notation, ties, integral values, non-finite and
-signed zero): spec#75. `format`'s tier and the module paths of `format`, `print` and the §7 std
-surface: spec#74. The explicit discard form for a value in final position: settled by SYN-9 (spec#81). A writer
+signed zero): spec#75. The module paths of the §7 std surface: spec#74 (`format`'s tier,
+base, follows from existing text). The explicit discard form for a value in final position:
+settled by SYN-9 (spec#81). A writer
 returning `Ok(k)` beyond its slice, and a total count past `usize`: spec#82. Whether a user
 brand or `@require` type over a hole type is in the hole set: spec#99. Which `write` calls carry
 the fragments (an empty fragment, joining fragments): spec#100.
