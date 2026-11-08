@@ -237,6 +237,12 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   a failed integer guard in it outside `unchecked` a compile-time diagnostic (Comptime §1.1; where the
   per-operator and mathematical readings differ is spec#62). Where an immediate is accepted it is an immediate.
 
+- **Slot type** (CG-18) — the signed integer type of the width an instruction form encodes in an
+  immediate slot or an integer `at(…)` field, given per architecture by the arch table (`disp : i32` and
+  `movb`'s immediate `i8` on x86_64). An immediate there must be assignable to it, a constant expression
+  takes it as its context type, and every value of it is encodable (Assembly §5). A field no v1 type
+  describes (sub-native, zero-extended, pattern-encoded) has none yet — spec#80.
+
 - **Value introducer** (*introducer*) — surface syntax for writing a value-literal on the
   RHS of a declaration: `struct/enum/union{}` (type-literals), `fn(){}` (a function), `mod{}`
   (a module) (FN-1/SYN-6). An **ABI** value is **not** an introducer — it is an ordinary `Abi`

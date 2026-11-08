@@ -49,6 +49,20 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — an immediate slot and an `at(…)` field take a signed per-width slot type from the
+arch table (Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch appendix §2(f), §3.6–§8.6, §9;
+CG-18).**  Nothing named the type of an immediate slot or of `disp`, so since CT-13 nothing fixed
+whether `movb(al, 200 + 100)` or `disp = -0x80000001` is well-formed. Each such slot now has a
+**slot type**, the signed type of the width its form encodes (`i8` for `movb`, `i32` for a 64-bit
+`add`, `i64` for `movq` into a register, `disp : i32` on x86_64 and i386); an immediate must be
+assignable to it, a constant expression takes it as context and is checked against it, and every
+value of it is encodable. A positive value above the maximum is written as its two's-complement
+negative (`movb(al, -56)`). The arch appendix gains a slot-type table per architecture; the fields
+no v1 type describes — sub-native, zero-extended and pattern-encoded ones, which are every slot of
+aarch64, aarch32 and RISC-V and x86's shift counts, `int` vector, SSE selectors and `scale` — are
+listed as open (spec#80). Rejected: the native signed integer as context with a separate per-arch
+range; no context type. (spec#63.)
+
 **Normative — a `str` index is the built-in slice read plus the code-point-boundary check, a
 read-only place (Stdlib appendix §3, §3.6; Memory §1.6; Type System §4.5; Stdlib §4.1; OP-9).**
 The `str` entry admitted byte access as either the built-in slice read or library code, and
@@ -111,7 +125,8 @@ compile-time diagnostic (`x : u8 = 200 + 100` is rejected). `disp = -16` and `0 
 immediates; CG-15 and CG-16 no longer leave the phase of `0 - 1` open. How the check reads where
 per-operator and mathematical evaluation differ (`-1` at an unsigned type, `-128 : i8`,
 `unchecked`), and how a floating-point constant expression is evaluated, are open as spec#62;
-the context type of an immediate slot as spec#63. Whether a constant expression is admitted
+the context type of an immediate slot as spec#63 (since settled by CG-18, above). Whether a
+constant expression is admitted
 under `no_abstractions` is open as spec#59. Rejected: only a literal and unary `-` on a literal
 comptime; every non-literal runtime, with negative immediates spelled through a `comptime`
 binding. (spec#39.)

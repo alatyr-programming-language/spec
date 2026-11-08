@@ -80,7 +80,7 @@ machine model, whose pointer width is the arch's 32-bit (Manifest §3.2). New tr
 
 ### 2. Table format (the schema each architecture section fills)
 
-Every architecture section (§3–§8) provides **five tables**, all populating the Assembly
+Every architecture section (§3–§8) provides **six tables**, all populating the Assembly
 chapter schema:
 
 **(a) Registers** (Assembly §6) — by **class** (GP / FP-SIMD / system), each row a
@@ -121,6 +121,15 @@ relocation syntax it lowers to:
 arch-specific operand decorator** (e.g. an x86 segment override), with their meaning:
 
 > `decorator | meaning`
+
+**(f) Slot types** (Assembly §5, §7; CG-18) — the **slot type** of each immediate slot of
+a table-(b) row and of each integer `at(…)` field of table (c): the **signed** integer type
+of the width the form encodes there. An immediate there MUST be assignable to it, and every
+value of it is encodable (Assembly §5). A slot whose encoding no v1 type describes — a
+sub-native width, a zero-extended field, a pattern-encoded immediate — is listed as
+**open** (spec#80) rather than given a type:
+
+> `slot | slot type | notes`
 
 An instruction or decorator **absent** from the curated tables is reached with `asm(…)`
 (Assembly §4); the tables are the curated set, not the whole ISA.
@@ -325,6 +334,28 @@ or the relevant builtin (Concurrency §2).
 | `v.mask(k)` | apply AVX-512 opmask `k` (merging) — **requires `avx512`** |
 | `v.mask(k).zeroing()` | apply opmask `k` with zeroing of masked-off lanes — **requires `avx512`** |
 
+#### 3.6 Slot types
+
+The **operand width** of a form is its size suffix (`movb` 8, `movw` 16, `andl` 32, `orq`
+64), or else the width of its register destination (`add(rax, 1)` is a 64-bit form). An unsuffixed
+form with a memory destination and no register operand has no width in this revision
+(spec#92), so no slot type.
+
+| Slot | Slot type | Notes |
+|------|-----------|-------|
+| immediate of an 8-bit form of `mov`, `add`/`sub`, `and*`/`or*`/`xor`, `cmp`/`test` | `i8` | `imm8` |
+| immediate of a 16-bit form of those, or of `imul` | `i16` | `imm16` |
+| immediate of a 32-bit form of those, or of `imul` | `i32` | `imm32` |
+| immediate of a 64-bit form of those (except a 64-bit `mov` into a register), or of `imul` | `i32` | `imm32`, sign-extended to 64 by the hardware |
+| immediate of a 64-bit `mov` into a register (`movq(rax, …)`, `mov(rax, …)`) | `i64` | GAS chooses the `imm32` or the 10-byte `movabs` encoding, below the GAS line (§2(b)) |
+| immediate of `push` | `i32` | `pushq imm32`, sign-extended |
+| `at(…)` `disp` | `i32` | `disp32`, sign-extended to 64 (`disp8` is the assembler's choice of encoding) |
+| shift count of `shl`/`shr`/`sar`; vector number of `int`; selector of `cmpps`/`cmppd`/`shufps`/`pshufd` | **open** (spec#80) | zero-extended `imm8` |
+| `at(…)` `scale` | **open** (spec#80) | one of {1, 2, 4, 8}, a set rather than a range |
+
+`at(…)` `offset` takes a symbol operand (§3.4) and `base`/`index` a register: neither is an
+integer slot.
+
 ---
 
 ### 4. `i386`
@@ -435,6 +466,21 @@ at(offset = tls_var).seg(gs)         # %gs:tls_var ; with tls_var.tpoff() → %g
 (AVX-512 opmask decorators `mask`/`zeroing` exist only with the AVX-512 feature, as on
 `x86_64` §3.5 — additive per-arch data, FND-6.)
 
+#### 4.6 Slot types
+
+As `x86_64` §3.6 without the 64-bit forms, for the 32-bit protected-mode tables above:
+
+| Slot | Slot type | Notes |
+|------|-----------|-------|
+| immediate of an 8-bit form of `mov`, `add`/`sub`, `and*`/`or*`/`xor`, `cmp`/`test` | `i8` | `imm8` |
+| immediate of a 16-bit form of those, or of `imul` | `i16` | `imm16` |
+| immediate of a 32-bit form of those, or of `imul`; immediate of `push` | `i32` | `imm32` |
+| `at(…)` `disp` | `i32` | `disp32`; addresses wrap at 2³², so an absolute address at or above `0x80000000` is written as its `i32` two's-complement value |
+| shift count of `shl`/`shr`/`sar`; vector number of `int`; selector of `cmpps`/`shufps` | **open** (spec#80) | zero-extended `imm8` |
+| `at(…)` `scale` | **open** (spec#80) | one of {1, 2, 4, 8} |
+
+`at(…)` `offset` takes a symbol operand (§4.4) and `base`/`index` a register.
+
 ### 5. `aarch64`
 
 Machine model: 64-bit, little-endian; pointer width 64. Default ABI: **`aapcs64`**
@@ -526,6 +572,19 @@ The keyword-collision rule (§3.2) applies to **`and`** only — AArch64 spells 
 | `v.lanes(T, N)` | interpret `v` register as `N` lanes of `T` (e.g. `v0.lanes(f32, 4)` ≡ the `.4s` arrangement) |
 | `z.pred(p)` | apply SVE predicate `p` (merging) to a scalable-vector op (only with the `sve` feature) |
 | `z.pred(p).zeroing()` | apply predicate `p` with zeroing of inactive lanes (SVE) |
+
+#### 5.6 Slot types
+
+| Slot | Slot type | Notes |
+|------|-----------|-------|
+| immediate of `mov`, `movz`/`movk`/`movn`, `svc` | **open** (spec#80) | zero-extended `imm16` (with a shift for `movz`/`movk`/`movn`); `mov` accepts what a `movz`/`movn`/`orr` encodes |
+| immediate of `add`/`sub`/`cmp`/`cmn` | **open** (spec#80) | zero-extended `imm12`, optionally shifted by 12 |
+| immediate of `andx`/`andw`/`orr`/`eor`/`bic`/`orn`/`tst` | **open** (spec#80) | a logical (bitmask-pattern) immediate; `mvn` has no immediate form (spec#90) |
+| shift amount of `lsl`/`lsr`/`asr`/`ror`; bit number of `tbz`/`tbnz` | **open** (spec#80) | zero-extended, below the register width |
+| `at(…)` `disp` | **open** (spec#80) | an unsigned scaled `imm12` (`ldr`/`str`), a signed `imm9` (`ldur`/`stur`) or a signed scaled `imm7` (`ldp`/`stp`) |
+| `at(…)` `scale` | **open** (spec#80) | the access size, or no shift |
+
+No immediate slot of this architecture has a slot type in this revision.
 
 ### 6. `aarch32`
 
@@ -624,6 +683,19 @@ mechanism, not a `at(…)` form. AArch32 has **no** segment registers.)
 (AArch32 has no predicate registers and no segment override — its operand-decorator set
 is lane decorations only.)
 
+#### 6.6 Slot types
+
+| Slot | Slot type | Notes |
+|------|-----------|-------|
+| immediate of `movw`/`movt` | **open** (spec#80) | zero-extended `imm16` |
+| immediate of `mov`, `add`/`sub`/`rsb`, `and32`/`orr`/`eor`/`bic`/`orn` (`orn` in Thumb-2 only)/`mvn`, `cmp`/`cmn`/`tst`/`teq` | **open** (spec#80) | a modified immediate (in ARM state an 8-bit value rotated right by an even amount; Thumb-2 has its own pattern set) |
+| shift amount of `lsl`/`lsr`/`asr`/`ror` | **open** (spec#80) | zero-extended: 0–31 for `lsl`, 1–31 for `ror`, 1–32 for `lsr`/`asr` |
+| immediate of `svc` | **open** (spec#80) | zero-extended (`imm24` in ARM state, `imm8` in Thumb) |
+| `at(…)` `disp` | **open** (spec#80) | a magnitude with a separate sign bit (in ARM state ±4095, ±255 for `ldrh`/`ldrsb`/`ldrsh`) |
+| `at(…)` `scale` | **open** (spec#80) | a shift amount |
+
+No immediate slot of this architecture has a slot type in this revision.
+
 ### 7. `riscv64`
 
 Machine model: 64-bit, little-endian; pointer width 64 (XLEN = 64). Default ABI:
@@ -718,6 +790,17 @@ segment. A symbol address is formed with `lui`+`addi` (`%hi`/`%lo`, medlow) or
 
 (RISC-V has no segment registers; the operand-decorator set is lane decorations only.)
 
+#### 7.6 Slot types
+
+| Slot | Slot type | Notes |
+|------|-----------|-------|
+| immediate of `addi`/`addiw`, `andi`/`ori`/`xori`, `slti`/`sltiu`, `jalr`, and of the `reg/imm` forms of `add`/`addw`/`and64`/`or64`/`xor`/`slt`/`sltu` | **open** (spec#80) | signed `imm12` |
+| immediate of `lui`/`auipc` | **open** (spec#80) | a 20-bit upper immediate |
+| shift amount of `slli`/`srli`/`srai` (`slliw`/… on RV64) and of the `reg/imm` forms of `sll`/`srl`/`sra` | **open** (spec#80) | zero-extended, below XLEN (below 32 for the word forms) |
+| `at(…)` `disp` | **open** (spec#80) | signed `imm12` (§7.3) |
+
+No immediate slot of this architecture has a slot type in this revision.
+
 ### 8. `riscv32`
 
 Machine model: 32-bit, little-endian; pointer width 32 (**XLEN = 32**). Default ABI:
@@ -766,6 +849,11 @@ or segment; symbol addresses via `lui`/`auipc` + relocation (§8.4).
 **Identical to `riscv64` §7.5** (vector `v.lanes(T, N)` under the `v` feature; no segment
 override).
 
+#### 8.6 Slot types
+
+**Identical to `riscv64` §7.6** without the RV64 word forms, with the keyword escapes
+`and32`/`or32` (§8.2): every slot is open (spec#80).
+
 ---
 
 ### 9. Conformance
@@ -775,11 +863,12 @@ A conforming implementation MUST:
 1. accept exactly the **supported targets** of §1 (the closed canonical-triple set) and
    reject any other `arch`×`os`×`env`×`container` `Target` with a Config diagnostic at
    configuration (Manifest §3.1; ABI §2); treat new triples as additive (FND-6);
-2. for each supported architecture, provide the **five tables** of §2 — registers,
+2. for each supported architecture, provide the **six tables** of §2 — registers,
    curated instructions (each 1:1 with its GAS mnemonic, with the guard column of §2(b)),
-   addressing modes, relocation/TLS decorators, and **operand decorators** (SIMD +
-   arch-specific, e.g. x86 segment override) — populating the Assembly chapter schema
-   (Assembly §4–§8);
+   addressing modes, relocation/TLS decorators, **operand decorators** (SIMD +
+   arch-specific, e.g. x86 segment override), and **slot types** (checking each immediate
+   against its slot's type; the open slots are spec#80) — populating the Assembly chapter
+   schema (Assembly §4–§8);
 3. emit each curated instruction **1:1** with the listed GAS mnemonic (I1; Assembly §3),
    emit the listed **checked-guards** at the operation site of the built-in operator that
    lowers to it — never as part of a direct intrinsic call (division-by-zero, over-width

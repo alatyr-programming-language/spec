@@ -351,7 +351,8 @@ floating-point constant expression is evaluated (step by step in its IEEE format
 or exactly with one rounding) are spec#62;
 Memory §4.5 reads `p == -1` per operator (Concurrency §6.5) while Type System §2.3 calls comptime
 numbers mathematical, and spec#62 reconciles them. The context type an immediate slot or an
-`at(…)` field gives is spec#63. Admission under `no_abstractions`, whose list forbids the
+`at(…)` field gives was spec#63, since settled by CG-18 (its slot type; spec#80 for the fields
+no v1 type describes). Admission under `no_abstractions`, whose list forbids the
 value-operators as surface syntax (Assembly §1.1, CG-12), is spec#59.
 
 **Rejected.** *Only literals and unary `-` on a literal are comptime* — a second, narrower notion

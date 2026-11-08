@@ -76,7 +76,9 @@ and **deferred (additive) growth**.
   expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed where its operator is admitted (its
   operand an immediate, a constant expression being comptime, CT-13) and an implementation's refusal to lower it is a known deviation, not a
   specified rejection (CG-15); that register materialization is the instruction intrinsics' only — `asm(…)` emits exactly
-  its template, and an operand of it not already of a §5 kind is a specified compile error (CG-16). Content — additive data.
+  its template, and an operand of it not already of a §5 kind is a specified compile error (CG-16); an immediate slot and an
+  integer `at(…)` field take a signed per-width slot type from the arch table, the constant checked against it (`disp : i32`
+  on x86_64; the slots no v1 type describes are open, spec#80) (CG-18). Content — additive data.
 - `[x]` **11. Codegen / lowering / GAS.** Pipeline structured→backend-specific assembly-correspondence→backend emission
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
   determinism; centralized emission; containers by target (CG-1).
