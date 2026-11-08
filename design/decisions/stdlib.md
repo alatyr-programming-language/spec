@@ -183,7 +183,9 @@ structural default, not a per-type override: FN-7 allows one generic definition 
 second generic `eq` over `[T]` could not carry it. The five fixtures become
 content-comparisons, and an implementation that compares the pair answers a wrong value.
 `Hash` over `[T]`/`str` follows content too (equal values hash alike), which §2.6 already
-requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with.
+requires of any `Eq`/`Hash` pair and now has a defined equality to be consistent with. The
+owning containers `Vec(T)` and `String`, which hold a data pointer without being views, take the
+same content rule through an arm of their own (STD-6).
 
 ### STD-5. The `{}` template is v1; its trigger is the first fixed `str` parameter; `print` is `format` to standard output — spec#38
 *provenance: refines STD-1 (which listed the `format` template as additive) and FN-13 (the
@@ -235,3 +237,45 @@ beside the template one does not conform (a call `print("{}")` would have two re
 compiler#1515 tracks the compiler's. `format`'s own result type and failure behaviour, which
 `print` inherits, its tier, the module paths of `format` and `print`, and the v1 set of types a
 hole renders are not decided here (spec#46).
+
+### STD-6. `Vec(T)` and `String` compare by content, not by buffer identity — spec#40
+*provenance: extends STD-4 (content comparison over views) to the alloc-tier owning containers;
+  rests on STD-1's structural derive and FN-7 (one generic definition per name) · spec: Stdlib
+  appendix §2.6, §6, §8; Comptime §5.4*
+
+**Question.** STD-4 made `==`/`<`/`hash` over `[T]` and `str` compare content, through a view arm
+in §2.6's structural derive, because comparing the `{ptr, len}` pair answers by address — a trap
+no caller means. The alloc-tier `String` and `Vec(T)` (appendix §6) are not views, so they took
+the plain field walk; their fields include a data pointer, so `==` over two `String`s with equal
+text reached the `Pointer` leaf and compared **buffer addresses**: the same trap, one tier up.
+
+**Decision (owner, 2026-11-08).** **`String` and `Vec(T)` compare by content: `==`/`<`/`hash`
+over their contents as STD-4 does for views** — a `Vec(T)` as the `[T]` of its `len` elements, a
+`String` as the `str` of its bytes; capacity, allocator and buffer address take no part. **`Vec(T)`
+requires `T`'s relation** (`eq` for `==`, `eq` and `lt` for `<`, `hash` for `hash`). The cost, **O(n)**, is
+stated in the text because the operator hides it. **Identity stays an explicit comparison of the
+data pointer** (`v[0..v.len()].ptr`, `bytes(s.as_str()).ptr`).
+
+**Why.** STD-4's reasoning applies unchanged: equality that depends on where a value happens to
+live is not what `==` on text or on a sequence means, and a program that compares two `String`s
+expects their text compared. Taking the view arm's rule keeps one meaning for "these hold the same
+elements" across `[T]`, `str`, `Vec(T)` and `String`.
+
+**Rejected.**
+- *Comparison over an owning container is ill-formed in v1, refused at the site; the author
+  compares the views explicitly.* Safe, but it makes the most common comparison of owned text a
+  compile error with a mechanical workaround, which is ceremony rather than information.
+- *Leave identity as the defined meaning.* It contradicts STD-4's rationale outright.
+- *A concrete override per container.* Possible for `String`, impossible for the generic
+  `Vec(T)` under FN-7, so the two containers would be specified by two mechanisms.
+
+**Consequences.** The rule is carried by an arm of §2.6's structural default keyed on the
+prelude's `Vec` and `String`, beside the view arm, not by a per-type override: FN-7 admits one
+generic definition per name, and `Vec(T)` is generic, so a second generic `eq` over it could not
+exist (the mechanism follows from "as STD-4 does for views" and FN-7; it is not a separate
+choice). The arm exists only where the alloc tier does, and the base-tier `eq` signature names
+no alloc type, so there is no tier inversion; how the base body names the alloc types is
+open as spec#55. Appendix §2.6 gains the containers' arm, §6 the rule with its cost and the
+identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
+`HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
+is filed as spec#50.

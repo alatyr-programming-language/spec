@@ -316,7 +316,8 @@ occurs inside a `comptime for` **unrolling** (§8.3), so each unrolled copy proj
 concrete field** and the projection is comptime-known by construction. This is the form
 that makes the v1 structural derives (`eq` / `lt` / `hash`, Stdlib appendix §2.6) ordinary
 **library code over `typeinfo`** (TYP-9). The body below is the struct arm; a slice or `str`
-is compared by content instead (Stdlib appendix §2.6's view arm, STD-4).
+is compared by content instead (Stdlib appendix §2.6's view arm, STD-4), and so is a `Vec(T)` or
+`String` (Stdlib appendix §2.6's arm for the owning containers, STD-6).
 
 ```alatyr
 eq := fn(T : type, in a : T, in b : T) -> bool {
