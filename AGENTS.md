@@ -120,7 +120,29 @@ implementations produce compatible results without guessing).
 ## How to make changes (process)
 
 - **Decide first, record second.** Contentious / design forks are discussed to
-  convergence and **only then** written down. Do not silently "work them out on the fly".
+  convergence and **only then** written down. Do not silently "work them out on the fly" —
+  except the two kinds of gap the next item lets a contributor settle.
+- **Who decides (the standing delegation, owner, 2026-11-08).** The **owner** is the project lead, who
+  makes the language decisions. Anything that changes what a program
+  **means**, or whether it is **well-formed**, is a language decision for the owner: file it
+  as an issue with the options, their pros and cons and a recommendation, and do not decide
+  it. Two kinds of gap are settled by the contributor instead, without asking, and listed to
+  the owner afterwards:
+  - **formatter-layout gaps** — how `fmt` places lines and comments where Tooling §4.3 gives
+    no single answer, settled under the principle *one canonical shape per construct, with no
+    width-dependent alternative beyond list wrapping*. The principle governs new settlements;
+    it does not reopen a layout rule already recorded (changing one is not a gap, and goes to
+    the owner);
+  - **purely editorial inconsistencies** — a stale name, a wrong citation, a cross-reference
+    that does not say what the text claims.
+
+  A layout settlement is recorded like any other decision (chapter, decision entry naming
+  this rule as its authority, index, aspect map, CHANGELOG); an editorial fix is just the
+  corrected text, with no entry (as for any editorial change). The PR of either kind says in
+  its body that it settles under the standing delegation; those PRs, once merged, are the
+  list reported to the owner. A layout
+  question that would change meaning or well-formedness — a source form becoming a
+  diagnostic, say — is not layout and goes to the owner.
 - **One decision = one commit.** When changing a norm, synchronously update every
   affected source of truth (invariants / decisions / glossary / aspects-map + the
   chapters themselves) — coherence is held precisely by these cross-cutting passes.

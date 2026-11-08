@@ -57,7 +57,16 @@ plainly in the text, that is itself a gap worth recording.
 ## Working on a change
 
 - **Decide first, record second.** Anything contentious is discussed to convergence
-  *before* it is written down. Do not open a PR that settles a design fork by fiat.
+  *before* it is written down. Do not open a PR that settles a design fork by fiat —
+  except the two kinds of gap the next item lets a contributor settle.
+- **Who decides.** A change to what a program means, or to whether it is well-formed, is
+  the owner's (the project lead's) language decision: file it with options and a
+  recommendation. By a standing rule, the *standing delegation* (2026-11-08), **formatter-layout gaps** (Tooling §4.3
+  — one canonical shape per construct, no width-dependent alternative beyond list
+  wrapping) and **purely editorial inconsistencies** (stale names, wrong citations) are
+  settled by the contributor, recorded as usual, and listed to the owner afterwards.
+  Layout that would change meaning or well-formedness is not layout, and a layout rule
+  already recorded is not a gap. `AGENTS.md` has the full rule.
 - **One decision = one commit.** A change to a norm updates *every* affected source in
   the same commit: invariants, decisions, glossary, aspects-map, and the chapters. The
   cross-cutting pass is what holds coherence; splitting it across commits is what breaks
