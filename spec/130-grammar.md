@@ -335,7 +335,10 @@ slice-type  ::= "[" [ "mut" ] type-expr "]"            (* [T] | [mut T] — the 
 tuple-type  ::= "(" [ type-expr { item-sep type-expr } ] ")"
 
 field       ::= { attribute } [ "mut" ] ident ":" type-expr [ "=" expr ]   (* a field takes any attribute (CT-10); target/kind legality is a semantic check, not a syntactic one *)
-variant     ::= ident [ "(" [ type-expr { item-sep type-expr } ] ")" ] [ "=" int ]   (* "= N" pins the discriminant; Type System §6.2 *)
+variant     ::= ident [ "(" variant-components ")" ] [ "=" int ]   (* "= N" pins the discriminant; zero components omit parentheses — `N`, never `N()`; Type System §6.2 *)
+variant-components ::= type-expr { item-sep type-expr }            (* positional: `Some(T)`, `Add(Expr, Expr)` *)
+                     | variant-field { item-sep variant-field }    (* named, struct field form: `Bare(arch : Arch, env : Env = Env.none)`; Type System §6.2 *)
+variant-field ::= ident ":" type-expr [ "=" expr ]                 (* a variant component in the struct field form, optional default (TYP-17) *)
 union-member ::= ident [ "(" type-expr { item-sep type-expr } ")" ]  (* zero components omit parentheses; 2+ components form one anonymous tuple payload; no discriminant — Type System §6.3 *)
 (* `layout-attr` — the closed v1 machine-lever subset (Type System §8 / CT-10); not the whole field-attribute space (see `attribute`, §3.6). A non-lever prelude/library effector is also a valid field attribute, validated semantically. *)
 layout-attr ::= "@repr"    "(" type-expr ")"          (* pin an enum tag's underlying type (Type System §8) *)
@@ -424,7 +427,7 @@ array-ctor   ::= "[" expr { item-sep expr } "]"                (* [1, 2, 3] — 
                | array-type "(" [ expr { item-sep expr } ] ")" (* [T = v; N](…) — defaulted/partly explicit *)
 struct-ctor  ::= type-expr "(" [ field-init { item-sep field-init } ] ")"  (* Point(x = 1, y = 2) *)
 field-init   ::= ident "=" expr
-variant-ctor ::= type-expr "." ident [ "(" [ call-args ] ")" ] (* Color.Red | Option.Some(v) | Cell.pair(a,b); variant and member arity are checked semantically (Type System §9.3, §6.3) *)
+variant-ctor ::= type-expr "." ident [ "(" [ call-args ] ")" ] (* Color.Red | Option.Some(v) | Cell.pair(a,b) | Machine.Bare(arch = Arch.aarch64); variant and member arity and named binding are checked semantically (Type System §9.3, §6.3) *)
 
 call-args    ::= arg { item-sep arg }
 arg          ::= expr                                          (* positional *)
@@ -465,7 +468,11 @@ named arguments, `m()` for a zero-component member, and a tuple supplied as one 
 for a multi-component member are Semantic diagnostics (Type System §6.3). **An enum variant
 constructor takes no argument beyond its declared components**, and for positionally
 declared components exactly their count, in order (Type System §9.3; TYP-15): a surplus
-argument is a Semantic diagnostic and is never silently discarded.
+argument is a Semantic diagnostic and is never silently discarded. Components declared by
+name (`variant-field`) bind by **named** arguments exactly as a `struct-ctor`'s fields do,
+a defaulted one omittable (Type System §9.3–§9.4; TYP-17). A variant declared without
+components is written `T.V`; `T.V()` is a Semantic diagnostic, as `m()` is for a raw-union
+member.
 Otherwise `a.f(args)` is **always UFCS** — `f(a, args)` (MOD-3) — even when `f` also names a field.
 In particular, `u.m(args)` for a raw-union **value** `u` is UFCS, not a member write; a
 whole-member write is `u.m = payload` (Type System §6.3). To call a **function-valued

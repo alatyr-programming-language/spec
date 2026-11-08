@@ -63,12 +63,12 @@ default, and a lower value is a Config diagnostic (Manifest §3.1). Android's **
 is Linux's, so `@abi(syscall)` uses the Linux table (ABI appendix §5); its **userland** is
 bionic, which is what `target.env` reports.
 
-`Machine.Com()` takes no `arch` argument — it **is** the `i386` real-mode image — and
+`Machine.Com` takes no `arch` argument — it **is** the `i386` real-mode image — and
 `Machine.Windows` / `Machine.Macos` take no `env`: their ABI environment is fixed by the
 platform, which is why neither `msvc` nor a `pe`+`gnu` combination is expressible at all
 (TOOL-18).
 
-The `com` container (Assembly §10) is the **`Machine.Com()`** target (the row above), for
+The `com` container (Assembly §10) is the **`Machine.Com`** target (the row above), for
 DOS/real-mode flat boot images: a platform variant of its own rather than a container field
 combined with an arch. It **requires `code_size = CodeSize.b16`** — that is its
 **default** there and any other value is a Config diagnostic (Manifest §3.2) — selecting the

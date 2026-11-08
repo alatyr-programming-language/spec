@@ -70,7 +70,7 @@ name is each target's `output` — whose **default base is that same binding nam
   values; the **list is the allowed set** of builds. Each `Target` carries a
   **`machine` variant** — the platform, and with it the machine model (FND-8; TOOL-18):
   `Machine.Linux(arch, env, startup)` / `Freebsd` / `Windows(arch, subsystem, startup)` /
-  `Macos(arch, startup)` / `Android(arch, api, startup)` / `Bare(arch, env)` / `Com()`, so a field that belongs to one
+  `Macos(arch, startup)` / `Android(arch, api, startup)` / `Bare(arch, env)` / `Com`, so a field that belongs to one
   platform (the PE `subsystem`, the libc `env`, `startup`) exists only in the variant that
   has it, and there is no `os` / `container` / `endian` field at all (they are `target.*`
   projections, §2.7). Defaulting is **by variant**: `Target()` is the build host's whole

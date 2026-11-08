@@ -106,7 +106,7 @@ regardless of `os`/`env` (so `Os.none`/`Env.none`/`musl`/`freebsd` all get a def
 **(b) Convention-level exceptions.**
 - `x86_64` on **`Machine.Windows`** (container `pe`): the default base convention becomes
   **`win64`** (§4.2).
-- **`Machine.Com()`** (the `i386` real-mode image, `code_size = b16`;
+- **`Machine.Com`** (the `i386` real-mode image, `code_size = b16`;
   per-arch appendix §1): **no standard C calling convention applies** — `sysv32` is a
   32-bit protected-mode convention and is **not** the ABI of a 16-bit real-mode image.
   The default selector is therefore **`naked`** (`AbiSelector.Naked`, §3.1): the

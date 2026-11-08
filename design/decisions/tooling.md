@@ -719,7 +719,7 @@ Machine := enum {
   Windows( arch : Arch, subsystem : Subsystem = Subsystem.console, startup : Startup = Startup.raw )   # PE
   Macos  ( arch : Arch, startup : Startup = Startup.raw )                                # Mach-O, hosted
   Bare   ( arch : Arch, env : Env = Env.none )                                           # ELF, freestanding
-  Com    ( )                                                                            # i386 real-mode image
+  Com                                                                                   # i386 real-mode image
 }
 ```
 
@@ -734,7 +734,7 @@ Consequences, each replacing a rule rather than adding one:
   compares projections rather than matching platforms, so adding a platform does not oblige portable code
   to handle a new arm.
 - **The supported set is `(variant, arch)` pairs** (per-arch appendix §1), and the ABI-selection exceptions
-  read off the variant (`Machine.Windows` → `win64`, `Machine.Com()` → `naked`).
+  read off the variant (`Machine.Windows` → `win64`, `Machine.Com` → `naked`).
 - **Two fields stay on `Target`** because they are **arch**-specific codegen knobs, not platform facts:
   `code_size` (x86) and `arm_mode` (`aarch32`). Their applicability rule is the one survivor of the old
   class.
