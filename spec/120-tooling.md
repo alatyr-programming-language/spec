@@ -682,8 +682,11 @@ on one line a construct that is always multi-line (§4.3.3): a `match` arm list 
 for` arm template (whether the line holds the whole list or only some of its arms, those are
 always wrapped one arm per line with no `;` between arms, TOOL-23), a value-`if` (TOOL-24), a
 non-empty block, and a list or operator chain holding any of these (TOOL-25); the
-suppression still applies to every construct on the line that is not always multi-line. Which
-output line the comment then trails is open (spec#57).
+suppression still applies to every construct on the line that is not always multi-line. When
+`fmt` so lays out one commented source line as several output lines, the comment **trails the
+first** of them, separated by one space (TOOL-26): `y := match x { A => 1; B => 2 }  # why`
+becomes `y := match x { # why` followed by the arms, and a line holding only some arms
+(`A => 1; B => 2  # why`) keeps the comment on the line of its first arm.
 
 ---
 

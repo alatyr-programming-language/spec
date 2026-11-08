@@ -49,6 +49,15 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a trailing comment on a line `fmt` expands trails the first output line (Tooling
+§4.3.4; TOOL-26).**  A trailing comment suppresses re-wrapping of its line, but an always
+multi-line construct (a `match`, a `comptime for` template, a value-`if`, a non-empty block, a
+list or chain holding one) has no one-line form to keep, and nothing said which of the output
+lines the comment then trails. It trails the first: `y := match x { A => 1; B => 2 }  # why`
+becomes `y := match x { # why` followed by the arms; a line holding only some arms keeps the
+comment on its first arm's line. Rejected: the last output line; an own line above the
+statement. Settled under the standing delegation for formatter layout. (spec#57.)
+
 **Normative — `fmt` wraps a list holding an always multi-line element one element per line
 (Tooling §4.3.3; TOOL-25).**  §4.3.3's outermost-construct rule assumed every construct has a
 one-line form; a `match`, a `comptime for` template, a value-`if` and a non-empty block (a `fn`
@@ -92,7 +101,7 @@ neither said which governs a short `match`, nor how a one-line arm list would be
 `match` arm list is now always wrapped, like the `comptime for` arm template: each arm on its
 own line, the `}` at the `match`'s indent; a one-line source `match` with `;` between arms is
 reformatted that way, with no `;` left between arms, and a trailing comment does not keep two
-arms on one line (§4.3.4; which output line the comment then trails is open, spec#57). The
+arms on one line (§4.3.4; the comment then trails the first output line, TOOL-26). The
 grammar is unchanged. Rejected: a fitting `match` on one line with arms joined by `; `.
 (spec#35.)
 

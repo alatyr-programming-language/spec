@@ -43,6 +43,6 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | `modules.md` | Modules, visibility, packages, paths | MOD-1..15 |
 | `codegen.md` | Codegen, lowering, optimization, backends, conventions | CG-1..16 |
 | `syntax.md` | Lexis, separators, declaration/expression grammar, `@` | SYN-1..8 |
-| `tooling.md` | Tooling, manifest, packages, tests | TOOL-1..25 |
+| `tooling.md` | Tooling, manifest, packages, tests | TOOL-1..26 |
 | `stdlib.md` | Prelude/stdlib definitions, streams, process inputs | STD-1..6 |
 | `concurrency.md` | Concurrency | CC-1..9 |

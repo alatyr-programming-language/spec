@@ -926,8 +926,8 @@ arms is reformatted wrapped, and no `;` survives between arms or before the `}` 
 between arms follow §4.3.1). A trailing comment does not keep two arms of a `match`, or of a
 `comptime for` arm template, on one line — whether it trails the whole list or only some arms;
 §4.3.4's suppression of re-wrapping still applies to every other construct on the line it
-trails, except a construct that is always multi-line (TOOL-24, TOOL-25); which output line the
-comment trails is spec#57. The source form stays well-formed
+trails, except a construct that is always multi-line (TOOL-24, TOOL-25); the comment then trails
+the first output line (TOOL-26). The source form stays well-formed
 (Grammar §2.6 is unchanged); only `fmt`'s output is fixed.
 
 **Why.** One layout for every `match` means the formatter never decides between two shapes by
@@ -997,3 +997,29 @@ it produces fits"), and no third shape appears between the one-line and the wrap
 multi-line element opening in place and `)` after its `}` (`f(a, match x {` … `})`): a second
 list shape beside the wrapped one, and a "fits" defined over the lines a construct produces
 rather than the construct.
+
+### TOOL-26. A trailing comment on a line `fmt` expands trails the first output line — spec#57
+*provenance: refines TOOL-2's §4.3.4 comment rule, after TOOL-23, TOOL-24 and TOOL-25 · settled
+  under the standing delegation for formatter layout (owner, 2026-11-08) · spec: Tooling §4.3.4*
+
+**Question.** §4.3.4 keeps a trailing same-line comment "on that line" and lets it suppress
+re-wrapping of the line it trails. An always multi-line construct (§4.3.3: a `match` arm list,
+a `comptime for` template, a value-`if`, a non-empty block, a list or chain holding one) has no
+one-line form for the suppression to keep, so `y := match x { A => 1; B => 2 }  # why` — or a
+line holding only some arms, `A => 1; B => 2  # why` — becomes several output lines, and
+nothing said which one the comment trails. Byte-identical output (TOOL-2): an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** Option (a). The comment trails the **first**
+output line the commented source line produces, one space after its code: the header ending in
+`{` for a whole `match`, `if` or block; the opening line of a list; the line of the first arm
+when the source line held only some arms. A comment does not keep an always multi-line
+construct on one line; it still suppresses re-wrapping of every other construct on its line.
+
+**Why.** The comment stays where its line began, which is where a reader of the source met it;
+the placement is the same for every expansion, so it needs no per-construct rule; and the
+header line is the one that names what the comment describes.
+
+**Rejected.** *(b) The last output line* (after the closing `}`) — it separates the comment
+from the header it was written beside, by the whole body. *(c) An own line above the
+statement* — against §4.3.4's rule that a trailing same-line comment stays on its line, and a
+`#` moved up can join an adjacent comment block (Grammar §2.5).
