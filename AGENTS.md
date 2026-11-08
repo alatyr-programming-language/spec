@@ -143,6 +143,16 @@ implementations produce compatible results without guessing).
   list reported to the owner. A layout
   question that would change meaning or well-formedness — a source form becoming a
   diagnostic, say — is not layout and goes to the owner.
+- **Latent gaps (owner rule, 2026-11-08).** A gap found by *reading* — by a reviewer, or
+  while writing a decision — that is not needed to write the decision at hand consistently
+  is **filed as an issue with the label `latent`** and is **not** brought to the owner. It
+  goes to the owner only when compiler work (a fix, a fixture, a pilot) hits it, or when it
+  blocks a decision already made; the issue then loses the label. Until then the compiler
+  **refuses the form with a located diagnostic** — a refusal can be relaxed later, additively
+  (`I10`), while a guess cannot be taken back.
+- **Scope.** A PR adds no wording beyond its decision, and a review stays scoped to the
+  decision and the passages it changes; what a review finds outside that scope is filed
+  (as `latent`, if it is a gap), not folded into the PR.
 - **One decision = one commit.** When changing a norm, synchronously update every
   affected source of truth (invariants / decisions / glossary / aspects-map + the
   chapters themselves) — coherence is held precisely by these cross-cutting passes.
@@ -150,9 +160,9 @@ implementations produce compatible results without guessing).
   *not-yet-shipped* decision is recorded by **editing its theme entry** in
   `design/decisions/` to the current truth, with a concise `Rejected:` / `Superseded:`
   note. Entries carry the **current** rationale plus *why*, not full history (git holds
-  it). IDs are **theme-prefixed and append-only** — the next memory entry is `MEM-9`, never
-  a reused number: add a **new entry** for a genuinely new decision area; never reuse or
-  shift an existing ID. Keep its
+  it). IDs are **theme-prefixed and append-only** — a new entry takes the next number after
+  the highest one in its theme file, never a reused number: add a **new entry** for a
+  genuinely new decision area; never reuse or shift an existing ID. Keep its
   **`provenance:`** line (what the entry refines, and where it lands in `spec/`) current.
   **Guardrail:** never silently repurpose a widely-cited ID's core meaning; supersede with
   a new entry instead.
@@ -162,7 +172,8 @@ implementations produce compatible results without guessing).
 - **Additivity (`PRIN-2`/`FND-6`/I10):** v1 is fully specified; "additive" is only about *future*
   growth (new instructions/types/features without breaking v1 programs), **not** a
   license to leave v1 underspecified.
-- **Fix** any inconsistency found between sources, do not work around it.
+- **Fix** any inconsistency found between sources, do not work around it — in its own
+  change when it lies outside the one at hand (see **Scope** above).
 
 ## Language and formatting
 

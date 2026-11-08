@@ -26,6 +26,8 @@
 - [ ] Decision IDs are **append-only**: no existing ID reused, shifted, or repurposed; a
       superseded decision got a new entry, and `provenance:` lines are current.
 - [ ] Terminology matches `design/glossary.md`; new load-bearing terms were added to it.
+- [ ] No wording beyond the decision; gaps found by reading that it does not need were
+      filed with the label `latent`, not folded in.
 - [ ] Written to the **`FND-3` bar** — an implementer needs no further guess.
 - [ ] English only; ASCII letters in identifiers, labels, and enumerations.
 - [ ] `CHANGELOG.md` updated under **Unreleased** if the change is normative.
