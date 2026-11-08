@@ -258,8 +258,8 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
 - a compound assignment `a[i] ⊕= rhs` on a library aggregate ≡
   `index_set(a, j, at(a, j) ⊕ rhs)`, with `a` and `i` each evaluated once (`j` is the
-  temporary for `i`; Memory §1.6, OP-7) — on an array or slice the element is a place and
-  Memory §1.6's address-temporary rule applies;
+  temporary for `i`; Memory §1.6, OP-7) — on an array whose base is a place, or on a slice,
+  the element is a place and Memory §1.6's address-temporary rule applies;
 - a range index `a[lo..hi]` ≡ `index_range(a, lo, hi)` — the **sub-slice** view.
 
 Arrays and slices supply these as the **compiler-known** built-ins (the bounds
@@ -321,7 +321,9 @@ wants:
 - operand `R`, position (a method's first value parameter) wants the **scoped reference**
   `ptr([mut] R)` — **auto-ref**: pass the receiver **by its address**, `a.f(b)` ≡
   `f(ptr(a), b)` (a `ptr(mut R)` slot requires `a` to be a mutable place; a
-  read-only `ptr(R)` slot does not);
+  read-only `ptr(R)` slot does not — a place passes its own address, and a value-expression
+  `a` is materialized in a caller-owned temporary living to the end of the full expression,
+  whose address is passed, Memory §1.6);
 - operand `ptr([mut] R)`, position wants `ptr([mut] R)` — **as-is** (the pointer
   passes through);
 - operand `ptr([mut] R)`, position wants the **pointee** `R` — **auto-deref**: reach the

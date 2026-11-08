@@ -27,7 +27,9 @@ and **deferred (additive) growth**.
   allocator-provider menu over first-class reference tokens** via `@alloc(value)` (MEM-1/STD-1, reframed by MEM-3; `get` ordinary via a
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
-  closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
+  closures (FN-6), copy/move+linearity (MEM-2); a value-expression in a read-only `ptr(R)` receiver slot gets a
+  caller-owned temporary to the end of the full expression, and a field, tuple component or array index of a
+  value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11; the owning case is spec#73). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned

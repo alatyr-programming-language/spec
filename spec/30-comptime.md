@@ -406,7 +406,7 @@ field** of a value. The only field-access form, `a.name` (Grammar §3.4), takes 
 `a.(f)` bridges this: it **projects the field of aggregate `a` identified by the comptime
 value `f`** — a `Field` (from `typeinfo(T).fields`) or its `str` `name`.
 
-It is **resolved at comptime** to the named field access `a.<f.name>`: the **same place**,
+It is **resolved at comptime** to the named field access `a.<f.name>`: the **same classification** (a place on a place base, Memory §1.6),
 the same type, and the same per-field write permission (Memory §3.2), and it emits
 **identical** code to a source-literal `a.name` — **zero-cost** (I2), with **no** runtime
 field-by-name lookup and **no** RTTI (I3). `f` MUST resolve to an actual field of `a`'s
@@ -794,7 +794,7 @@ A conforming implementation MUST:
    structural mismatch at instantiation with a diagnostic (§4);
 7. provide `typeinfo(T)` as a comptime-erased reification with no runtime RTTI and
    no hidden type table, and **comptime field projection** `a.(f)` resolving to the
-   named field access `a.<f.name>` (same place/type/permission, identical emitted
+   named field access `a.<f.name>` (same classification/type/permission, identical emitted
    code; an `f` that is not a field of `a` is a compile error), and the **comptime
    variant pattern** `T.(v)` resolving to the variant pattern `T.<v.name>` (with
    `comptime for` unrolling match arms over `typeinfo(T).variants`; a `v` that is not
