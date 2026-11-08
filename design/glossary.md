@@ -233,9 +233,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Constant expression** (CT-13) — a scalar literal, or scalar literals combined (with parentheses) by
   the built-in scalar operators, unary `-` included: `-16`, `0 - 1`, `(1 + 2) * 4`. **Comptime by its
-  form** — a rule about the text, not phase inference; checked against its context type like a literal,
-  a failed integer guard in it outside `unchecked` a compile-time diagnostic (Comptime §1.1; where the
-  per-operator and mathematical readings differ is spec#62). Where an immediate is accepted it is an immediate.
+  form** — a rule about the text, not phase inference (CT-13). An integer one is computed over exact
+  integers and only its result is checked against the context type like a literal (`-1 : u8` rejected,
+  `-128 : i8` accepted), `unchecked` changing nothing (`unchecked (0 - 1)` is the constant expression `0 - 1`); a floating-point one is evaluated per operation in
+  its context's IEEE format (Comptime §1.1; CT-14). Where an immediate is accepted it is an immediate.
 
 - **Slot type** (CG-18) — the signed integer type of the width an instruction form encodes in an
   immediate slot or an integer `at(…)` field, given per architecture by the arch table (`disp : i32` and

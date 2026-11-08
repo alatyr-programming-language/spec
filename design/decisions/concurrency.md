@@ -198,6 +198,9 @@ question the type system already answers.
 row is `WRONG-VALUE:x86_64` — the shape that matters most, because a silent wrong answer
 recorded as someone else's trap is never looked for in `lower.al`.
 
+The rule is about an operator over a **typed** operand. A constant expression (`-1`, `0 - 1`) has
+none: it is computed over exact integers and only its result is checked (CT-14).
+
 ### CC-9. A pass may not invent an `unchecked` scope
 *spec: Concurrency §6.6*
 

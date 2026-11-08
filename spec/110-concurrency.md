@@ -319,7 +319,10 @@ The result type of **unary `−`** is its **operand's** type. Over an unsigned o
 result stays **unsigned** and its value is the two's-complement negation modulo `2^N` —
 so `-a` with `a : u64 = 5` is `2^64 − 5`, a representable value, and **not** the signed
 `-5`. Over a signed operand the result is that same signed type, and negating `MIN` is
-the checked failure of §6.1.
+the checked failure of §6.1. This is the operator over a **typed** operand; a constant
+expression (`-1`, `0 - 1`) has none — it is computed over exact integers and only its result
+is checked against the context type, so `x : u64 = -5` is rejected rather than read as
+`2^64 − 5` (Comptime §1.1, CT-14).
 
 Because the operand types are unchanged, **the guard an operation carries is chosen by
 the operand types and by nothing else**: an unsigned operation tests the **carry** out of
@@ -459,8 +462,8 @@ A conforming implementation MUST:
    has no fused instruction), provide `saturating_convert` (§7.7), follow IEEE non-trapping exceptions (float div-by-0 → ±∞, not a
    trap — unlike integer), unordered NaN comparisons, RNE rounding with no implicit
    mode state, and `f32`/`f64` as the v1 types (§7; I1/CG-9).
-7. keep **signedness a property of the value**: unary `−` over an unsigned operand yields
-   that same unsigned type with the two's-complement negation modulo `2^N`, and every
+7. keep **signedness a property of the value**: unary `−` over an unsigned **typed** operand
+   (a constant expression has none; Comptime §1.1, CT-14) yields that same unsigned type with the two's-complement negation modulo `2^N`, and every
    operation's checked guard is selected by its **operand types** (unsigned → carry,
    signed → signed overflow) and never by the shape of a subexpression; and introduce
    **no** `unchecked` scope that the source did not write — a pass needing an unguarded

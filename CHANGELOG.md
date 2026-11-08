@@ -49,6 +49,25 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — an integer constant expression is evaluated exactly and its result checked; a
+floating-point one per operation (Comptime §1.1, §2.6, §11; Type System §2.3, §9.1; Declarations
+§3.4; Memory §4.5; Concurrency §6.5, §8; CC-8; CT-14).**  CT-13 checked a constant expression "like a literal" without saying
+whether each operator runs at the context type or the exact result is checked, and the two
+disagree on `-1 : u8`, `-128 : i8` and `1 - 2 + 3 : u64`. An integer constant expression is now
+computed over exact integers and only its result is range-checked: `-1 : u8` and `~0 : u8` are
+rejected, `-128 : i8` is accepted, `1 - 2 + 3 : u64` is 2, `300 - 100 : u8` is 200; an unsigned
+context does not select the unsigned operations, and the mask `~7` at
+`usize` is rejected (write `~usize(7)`). `unchecked` does not change a constant expression. A
+floating-point constant expression — one containing a floating-point literal — is evaluated per
+operation in its context's IEEE format (`f64` with no context), so it means the value run time
+would give (overflow is ±∞). Open: an integer-literal expression more than a single literal
+(unary `-` included) at a floating-point context (spec#87); the operands of a constant comparison (spec#88); `/`, `%` with a negative operand
+and the bitwise operators over negative values (spec#91).
+Memory §4.5's `p == -1` is now ill-formed; the all-ones sentinel is written `p == ~usize(0)`.
+Rejected: per-operator evaluation at the context type; exact evaluation with a negative result
+accepted at an unsigned type as its two's complement; floating-point evaluated exactly with one
+rounding and range-checked. (spec#62.)
+
 **Normative — `Vec(T)` admits an owning `T`; its element is exchanged or lent by a scoped
 reference, never copied out or overwritten unseen (Stdlib appendix §6, §8; Types §4.5; Memory §1.6,
 §5.9; STD-10).**  Nothing said whether `Vec(T)`'s `T` may be `@owning`, nor what the by-value `at`/`v[i]` or
@@ -147,13 +166,13 @@ compile-time number, so `-16` (unary `-` over `16`; there is no negative literal
 read as runtime values, against the specification's own `disp = -16` immediates. A constant
 expression — scalar literals combined by the built-in scalar operators, unary `-` included — is
 now comptime by its form, a rule about the text and not inference. It is checked against its
-context type like a literal, and outside `unchecked` a failed integer guard in it is a
-compile-time diagnostic (`x : u8 = 200 + 100` is rejected). `disp = -16` and `0 - 1` are
+context type like a literal, a failure being a compile-time diagnostic (`x : u8 = 200 + 100` is
+rejected; how the check reads, `unchecked` included: CT-14, above). `disp = -16` and `0 - 1` are
 immediates; CG-15 and CG-16 no longer leave the phase of `0 - 1` open. How the check reads where
 per-operator and mathematical evaluation differ (`-1` at an unsigned type, `-128 : i8`,
-`unchecked`), and how a floating-point constant expression is evaluated, are open as spec#62;
-the context type of an immediate slot as spec#63 (since settled by CG-18, above). Whether a
-constant expression is admitted
+`unchecked`), and how a floating-point constant expression is evaluated, are open as spec#62
+(since settled by CT-14, above); the context type of an immediate slot as spec#63 (since settled by
+CG-18, above). Whether a constant expression is admitted
 under `no_abstractions` is open as spec#59. Rejected: only a literal and unary `-` on a literal
 comptime; every non-literal runtime, with negative immediates spelled through a `comptime`
 binding. (spec#39.)

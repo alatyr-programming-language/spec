@@ -61,8 +61,9 @@ and **deferred (additive) growth**.
   (`static`/`dynamic`, static default) → hermetic-static default binary, non-hermetic status
   manifest-determinable + toolchain-surfaced (MOD-9).
 - `[x]` **9. Comptime and generics.** Boundary (CT-7; a constant expression — literals
-  combined by the built-in scalar operators, `-16`, `0 - 1` — is comptime by its form, a failed integer guard in it
-  outside `unchecked` a compile-time diagnostic, CT-13; where the per-operator and mathematical readings differ is spec#62), generics (CT-3), constraint-predicates (CT-4),
+  combined by the built-in scalar operators, `-16`, `0 - 1` — is comptime by its form, CT-13; an integer one is
+  computed exactly and its result checked like a literal, `-1 : u8` rejected and `-128 : i8` accepted, `unchecked`
+  changing nothing, a floating-point one per operation in its IEEE format, CT-14; open: spec#86, #87, #88, #91), generics (CT-3), constraint-predicates (CT-4),
   comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
   `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`

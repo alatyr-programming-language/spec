@@ -424,15 +424,17 @@ wherever its own site is well-formed (below); this sentence does not reach it. N
 `usize`, and the pointer contributes **its address bits at that same width** to a relation the compiler
 knows (below); neither operand is a `usize` copy of the other, and that is exactly why no edge is added
 to the lattice. Both operands therefore **occupy one width**, which is what makes the answer
-determinate. An integer literal or constant expression at this position — `0`, `4096`, `-1` (comptime by its form, Comptime
-§1.1, CT-13; whether `p == -1` keeps the reading below is spec#62) — takes `usize` from the position,
-the same rule that settles `p == -1`: the literal `1` takes `usize` from
-the position and unary `−` over an unsigned operand keeps that type and yields the
-two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of
-the pointer's own width, `2^N − 1` (`usize` is a prelude alias that expands to the target's
-pointer width, Type System §7 — which states the width, not the number: `2^32 − 1` follows on
+determinate. An integer literal or constant expression at this position — `0`, `4096` — takes `usize`
+from the position and is checked against it (Comptime §1.1, CT-13/CT-14). A constant expression is
+computed exactly and only its result is checked, so `p == -1` is **ill-formed**: −1 does not fit `usize`,
+and no wrap is applied to make it fit. The all-ones address is asked for by writing `usize`'s maximum,
+`p == ~usize(0)` — not a constant expression (`usize(0)` is a construction), but the `usize`
+bitwise `~` (Type System §2.2, §10) over the value `0`, which yields the `usize`
+with every bit set: `2^N − 1` at the pointer's own width (`usize` is a prelude alias that
+expands to the target's pointer width, Type System §7 — which states the width, not the number: `2^32 − 1` follows on
 i386/aarch32/riscv32 and `2^64 − 1` on the 64-bit targets), the same value on
-every target **of that width**.
+every target **of that width**. Being a construction, `~usize(0)` is a run-time value; bound
+`comptime`, it is an immediate (Comptime §1.6).
 
 **What is hardware-defined, and what is not.** The *representation* is the target's: a
 pointer's width and the bits a fabricated address holds are the machine model's, and an

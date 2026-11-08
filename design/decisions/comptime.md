@@ -278,7 +278,7 @@ Declarations §7.1*
 family applies to it — but the family is specified in terms of a *trap*, and there is no
 process to trap during compilation. Left unstated, an implementation could (and one did)
 carry the failure forward and let it trap when a run-time path reaches the constant, so
-`K : u64 = MAX + 1` builds green and dies later, or on a path never taken, dies never. That
+`comptime K : u64 = M + 1` (with `M` the `u64` maximum) builds green and dies later, or on a path never taken, dies never. That
 is both a worse diagnostic and an implementation fork: another implementation may
 reasonably reject it at the declaration. The compiler already *evaluated* the operation and
 already knows the answer is unrepresentable; the only question is whether it says so.
@@ -298,7 +298,8 @@ is *hardware-defined* — division by zero, an over-width shift, `MIN / -1`, `MI
 diagnostic,
 because the evaluator has no hardware whose behaviour it could reproduce and I11 forbids
 inventing one. The two's-complement wrap of `+`, `−`, `*`, unary `−` is *defined*, not
-hardware-defined, so it evaluates reproducibly.
+hardware-defined, so it evaluates reproducibly. None of this reaches an integer constant expression, which
+is evaluated exactly and range-checked whether or not it sits in an `unchecked` scope (CT-14).
 
 **Rejected.** Deferring the failure to run time — turns a known-at-compile-time error into
 a conditional runtime death, and makes two implementations disagree on whether a program
@@ -326,15 +327,15 @@ phase inference. CG-15 and CG-16 were written to hold either way and left the qu
 **Decision (owner, 2026-11-08).** **A constant expression is comptime by its form.** A
 constant expression is a scalar literal, or scalar literals combined (with parentheses) by the
 built-in scalar operators — arithmetic, comparison, bitwise, `and`/`or`, and the unary `-`,
-`~`, `not` — the arithmetic, comparison and bitwise ones each the prelude's operator function for
-its operands' type, `and`/`or`/`not` the built-in short-circuit forms over `bool` (OP-2). It is
+`~`, `not` — the arithmetic, comparison and bitwise ones each naming the operation of the prelude's
+operator function for its operands' type (evaluated as CT-14 says), `and`/`or`/`not` the built-in short-circuit forms over `bool` (OP-2). It is
 comptime like the literals it is built from. The rule reads the text, not
 values or uses, so it is not phase inference: an expression naming a binding, a call or a place
 does not become comptime by it, and a named operation-function such as `shl` is a call. The
 expression is checked against its context type like a literal, with the literal default where
-there is no context, and its evaluation is a comptime one, so outside an `unchecked` scope a
-failed integer guard in it (an overflow, a division by zero) is a located compile-time
-diagnostic (CT-12), never a run-time trap: `x : u8 = 200 + 100` is rejected where it is written. A named constant (`NaN`, `Infinity`, a `comptime` binding) is not
+there is no context, and its evaluation is a comptime one, so a failure in it is a located
+compile-time diagnostic (CT-12), never a run-time trap: `x : u8 = 200 + 100` is rejected where
+it is written (how the check reads is CT-14). A named constant (`NaN`, `Infinity`, a `comptime` binding) is not
 a literal, and the range forms are not scalar operators, so neither makes a constant expression.
 `disp = -16` and `0 - 1` are immediates.
 
@@ -345,12 +346,9 @@ the result at compile time keeps I11 (no silent wrap) without a run-time guard o
 compiler already knows.
 
 **Not decided here.** *How* the check reads where checking each operator in the context type
-and checking the mathematical result differ — `-1` at an unsigned type (Memory §4.5's
-`p == -1`), `-128 : i8`, `1 - 2 + 3 : u64`, a constant expression under `unchecked`, including whether `unchecked (0 - 1)` is itself one — and how a
-floating-point constant expression is evaluated (step by step in its IEEE format, Concurrency §7.4,
-or exactly with one rounding) are spec#62;
-Memory §4.5 reads `p == -1` per operator (Concurrency §6.5) while Type System §2.3 calls comptime
-numbers mathematical, and spec#62 reconciles them. The context type an immediate slot or an
+and checking the mathematical result differ — `-1` at an unsigned type, `-128 : i8`,
+`1 - 2 + 3 : u64`, `unchecked` — and how a floating-point constant expression is evaluated are
+CT-14 (spec#62). The context type an immediate slot or an
 `at(…)` field gives was spec#63, since settled by CG-18 (its slot type; spec#80 for the fields
 no v1 type describes). Admission under `no_abstractions`, whose list forbids the
 value-operators as surface syntax (Assembly §1.1, CG-12), is spec#59.
@@ -366,4 +364,74 @@ System §2.3, §9.1, Declarations §3.4, Memory §4.5 and Assembly §5, §7 poin
 Assembly §5's register example
 moves to a runtime operand (`y - 1`). CG-15 and CG-16 no longer leave the phase of `0 - 1` open;
 Assembly §1.1 and CG-12 mark spec#59 open. Comptime §1.6 notes that a scalar comptime operand is
-an immediate, and §2.6's `unchecked` paragraph points to §1.1 and spec#62.
+an immediate, and §2.6's `unchecked` paragraph points to §1.1.
+
+### CT-14. An integer constant expression is exact, then checked; a floating-point one is per operation — spec#62
+*provenance: refines CT-13 (how its check reads) and CT-12; reconciles Type System §2.3 with Memory
+  §4.5 and Concurrency §6.5 (CC-8) · spec: Comptime §1.1, §2.6, §11; Type System §2.3, §9.1; Memory
+  §4.5; Concurrency §6.5, §8 item 7; Declarations §3.4*
+
+**Question.** CT-13 checks a constant expression "against its context type like a literal", which
+has two readings that disagree on ordinary code: each literal takes the context type and each
+operator runs with its fixed-width semantics (so `-1 : u8` is 255 and `-128 : i8` and
+`1 - 2 + 3 : u64` are rejected), or the expression is evaluated over exact integers and only the
+result is checked (so the opposite on all three). Type System §2.3 called comptime numbers
+mathematical while Memory §4.5 read `p == -1` per operator. `unchecked` (does it make `0 - 1 : u8`
+wrap?) and floating-point constant expressions (step by step in the IEEE format, or exactly with
+one rounding and then range-checked) were open with it.
+
+**Decision (owner, 2026-11-08), verbatim.** "Option 1. Integer constant expressions are evaluated
+over exact integers and the RESULT is checked against the context type like a literal (Types §2.3):
+`-1 : u8` is rejected, `-128 : i8` is accepted, `1 - 2 + 3 : u64` is 2; `unchecked` does not change
+a constant expression. Floating-point constant expressions are evaluated per operation in the
+context's IEEE format, so a constant means the same value it would at run time (I1). Memory §4.5's
+`p == -1` and every unsigned `-1` in the spec are rewritten to the type's maximum."
+
+**Derived (where every open reading agrees; not the owner's wording).** "`unchecked` does not change
+a constant expression" covers it inside an `unchecked` scope and as `unchecked`'s operand: it is
+evaluated and checked the same way, so `unchecked (0 - 1)` is the constant expression `0 - 1`.
+"Per operation in the IEEE format" makes overflow ±∞, not a diagnostic (Concurrency §7.4). Applying the decision needs
+the domain and the operators' exact meaning, which Comptime §1.1 states where every reading agrees. A `bool` literal, a comparison or their `and`/`or`/`not`
+combination is boolean; otherwise an expression containing a floating-point literal is
+floating-point (its context's format, or `f64` with no context; a non-floating-point context is a
+compile error, TYP-13), and one of integer literals only is
+integer at every context but a floating-point one. An operator over an operand outside its domain
+(`1 + (1 < 2)`, `not 1`) is ill-formed, there being no prelude operator for it; a character literal
+under an arithmetic or bitwise operator is not an integer constant expression and keeps CT-13's
+reading. Over exact integers `+ - *` and unary `-` are the
+mathematical operations, and `/`, `%`, `& | ^` over non-negative operands the quotient, remainder
+and bitwise operations; an unsigned context does not select the unsigned operations, and only the
+result of the integer expression as a whole is range-checked, not an integer operand of one of its
+integer operators (`x : u8 = 300 - 100` is 200); a zero divisor is a diagnostic, having no
+exact result. `~` of a non-negative integer is negative or ill-formed under every reading still
+open, so `~0 : u8` is rejected for the decision's own reason that `-1 : u8` is, and so is the mask in
+`addr & ~7` at `usize` (written `addr & ~usize(7)`). Three cases the decision does not settle stay
+open: an integer-literal expression more than a single literal (unary `-` included) at a
+floating-point context, whole or as an operand (`x : f64 = 7 / 2`, `-0`, `1.0 + 7 / 2` — spec#87); the domain and range check of a
+comparison's operands (`1 / 2 < 0.4`, `99999999999999999999 > 0` — spec#88); and `/`, `%` with a
+negative operand and the bitwise operators over negative values (`-7 / 2`, `~7`, `-8 & 255` —
+spec#91). A type's maximum is written with existing means —
+the literal (`255`) or, width-independently for `usize`, `~usize(0)`: not a constant expression
+(`usize(0)` is a construction), so `~` is the fixed-width `usize` operation and yields every bit set.
+The prelude names no `MAX` constant (Modules §4.1.1's `i64::limits` is an illustrative module path), and
+this decision adds none.
+
+**Why.** It follows the owner's wording and Type System §2.3: a constant expression means one number
+whatever type it later meets, with no silent wrap (I11) and no second meaning of `-` chosen by the
+context type. It makes `iN`'s minimum expressible as a literal-built constant. The floating-point
+rule keeps constant folding invisible (I1): a constant expression and the same operations at run
+time give the same bits.
+
+**Rejected.** *Per operator in the context type* — `-1 : u8` silently 255, `-128 : i8` and
+`1 - 2 + 3 : u64` rejected, and the flow of context into each operand left to be written. *Exact,
+with a negative result accepted at an unsigned type as its two's complement when the magnitude
+fits* — `-255 : u8` would be 1, a second meaning of `-` decided by the context type. *Floating-point
+evaluated exactly, rounded once, and range-checked like a literal* — a constant would then differ in
+its last bit, or be rejected where run time gives ±∞, from the same expression at run time.
+
+**Consequences.** Comptime §1.1 states the rule and the per-operator meanings, §2.6 that `unchecked`
+does not reach a constant expression, §11 item 1 both; Type System §2.3 confines "mathematical
+numbers" to literals and constant expressions (a typed comptime value keeps its type's operators,
+§2.6) and §9.1 gives the examples; Memory §4.5's sentinel becomes `p == ~usize(0)` and `p == -1` is
+ill-formed; Declarations §3.4 cites the rule; Concurrency §6.5, its §8 item 7 and CC-8 note that the
+unsigned negation is the operator over a typed operand, not a constant expression's.
