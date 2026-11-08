@@ -49,8 +49,20 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
-**Normative — a backend that cannot lower an expression asm operand refuses, and that refusal
-is its limit, not the language's (Assembly §5; CG-15).**  §5 says operands are
+**Normative — `asm(…)` emits exactly its template: an operand not of a §5 kind is a compile
+error, never materialized (Assembly §4, §5, §11, §12; CG-16).**  §4 restricts an
+`asm(template, …)` operand to an operand kind of §5, but did not say whether a runtime
+operand — a plain local `x`, or a non-comptime expression — is placed in a register as an
+instruction intrinsic's operand is (§2.2, CG-15). It is not: each operand must already be of
+a §5 kind, as in a naked body, and one that is not is a compile error in any function frame;
+the register materialization is for instruction intrinsics only. The explicit form is to
+move the value into a register with an instruction intrinsic first. Materializing it was
+rejected because the escape would then emit instructions, and pick a register, that its
+template does not show (I1). Whether a `@reg` / `@reg(name)` binding is a register operand is
+open as spec#52.
+
+**Normative — a backend that cannot lower an expression instruction-intrinsic operand
+refuses, and that refusal is its limit, not the language's (Assembly §5; CG-15).**  §5 says operands are
 ordinary expressions and there is no special operand grammar, yet five compiler fixtures
 refused expression operands such as `movq(rbx, 0 - 1)` on the ground that ch. 80 fixes an
 operand to a register name or an immediate. In an ABI-framed function the form is

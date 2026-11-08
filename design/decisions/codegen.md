@@ -657,7 +657,7 @@ some ISA (what the implementation did) — it makes a true statement false and s
 for another machine. Making a `target.arch` query a diagnostic on such a backend — it breaks every portable
 `when target.arch == …` gate, which is the construct the facet exists for.
 
-### CG-15. A backend that cannot lower an expression asm operand refuses — and that refusal is its limit, not the language's — compiler#1443
+### CG-15. A backend that cannot lower an expression instruction-intrinsic operand refuses — and that refusal is its limit, not the language's — compiler#1443
 *provenance: refines CG-2 (instruction intrinsics and their operands), CG-4 (per-backend
   codegen) and CG-13 (the checked-guard family); reads Assembly §5 with §2.2, §3, §4 and
   Overview §6 (known deviations) · spec: Assembly §5*
@@ -669,8 +669,8 @@ ch. 80 fixes an operand to "a register name or an immediate literal" — and ass
 basis. If the compiler's test expectations are generated from fixture prose, the claim turns a
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
-**Decision.** **In an ABI-framed function the form is well-formed (where its operator is
-admitted — not the value-operators under `no_abstractions`, Assembly §1.1): the source operand is an ordinary expression,
+**Decision.** **For an instruction intrinsic in an ABI-framed function the form is
+well-formed (where its operator is admitted — not the value-operators under `no_abstractions`, Assembly §1.1): the source operand is an ordinary expression,
 evaluated by the rules for any expression; a comptime value is an immediate, and any other
 value is materialized in a register exactly as an operand local is (§2.2).** So
 `movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
@@ -699,8 +699,53 @@ would reverse the direction of authority — "the compiler does it" is not a rat
 `main`) are corrected in the compiler (#1443): the program is well-formed, its outcome is
 whatever the general rules give the operand expression, and the present refusal is a known
 deviation. The fifth, `reject_raw_asm_tmpl_operand`, passes the expression through
-`asm(…)`, whose operands §4 restricts to §5 kinds; whether such an operand is materialized
-there too is not settled by this decision and is filed as spec#37. The same correction applies to the other headers in
-the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
+`asm(…)`, whose operands §4 restricts to §5 kinds; the materialization above is for
+instruction intrinsics only, and through `asm(…)` a runtime operand is a compile error the
+specification mandates (CG-16); whether `0 - 1` is a runtime value there is the phase
+question of spec#39, which CG-16 does not settle either. The same correction applies to the
+other headers in the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
 existing refusal is *labelled*, which is what makes the eventual fix a fix rather than a spec
 break.
+
+### CG-16. `asm(…)` emits exactly its template: an operand not of a §5 kind is a compile error, never materialized — spec#37
+*provenance: refines CG-3 (the raw escape `asm(…)`) and CG-2 (the operand schema), and scopes CG-15 (expression
+  operands of instruction intrinsics); reads Assembly §4 with §2.2, §5 and I1 · spec: Assembly §4,
+  §5, §11, §12*
+
+**Question.** Assembly §4 replaces placeholder `{i}` with "an operand kind of §5" and makes an
+operand that is not a valid kind a compile error; §5 lists the kinds (a register, a **comptime**
+immediate, a memory operand, a label, a reloc/TLS symbol, SIMD); §2.2 and CG-15 materialize an
+operand **local** or **expression** in a register for an **instruction intrinsic** in an
+ABI-framed function. Nothing said whether an `asm(template, …)` operand whose value is a runtime
+value — a plain local `x`, or a non-comptime expression — takes the same step and is substituted
+by that register's name, or is not an operand kind at all.
+
+**Decision.** **It is not an operand kind, so it is a compile error under §4, in any function
+frame.** `asm(…)` emits exactly its template with the operands substituted, and nothing more
+(I1), so each operand must already be of a §5 kind — the same test as for an instruction
+intrinsic in a naked body, which has no materialization either; a local or a non-comptime
+expression that is not itself of a §5 kind fails it. Whether a binding pinned by `@reg` /
+`@reg(name)` is itself a register operand is not decided here (spec#52). The register
+materialization of §2.2 / CG-15 applies to instruction intrinsics only. The
+explicit form stays expressible: place the value in a register with an instruction intrinsic
+(`movq(rcx, x)`) and pass that register to the template — the placing instruction is then one
+the programmer wrote. This decides neither the phase of a given expression (whether `0 - 1` is
+comptime is spec#39's question) nor any new operand kind.
+
+**Why.** `asm(…)` is the uncurated escape that only `as` validates (§4). Its value is that its
+output is the text the programmer wrote; materializing an operand would make it emit
+instructions the template does not name, choose a register the template cannot see, and
+leave `as` validating less than was emitted. The cost is one explicit instruction in the source, which the curated surface already provides — so nothing becomes inexpressible
+(I4), and the escape stays transparent (I1/I3). (That the register written by the placing
+instruction is not reused by the strategy's placement before the template runs is the
+general question of spec#52 §2, not specific to `asm`.)
+
+**Rejected.** *Materializing a runtime operand in a register as for an instruction intrinsic*
+(uniform operand surfaces) — rejected because the escape would then emit code its template does
+not contain, and the register choice would be the compiler's, invisible in the source, while
+the explicit form costs one written instruction.
+
+**Consequences.** Assembly §4, §5, §11 and §12 carry the rule. The compiler fixture
+`reject_raw_asm_tmpl_operand` (an expression operand through `asm(…)`) now asserts a rejection
+the specification mandates rather than a known deviation, to the extent its operand is not
+comptime — which is spec#39's question for `0 - 1`.
