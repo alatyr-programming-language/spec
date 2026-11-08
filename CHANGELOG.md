@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` wraps a list holding an always multi-line element one element per line
+(Tooling §4.3.3; TOOL-25).**  §4.3.3's outermost-construct rule assumed every construct has a
+one-line form; a `match`, a `comptime for` template, a value-`if` and a non-empty block (a `fn`
+value's body included) have none, so `f(a, match x { … })` had no single layout. A construct
+whose canonical layout breaks whatever the width is now *always multi-line*, never "fits"; a
+call argument list, array/list literal, constructor field list or parameter list holding one is
+wrapped one element per line with the trailing comma, and a binary-operator chain holding one
+breaks before each operator; the rule climbs to the enclosing list or chain. Rejected: the list
+staying on its opening line with `)` after the element's `}`. Settled under the standing
+delegation for formatter layout. (spec#58.)
+
 **Normative — `fmt` lays out every value-`if` wrapped (Tooling §4.3.3, §4.3.4; TOOL-24).**
 §4.3.2 makes `if` a block header whose `}` stands on its own line, while §4.3.3 kept a fitting
 value-`if` (`x := if c { a } else { b }`) on one line, so a short value-`if` had two canonical

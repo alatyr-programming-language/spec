@@ -615,11 +615,10 @@ immediately after an opening `{` or before a closing `}`.
 ##### 4.3.3 Wrapping (the 100-column rule)
 
 The **soft maximum line width is 100 columns** (counting Unicode scalar values, not bytes).
-A construct that fits within 100 columns at its indent is written on **one** line, except a
-`match` arm list, a `comptime for` arm template and a value-`if`, which are always wrapped
-(below). One that does **not** fit is wrapped by the following deterministic rule, so the choice
-to wrap is a pure function of width, or unconditional for those three (never of the input's
-original line breaks):
+A construct that fits within 100 columns at its indent is written on **one** line, except an
+**always multi-line** construct (below), which is always wrapped. One that does **not** fit is
+wrapped by the following deterministic rule, so the choice to wrap is a pure function of width
+and of the construct's content (never of the input's original line breaks):
 
 - A **call argument list**, an **array/list literal**, a **struct/enum constructor's
   fields**, and a **parameter list** wrap with **each element on its own line**, indented
@@ -655,10 +654,20 @@ original line breaks):
   `else if` chain continues at the same indent (`} else if c2 {`), never nesting one level per
   link. A source value-`if` written on one line is laid out this way; there is **no** one-line
   canonical value-`if`.
+- A construct is **always multi-line** when its canonical layout has a line break whatever
+  the width: a `match` arm list, a `comptime for` arm template and a value-`if` (above), a
+  non-empty block — the body of a `fn` value included — whose `}` stands on its own line
+  (§4.3.2), and any expression that contains one of these. A **list** of the first bullet (call
+  arguments, array/list literal, struct/enum constructor fields, parameters) with an always
+  multi-line element is **always** wrapped, one element per line with the trailing comma, as if
+  it overflowed (TOOL-25): the multi-line element opens on its own line at the element indent
+  and continues by its own construct's rule, and the closing `)` / `]` stands on its own line
+  after it. A **binary-operator chain** with an always multi-line operand likewise breaks before
+  each operator. Such a list or chain is itself always multi-line, so the rule applies again to
+  the list or chain around it.
 - Wrapping is applied at the **outermost** construct that makes the line fit; an inner
   construct wraps only if it still overflows once the outer one has. A construct is never
-  wrapped if it fits — **except** a `match` arm list, the `comptime for` arm template and a
-  value-`if`, above, which are always wrapped.
+  wrapped if it fits; an always multi-line construct, above, never fits.
 
 ##### 4.3.4 Comments
 
@@ -669,10 +678,12 @@ from the code by **one** space. `fmt` never deletes, merges, or rewrites the **c
 comment (only its surrounding indentation/whitespace is normalized). A comment **suppresses**
 re-wrapping of the line it trails (the line is kept as the author wrote it modulo the spacing
 rules) so a deliberately-laid-out, commented line is not reflowed. A comment does **not** keep
-two arms of a `match` arm list, or of a `comptime for` arm template, on one line — whether the
-line holds the whole list or only some of its arms, those are always wrapped one arm per line
-with no `;` between arms (§4.3.3; TOOL-23) — nor a value-`if` (TOOL-24); the suppression still
-applies to every other construct on the line it trails. Which output line the comment then trails is open (spec#57).
+on one line a construct that is always multi-line (§4.3.3): a `match` arm list or a `comptime
+for` arm template (whether the line holds the whole list or only some of its arms, those are
+always wrapped one arm per line with no `;` between arms, TOOL-23), a value-`if` (TOOL-24), a
+non-empty block, and a list or operator chain holding any of these (TOOL-25); the
+suppression still applies to every construct on the line that is not always multi-line. Which
+output line the comment then trails is open (spec#57).
 
 ---
 

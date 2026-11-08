@@ -56,7 +56,8 @@ there is a Parse diagnostic (SYN-8; superseded: the trailing comma on expression
 first gave contradicted the grammar); a `match` is always wrapped, with no one-line form (TOOL-23);
 an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
-layout, always, with no one-line form (TOOL-24), so no construct has two shapes.)*
+layout, always, with no one-line form (TOOL-24), so no construct has two shapes; a list or
+operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25).)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -925,7 +926,8 @@ arms is reformatted wrapped, and no `;` survives between arms or before the `}` 
 between arms follow §4.3.1). A trailing comment does not keep two arms of a `match`, or of a
 `comptime for` arm template, on one line — whether it trails the whole list or only some arms;
 §4.3.4's suppression of re-wrapping still applies to every other construct on the line it
-trails, except a value-`if` (TOOL-24); which output line the comment trails is spec#57. The source form stays well-formed
+trails, except a construct that is always multi-line (TOOL-24, TOOL-25); which output line the
+comment trails is spec#57. The source form stays well-formed
 (Grammar §2.6 is unchanged); only `fmt`'s output is fixed.
 
 **Why.** One layout for every `match` means the formatter never decides between two shapes by
@@ -961,3 +963,37 @@ without an exception, and lengthening one branch never reflows the whole express
 
 **Rejected.** *One line when it fits in expression position* — a second, width-decided shape
 for one construct, and an exception to §4.3.2's block-header rule.
+
+### TOOL-25. A list holding an always multi-line element is wrapped one element per line — spec#58
+*provenance: refines TOOL-2's §4.3.3 outermost-construct rule, after TOOL-23 and TOOL-24 ·
+  settled under the standing delegation for formatter layout (owner, 2026-11-08) ·
+  spec: Tooling §4.3.3, §4.3.4*
+
+**Question.** §4.3.3 wraps "at the outermost construct that makes the line fit" and never wraps
+a construct that fits — which assumes every construct has a one-line form. A `match`, a
+`comptime for` template, a value-`if` and a non-empty block (a `fn` value's body included) have
+none. For `f(a, match x { … })`, nothing said whether the call "fits" (its first line does, the
+call spans several) and so whether its argument list wraps one element per line or stays on the
+`f(` line with `)` after the `match`'s `}`. The same held for a binary-operator chain
+(`a + match x { … }`) and for struct-constructor fields. Byte-identical output (TOOL-2) needs one
+answer: an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** Option (a). A construct is **always multi-line**
+when its canonical layout has a line break whatever the width: the three always-wrapped
+constructs, a non-empty block, and any expression containing one. A list — call arguments,
+array/list literal, struct/enum constructor fields, parameters — with an always multi-line
+element is always wrapped, one element per line with the trailing comma; the element opens on its
+own line at the element indent, and the closing `)` / `]` stands on its own line. A
+binary-operator chain with such an operand breaks before each operator. A list or chain so
+wrapped is itself always multi-line, so the rule climbs to the enclosing list or chain. An
+always multi-line construct never "fits".
+
+**Why.** One canonical shape per construct, with list wrapping as the only width-dependent
+alternative: a list is laid out one way whenever it cannot be one line, whether width or a
+mandatory break is the reason, so the "fits" test needs no second, partial meaning ("every line
+it produces fits"), and no third shape appears between the one-line and the wrapped list.
+
+**Rejected.** *(b) The list stays on the opening line when every line it produces fits* — the
+multi-line element opening in place and `)` after its `}` (`f(a, match x {` … `})`): a second
+list shape beside the wrapped one, and a "fits" defined over the lines a construct produces
+rather than the construct.
