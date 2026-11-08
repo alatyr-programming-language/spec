@@ -88,8 +88,9 @@ Every expression is classified as either a **place-expression** or a
 **value-expression**.
 
 - **Place-expressions** denote a place: a variable reference, a field access
-  `s.f`, an index `a[i]` on an array or slice (Type System §6.4), and a dereference
-  (§4.3).
+  `s.f`, a tuple component, an index `a[i]` on an array or slice (Type System §6.4), and a
+  dereference (§4.3) — except a field or raw-union member, tuple component or array index reaching into a library
+  aggregate's element through its index (below).
 - **Value-expressions** denote a value: literals, arithmetic, comparisons, a call
   whose result is taken by value — including an index `a[i]` on a library aggregate,
   which is the by-value call `at(a, i)` (Type System §4.5) — and an address-of (which
@@ -106,7 +107,11 @@ The fundamental operations relating values and places are:
   (§4).
 
 A store's left operand MUST be a place-expression; assigning to a value-expression
-is ill-formed.
+is ill-formed. A field or raw-union member, tuple component or array index reaching into the storage of a
+library aggregate's element through its index is not a place either, so a store into the
+element (`a[i].f = x`) is ill-formed (Type System §4.5; OP-8); a dereference out of the
+element (through a pointer- or slice-typed element or component of it) still yields a place. `a[i] = v` on a library
+aggregate is not a store but the call `index_set(a, i, v)`.
 
 A **compound assignment** `place ⊕= rhs` (Grammar §3.2; OP-2), where `⊕` is one of the
 binary glyph operators `+ - * / % & | ^` (OP-2), is **sugar** lowered by this documented

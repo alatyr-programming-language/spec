@@ -49,6 +49,18 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a write into a library aggregate's element through its index is ill-formed
+(Types §4.5; Memory §1.6; OP-8).**  Types §4.5 gave a library aggregate such as `Vec(T)` a
+by-value read `a[i]` and a write `a[i] = v`, but said nothing of `a[i].f = x` when the element
+is a struct. It is now refused with a located diagnostic naming the explicit form
+`mut e := a[i]; e.f = x; a[i] = e`, as are `a[i].f ⊕= x` and any longer path into the element's
+own storage; a path that leaves it through a dereference (a pointer- or slice-typed element
+or component) writes the pointee and is unaffected. A mutating method on the element such as
+`a[i].push(x)`, and `vv[i][k] = x` on a `Vec(Vec(T))`, are refused by §4.5's existing receiver
+rule, since the element is not a mutable place. `a[i] = v` and `a[i] ⊕= rhs` (OP-7) stay.
+Types §6.4 now names the library functions `at`/`index_set`/`index_range` (it said `index`).
+Rejected: read-modify-write sugar; a place-returning index operation (deferred). (spec#23.)
+
 **Normative — a compound assignment on a library aggregate's index is `index_set(a, j,
 at(a, j) ⊕ rhs)` (Memory §1.6; Types §4.5; Grammar §3.2; Stdlib appendix §6; OP-7).**  Memory
 §1.6 lowered `place ⊕= rhs` by taking the place's address once, but on a library aggregate such

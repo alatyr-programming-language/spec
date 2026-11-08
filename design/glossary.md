@@ -279,13 +279,14 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Scope** (*scope*) — where in the source a binding name is accessible.
 
-- **place-expression / value-expression** — classification: a place yields a place (variable, field, index on
-  an array or slice, dereference), a value yields a value (literal, arithmetic, by-value call — including an
+- **place-expression / value-expression** — classification: a place yields a place (variable, field, tuple
+  component, index on an array or slice, dereference — except a path into a library aggregate's element
+  through its index, OP-8), a value yields a value (literal, arithmetic, by-value call — including an
   index on a library aggregate, `at(a, i)` — taking an address) (Memory §1.6).
 
 - **Library aggregate** — an indexable type whose index operator is not the compiler-known one of an array or
   slice but resolves to its own source-level `at`/`index_set`/`index_range` (`Vec(T)`; Types §4.5, OP-3). An index on it
-  is a value-expression (the by-value call `at(a, i)`); `a[i] = v` and `a[i] ⊕= rhs` are its writes (OP-7), and
+  is a value-expression (the by-value call `at(a, i)`); `a[i] = v` and `a[i] ⊕= rhs` are the writes to its element (OP-7), and
   a store into the element's own storage through the index is refused (OP-8).
 
 - **Mutability** — permission to write into a place, bound to the path to it (binding/field/pointer),

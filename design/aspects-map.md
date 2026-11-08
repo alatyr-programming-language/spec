@@ -64,7 +64,8 @@ and **deferred (additive) growth**.
   `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`
   compares by content through the derive's view arm, STD-4),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6;
-  `a[i] ⊕= rhs` on a library aggregate = `index_set(a, j, at(a, j) ⊕ rhs)`, `a` and `i` each evaluated once, OP-7).
+  `a[i] ⊕= rhs` on a library aggregate = `index_set(a, j, at(a, j) ⊕ rhs)`, `a` and `i` each evaluated once, OP-7;
+  a write into the element through it, `a[i].f = x`, is refused, OP-8).
 - `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
   `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2); an operand is an ordinary
   expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed where its operator is admitted and an implementation's refusal to lower it is a known deviation, not a
@@ -136,6 +137,8 @@ verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
   **`gen`/`manual`/`system` are additive** (surfaces specified when first built). There is **no package-wide
   `allocator` manifest field in v1** (deferred/additive — no zero-config default provider; `arena_over` needs a
   caller buffer); allocation is **per-site `@alloc(value)`** on every target.
+  A **place-returning index operation** (`index_ptr`) for a library aggregate, which would make `a[i].f = x`
+  expressible in place — it needs its own rule for the pointer across a reallocation (OP-8).
   Cache fingerprints (TOOL-4). **Vendoring** — a vendored `DepSource` surface, its lockfile check, its place
   in MOD-10's source identity, and the `vendor_dir`/`--vendor-dir` pair withdrawn from v1 with it (TOOL-16).
   All addable without breakage (FND-6).

@@ -313,7 +313,7 @@ path        ::= ident { "::" ident }                  (* :: = namespace navigati
 place       ::= ident                                  (* an assignable location (lvalue) *)
               | place "." ident                        (* struct field / raw-union member *)
               | place "." tuple-index                  (* tuple element *)
-              | place "[" expr "]"                      (* index *)
+              | place "[" expr "]"                      (* index — a place on an array/slice; on a library aggregate a value, so a store into its element's own storage is refused; `a[i] = v` itself is the `index_set` call (Memory §1.6; Type System §4.5; OP-8) *)
               | "deref" "(" expr ")"                      (* dereference as a place; ≡ expr.deref() (Memory §4.3) *)
               | path
 
@@ -394,7 +394,7 @@ postfix     ::= "." ident                               (* named field/member of
               | "." "(" expr ")"                        (* comptime field projection: a.(f) — f a comptime Field/str; ≡ a.<f.name> (TYP-9; Comptime §5.4) *)
               | "." path "(" [ call-args ] ")"          (* UFCS (β): a.f(args) always = f(a,args); a.ns::f(b) ≡ ns::f(a,b) (TYP-5/MOD-3/CT-10) *)
               | "(" [ call-args ] ")"                    (* call *)
-              | "[" expr "]"                             (* index — the `index` operator: built-in for arrays/slices (§6.4), or a library type's own `index`/`index_range` (OP-3; Type System §4.5) *)
+              | "[" expr "]"                             (* index — the index operator: built-in for arrays/slices (Type System §6.4), or a library type's own `at`/`index_set`/`index_range` (OP-3; Type System §4.5) *)
               | "?"                                       (* try: unwrap-or-propagate (Control Flow §8) *)
 primary     ::= literal
               | path | ident
