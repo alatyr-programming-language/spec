@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` lays out every `match` wrapped, one arm per line (Tooling §4.3.3, §4.3.4;
+TOOL-23).**  §4.3.3 put any construct that fits in 100 columns on one line and wrapped a
+`match` arm list only when it did not fit, while §4.3.2 puts a block's `}` on its own line;
+neither said which governs a short `match`, nor how a one-line arm list would be spelled. A
+`match` arm list is now always wrapped, like the `comptime for` arm template: each arm on its
+own line, the `}` at the `match`'s indent; a one-line source `match` with `;` between arms is
+reformatted that way, with no `;` left between arms, and a trailing comment does not keep two
+arms on one line (§4.3.4; which output line the comment then trails is open, spec#57). The
+grammar is unchanged. Rejected: a fitting `match` on one line with arms joined by `; `.
+(spec#35.)
+
 **Normative — `Vec(T)` and `String` compare by content, not by buffer identity (Stdlib
 appendix §2.6, §6, §8; Comptime §5.4; STD-6).**  STD-4 made comparison over `[T]` and `str`
 compare content, but the owning containers took the plain field walk, which reaches their data

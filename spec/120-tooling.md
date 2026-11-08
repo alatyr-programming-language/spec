@@ -615,9 +615,10 @@ immediately after an opening `{` or before a closing `}`.
 ##### 4.3.3 Wrapping (the 100-column rule)
 
 The **soft maximum line width is 100 columns** (counting Unicode scalar values, not bytes).
-A construct that fits within 100 columns at its indent is written on **one** line. One that
-does **not** is wrapped by the following deterministic rule, so the choice to wrap is a pure
-function of width (never of the input's original line breaks):
+A construct that fits within 100 columns at its indent is written on **one** line, except a
+`match` arm list and a `comptime for` arm template, which are always wrapped (below). One that
+does **not** fit is wrapped by the following deterministic rule, so the choice to wrap is a pure
+function of width, or unconditional for those two (never of the input's original line breaks):
 
 - A **call argument list**, an **array/list literal**, a **struct/enum constructor's
   fields**, and a **parameter list** wrap with **each element on its own line**, indented
@@ -626,11 +627,16 @@ function of width (never of the input's original line breaks):
   **not**); this keeps element-wise diffs minimal and is itself canonical.
 - A **binary-operator chain** that overflows breaks **before** each operator at the
   continuation indent (one level), the operator beginning the continuation line.
-- A **`match` arm list** wraps with **each arm on its own line**, indented one level beyond
-  the `match` line, the closing `}` at the `match`'s indent. Arms are separated by the
-  newline alone, so **no** arm takes a comma: an arm whose body is an `expr` ends with that
-  expression, and an arm whose body is a `block` ends with its `}` (a comma after an arm is a
-  Parse diagnostic, Grammar §3.7; SYN-8). An **OR-pattern**
+- A **`match` arm list** is **always** wrapped, whether or not it would fit on one line: **each
+  arm on its own line**, indented one level beyond the `match` line, the closing `}` at the
+  `match`'s indent. There is **no** one-line canonical `match` (TOOL-23): a source `match`
+  written on one line, its arms separated by `;` (Grammar §2.6), is laid out wrapped. No `;`
+  separates arms in a canonical arm list: every `;` between two arms, or after the last arm,
+  is dropped, two arms the source put on one line are put on separate lines, and blank lines
+  between arms follow §4.3.1; a `;` inside an arm body follows the rules of its own construct.
+  Arms are separated by the newline alone, so **no** arm takes a comma: an arm whose body is an
+  `expr` ends with that expression, and an arm whose body is a `block` ends with its `}` (a
+  comma after an arm is a Parse diagnostic, Grammar §3.7; SYN-8). An **OR-pattern**
   (`p1 | p2 | …`, Grammar §3.5) that still overflows breaks **before** each `|` at one
   further level, the `|` beginning the continuation line, with `=>` and the body following
   the last alternative. An arm **body** that still overflows wraps by its own construct's
@@ -638,8 +644,8 @@ function of width (never of the input's original line breaks):
 - A **`comptime for` arm template** inside a `match` arm list (Grammar §3.5; CT-9) wraps as
   a block: `comptime for x in ‹collection› {` on the arm line, its **arm** bodies one level
   deeper by the arm rule above, and `}` at the template's indent. It is never collapsed to
-  one line when the `match` is wrapped, even if it would fit — a template and a plain arm
-  are visually distinct because they mean different things.
+  one line, even if it would fit — a template and a plain arm are visually distinct because
+  they mean different things.
 - An **inline value-`if`** (`if c { a } else { b }` in expression position, Grammar §3.4)
   that overflows wraps with the condition on the `if` line and **each branch's block
   brace-delimited on its own lines**, one level deeper, `else` on the line closing the
@@ -648,7 +654,8 @@ function of width (never of the input's original line breaks):
   same indent (`} else if c2 {`), never nesting one level per link.
 - Wrapping is applied at the **outermost** construct that makes the line fit; an inner
   construct wraps only if it still overflows once the outer one has. A construct is never
-  wrapped if it fits — **except** the `comptime for` arm template, above.
+  wrapped if it fits — **except** a `match` arm list and the `comptime for` arm template,
+  above, which are always wrapped.
 
 ##### 4.3.4 Comments
 
@@ -658,7 +665,11 @@ above it at that item's indent; a trailing same-line comment stays on that line,
 from the code by **one** space. `fmt` never deletes, merges, or rewrites the **content** of a
 comment (only its surrounding indentation/whitespace is normalized). A comment **suppresses**
 re-wrapping of the line it trails (the line is kept as the author wrote it modulo the spacing
-rules) so a deliberately-laid-out, commented line is not reflowed.
+rules) so a deliberately-laid-out, commented line is not reflowed. A comment does **not** keep
+two arms of a `match` arm list, or of a `comptime for` arm template, on one line — whether the
+line holds the whole list or only some of its arms, those are always wrapped one arm per line
+with no `;` between arms (§4.3.3; TOOL-23); the suppression still applies to every other
+construct on the line it trails. Which output line the comment then trails is open (spec#57).
 
 ---
 
