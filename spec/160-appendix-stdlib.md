@@ -525,7 +525,7 @@ TypeInfo := enum {
 }
 Field   := struct { name : str, type : type, offset : usize, mutable : bool }
 ScalarKind := enum { Bits, Uint, Int, Float, Bool, Char }   # a scalar leaf's numeric interpretation
-Variant := struct { name : str, payload : Option(type) }   # the variant's whole payload as one type: `None` for a unit variant, the component type for one, the **tuple** of component types for several (`Add(Expr, Expr)` → `Some((Expr, Expr))`) — bound whole by the comptime variant pattern `T.(v)(p)` (CT-9; Comptime §5.5)
+Variant := struct { name : str, payload : Option(type) }   # the variant's whole payload as one type: `None` for a unit variant, the component type for one positional component, the **tuple** of component types for several positional ones (`Add(Expr, Expr)` → `Some((Expr, Expr))`), the **anonymous struct** of the fields for named components (`Bare(arch : Arch, env : Env = Env.none)` → `Some(struct { arch : Arch, env : Env = Env.none })`; TYP-18) — bound whole by the comptime variant pattern `T.(v)(p)` (CT-9; Comptime §5.5)
 Param   := struct { name : str, type : type, dir : ParamDir }
 ParamDir := enum { dir_in, dir_out, dir_in_out }   # the parameter directions (Functions §3)
 ```

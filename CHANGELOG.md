@@ -49,6 +49,18 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a named-component variant's payload is the anonymous struct of its fields;
+patterns bind it by name, a subset (Types §6.2; Comptime §5.1, §5.5; Control Flow §5.2;
+Grammar §3.5; Stdlib appendix §4.1; TYP-18).**  `Variant.payload` of a variant whose
+components are declared by name is now `Some(struct { … })` — names, types, defaults and order
+as declared — and `T.(v)(p)` binds that struct; positional payloads and every layout are
+unchanged. A pattern over such a variant, and a struct destructuring, binds **by name only**
+and may list a subset, unlisted components ignored; a positional argument there, an unknown
+name or a repeated one is a Semantic diagnostic. `E.N()` is ill-formed as a pattern, as it is
+as a constructor. Open: the empty list and positional-pattern arity (spec#68); a reflected
+field default (spec#69); the identity of an anonymous struct (spec#79). Rejected: the tuple payload; listing every component; positional
+binding of named components. (spec#44.)
+
 **Normative — a trailing comment on a line `fmt` expands trails the first output line (Tooling
 §4.3.4; TOOL-26).**  A trailing comment suppresses re-wrapping of its line, but an always
 multi-line construct (a `match`, a `comptime for` template, a value-`if`, a non-empty block, a

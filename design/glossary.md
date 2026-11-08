@@ -264,7 +264,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Comptime variant pattern** (*comptime variant pattern*) — `T.(v)`: the **enum** dual of field projection, in
   **pattern** position. Inside a `comptime for v in typeinfo(T).variants` it resolves at comptime to the concrete
   variant pattern `T.<v.name>` (`v` a `Variant`, or its `str` name); `T.(v)(p)` binds the matched variant's **whole
-  payload** as one value `p` (a tuple when multi-component). With `comptime for` admitted in **match-arm** position
+  payload** as one value `p` (a tuple when several positional components, the anonymous struct of the fields when
+  named, TYP-18). With `comptime for` admitted in **match-arm** position
   (one arm per variant ⇒ exhaustive), it lets a structural derive compare an enum value of generic `T` — the form that
   makes `eq`/`lt`/`hash` library code over `typeinfo` for **every** type (CT-9; Comptime §5.5).
 

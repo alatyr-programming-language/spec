@@ -495,10 +495,10 @@ pattern      ::= "_"                                   (* wildcard *)
                | range-pattern
                | variant-pat [ "(" [ pattern-arg { item-sep pattern-arg } ] ")" ]  (* variant / destructure *)
                | ident                                  (* binding *)
-variant-pat  ::= path | type-expr "." ident             (* a variant pattern is a `path` (bare `Red` / `Color::Red`) OR the constructor `.`-spelling `Color.Red` (Control Flow §5.2): a pattern may mirror how the variant is built *)
-               | type-expr "." "(" expr ")"             (* comptime variant pattern T.(v): the variant of T named by the comptime Variant/str `v`; resolves to T.<v.name>. Inside a `comptime for` over `typeinfo(T).variants` — the enum analog of a.(f) (CT-9; Comptime §5.5). T.(v)(p) binds the whole payload as one value (a tuple when multi-component). *)
+variant-pat  ::= path | type-expr "." ident             (* a variant pattern is a `path` (bare `Red` / `Color::Red`) OR the constructor `.`-spelling `Color.Red` (Control Flow §5.2): a pattern may mirror how the variant is built; E.N() for a variant without components is ill-formed, Control Flow §5.2, TYP-18 *)
+               | type-expr "." "(" expr ")"             (* comptime variant pattern T.(v): the variant of T named by the comptime Variant/str `v`; resolves to T.<v.name>. Inside a `comptime for` over `typeinfo(T).variants` — the enum analog of a.(f) (CT-9; Comptime §5.5). T.(v)(p) binds the whole payload as one value (a tuple when several positional components, the anonymous struct of the fields when named — TYP-18). *)
 pattern-arg  ::= pattern
-               | ident "=" pattern                      (* field destructure: Point(x = px, …) *)
+               | ident "=" pattern                      (* field destructure by name: Point(x = px, …); a named-component variant or a struct takes only this form, any subset of its fields (Control Flow §5.2; TYP-18) *)
 range-pattern ::= literal ".." literal | literal "..=" literal   (* scalar ranges (Control Flow §5.4) *)
 ```
 
