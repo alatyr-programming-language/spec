@@ -28,7 +28,7 @@ and **deferred (additive) growth**.
   `scoped` second-class return, transient in checked code; every `Arena` an owning value consumed by `close`;
   `arena_over` over a caller buffer an `unchecked` call, except over a `@static` place, which is checked),
   closures (FN-6), copy/move+linearity (MEM-2). Joint detailing is complete.
-- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17
+- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
   integers at multiples of 64 — `u128 ≡ uint(128)`, TYP-10; raw-union members have one
@@ -38,7 +38,8 @@ and **deferred (additive) growth**.
   TYP-14; an enum variant constructor takes no argument beyond its declared components (exactly their count when
   positional), TYP-15; a variant's
   components may take the struct field form, constructed by name with defaults omittable, and a nullary
-  variant is spelled `N` only, never `N()`, TYP-17).
+  variant is spelled `N` only, never `N()`, TYP-17; a named-component variant's payload is the anonymous
+  struct of its fields, and a pattern binds named components and struct fields by name, any subset, TYP-18).
   `@require` is the explicit non-owning-underlying constructor gate with an ordinary ABI
   predicate call (TYP-12).
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,

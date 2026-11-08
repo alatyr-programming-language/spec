@@ -590,12 +590,50 @@ implementation one form to expect (FND-3).
   `issue513_variant_arity_nullary_control`): two spellings for one value, and an asymmetry with
   raw-union members for no gain.
 
-**Not decided here** (filed as spec#44): the payload type a named-component variant presents to
-`typeinfo` and `T.(v)(p)` (the tuple of component types, as the text reads now, or the anonymous
-struct of those fields); how a pattern binds named components (by name only? may it omit some?);
-and whether `E.N()` is a valid **pattern**.
+**Not decided here** (filed as spec#44, decided by TYP-18): the payload type a named-component
+variant presents to `typeinfo` and `T.(v)(p)`; how a pattern binds named components; and whether
+`E.N()` is a valid **pattern**.
 
 **Consequences.** Grammar §3.3 gains `variant-components` / `variant-field` and drops the empty
 parentheses from `variant`; Grammar §3.4 and Types §9.3 state the named binding and the `T.V()`
 diagnostic; Types §6.2 describes the three component forms and §9.4 the component default. The
 compiler accepts `E.N()` today; that becomes a refusal the spec mandates.
+
+### TYP-18. A named-component variant's payload is the anonymous struct of its fields; patterns bind by name, a subset — spec#44
+*provenance: follows TYP-17 (named variant components) and refines CT-9's faithful
+  `Variant.payload` and CF-2's destructuring patterns · spec: Types §6.2; Comptime §5.1, §5.5;
+  Control Flow §5.2; Grammar §3.5; Stdlib appendix §4.1*
+
+**Question.** TYP-17 settled how a named-component variant is declared and constructed, not the
+other side. `Variant.payload` was `None`, the component type, or the tuple of component types, so
+`Linux(arch : Arch, env : Env = …)` read as payload `(Arch, Env)`, its names and defaults lost to
+`typeinfo` and `T.(v)(p)`. Nothing said whether a pattern binds named components by name,
+positionally or both, or may omit some (the same omission question was open for struct
+destructuring), nor whether `E.N()` is a pattern for a nullary variant.
+
+**Decision (owner, 2026-11-08).** (1) The payload of a named-component variant is the
+**anonymous struct of those fields** — names, types, defaults and declaration order as declared;
+`Variant.payload` is `Some(struct { … })`, and `T.(v)(p)` binds that struct. Positional
+payloads are unchanged; the layout is the same either way (§6.1). (2) A pattern binds named
+components **by name only** and may list a **subset**; unlisted components are ignored. The
+same subset rule applies to struct destructuring. (3) `E.N()` is ill-formed as a pattern too.
+Consequences, not separate decisions: a positional pattern argument against named components
+or a struct is ill-formed (by name only; a struct constructor has no positional form, TYP-17), and a name that names no component, or is listed
+twice, is a Semantic diagnostic (there is nothing to bind, as TYP-15 refuses a surplus
+constructor argument).
+
+**Why.** TYP-17 made these components struct fields, so the payload is the struct of them, as a
+positional payload is the tuple of its components: a generic derive or serializer sees the names
+(`p.arch`), and nothing moves in memory. A by-name subset pattern mirrors the constructor, which
+omits defaulted components, and keeps every existing pattern valid when a component is added
+(I10 additivity). One spelling for a nullary variant in patterns matches TYP-17's constructor.
+
+**Rejected.** *Keep the tuple payload* — introspection loses the names the declaration gave.
+*Every component listed* (`_` for the rest) — a pattern breaks whenever a defaulted component is
+added. *By name or positionally* — two spellings, and positional order over named fields is the
+coupling the named form exists to avoid. *`E.N()` accepted as a pattern only* — two spellings.
+
+**Left open.** Whether the by-name list may be empty and the arity rules of positional patterns
+(a bare variant pattern for a variant with components, the sub-pattern count): spec#68. Whether
+`typeinfo`'s `Field` reflects a default: spec#69. Whether field names and defaults take part in
+an anonymous struct's identity (Types §4.1): spec#79.

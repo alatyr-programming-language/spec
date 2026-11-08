@@ -524,6 +524,15 @@ has none:
 One variant's components are all positional or all named (Grammar §3.3). How each form is
 constructed is §9.3.
 
+A variant's **payload** is one value (TYP-18): none for a variant without components; the
+component's type for one positional component; the anonymous **tuple** of the component types
+for several positional components; and, for components declared **by name**, the **anonymous
+struct of those fields** — `struct { arch : Arch, env : Env = Env.none }` for the `Bare` above,
+with the names, types, defaults and declaration order the variant declares (§6.1; whether
+names and defaults take part in its identity is open, spec#79). Either way the payload is laid out by §6.1 — declaration order, standard
+padding — so the choice of form does not move a byte. `typeinfo` reports this payload
+(Comptime §5.1), and a pattern reaches it as Control Flow §5.2 states.
+
 An enum with **zero variants** is **ill-formed**: it is uninhabited (no tag value, so no
 value can ever be constructed), and the language's single uninhabited type is the named
 bottom type **`Never`** (§3.7 / Stdlib §3.7) — a second one by an empty `enum {}` would be

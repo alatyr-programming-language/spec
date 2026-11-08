@@ -186,7 +186,8 @@ matched variant's **whole payload as one value** so a derive can recurse with th
 and **`comptime for` in match-arm position**, unrolling to one arm per variant — exhaustive
 by construction. A companion **faithfulness fix**: a `Variant.payload` must describe the
 *actual* payload (the **tuple** of all component types for a multi-component variant, not
-just the first), so `T.(v)(p)` binds a faithful value.
+just the first; the **anonymous struct** of the fields for named components, TYP-18), so
+`T.(v)(p)` binds a faithful value.
 
 **Rejected.** *A payload projection `a.(v)` outside a match* — reintroduces the unsound
 positional access the match-only rule forbids (I11), since `a` need not be variant `v`.

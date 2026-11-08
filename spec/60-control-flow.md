@@ -193,7 +193,19 @@ A variant pattern names the variant **bare** (`Some`, `Red` — the scrutinee's 
 type supplies the context) and may **qualify** it either as a `::`-path (`Color::Red`)
 **or** with the constructor `.`-spelling (`Color.Red`, `Option.Some(v)`) — a pattern
 may mirror exactly how the variant is built (Grammar §3.5). All three forms denote
-the same variant.
+the same variant. A variant declared **without** components is matched without
+parentheses (`N`, `E::N`, `E.N`): `E.N()` (or `N()`) is ill-formed as a pattern, as it is as a constructor (Type
+System §9.3; TYP-17, TYP-18).
+
+**Binding by name (TYP-18).** A variant whose components are declared **by name** (Type
+System §6.2) and a **struct** are destructured **by name only**: each pattern argument is
+`name = pattern`, binding that component or field (`Machine.Linux(arch = a)`,
+`Point(x = px)`). The pattern may list a **subset** of the components or fields, in any
+order; an unlisted one is **ignored**, exactly as if it were listed with `_`. A positional
+pattern argument there is ill-formed — a struct constructor has no positional form, and the
+pattern mirrors it (Type System §9.3) — and so is a name that names no component or field, or
+one listed twice: a Semantic diagnostic each. Whether the list may be empty, and the arity
+rules of positional patterns, are open (spec#68).
 
 An **OR-pattern** writes several alternatives separated by `|` ahead of one `=>`
 (`p1 | p2 | … => body`): the arm matches when **any** alternative matches, and is

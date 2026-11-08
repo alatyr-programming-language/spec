@@ -33,7 +33,7 @@ just statements, so control flow composes as values.
 `_`-default — because an unhandled case would be a path with no defined behavior, i.e. UB,
 which I11 forbids. Pattern matching is the **one common mechanism** shared with binding
 destructuring (one machinery, not two): variant+payload, literal, range, `_`,
-destructuring. The value of a value-yielding control construct follows a **single rule**
+destructuring (named components and struct fields bind by name, any subset — TYP-18). The value of a value-yielding control construct follows a **single rule**
 across the family: an `if`/`match` expression's type is the common type of its arms, and a
 `loop` becomes an expression whose type is the **common type of all reachable
 `break`-with-value exits** (no reachable break → `Never`). `for x in <iterator>` ranges

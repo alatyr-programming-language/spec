@@ -315,6 +315,14 @@ components (the member's one anonymous tuple payload, Type System §6.3/TYP-11).
 information reports no active member: activity
 is compile-time analysis/evaluator state, never RTTI or a hidden discriminant.
 
+For an `Enum{variants}` entry, `Variant.payload` is the variant's whole payload (Type System
+§6.2; TYP-18): `None` for a variant without components, `Some(C)` for one positional
+component of type `C`, `Some((C0, C1, ...))` for several positional components, and `Some(P)` for
+components declared by name, where `P` is the anonymous struct of those fields — so
+`typeinfo(P)` is `Struct{fields}` and carries the component names, in declaration order, as
+`Field` entries (a default belongs to `P` itself, applied by its constructor; `Field` has no
+default member — whether it reflects one is open, spec#69).
+
 A `TypeInfo` value is inspected by **ordinary comptime code** (`match`, iteration);
 size and alignment are derivable from it (and exposed as the word-functions
 `T.size()` / `T.align()`, Memory §4.3) — they are **not** members of `TypeInfo` itself.
@@ -376,7 +384,8 @@ to `a.(f)`:
 - **The comptime variant pattern `T.(v)`** — in pattern position, resolved at comptime to the concrete variant pattern
   `T.<v.name>` (`v` a `Variant` from `typeinfo(T).variants`, or its `str` `name`). It emits **identical** code to a
   source-literal `T.<name>` (zero-cost, I2; no RTTI, I3). `T.(v)(p)` binds the matched variant's **whole payload** as
-  one value `p` — a **tuple** when the variant has several components (§5.1: `Variant.payload` is that whole payload) —
+  one value `p` — a **tuple** when the variant has several positional components, the **anonymous struct** of its fields
+  when its components are named (§5.1: `Variant.payload` is that whole payload; TYP-18) —
   so a derive compares it by **recursing with the operator** (`p_a == p_b`). This is **distinct** from the positional
   literal form `T.Add(x, y)` (which binds each component separately); `T.(v)` MUST resolve to an actual variant of
   `T`'s enum type, else a defined compile error.
