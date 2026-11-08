@@ -179,8 +179,17 @@ arm of the structural default rather than a per-type override, because FN-7 admi
 definition per name and `Vec(T)` is generic. The arm exists exactly when the alloc tier does:
 under `no_alloc` there is no `Vec` or `String` for it to meet, and the base-tier signature of
 `eq` / `lt` / `hash` names no alloc-tier type, so it is no tier inversion (Stdlib §1).
-How a base-tier library body names the alloc-tier types is open as spec#55; the observable
-rule above does not depend on it.
+
+**Where the arm lives (STD-8).** The owning-container arm (STD-6) is part of the
+**compiler-provided prelude** (Stdlib §1), which is built **per translation unit with that unit's
+limits**: for a unit where the alloc tier is present, the default `eq` / `lt` / `hash` body the
+unit sees includes this arm and names the alloc-tier `Vec` and `String`; for a unit without it
+(`no_alloc`, or no allocator), the body has no such arm and names nothing absent. No language
+construct tests for a tier: the selection is the toolchain building the prelude a unit is given,
+as it already omits the `alloc` root for that unit (Stdlib §1). The arm remains prelude code over
+`typeinfo`, not a compiler-internal comparison. Whether a unit without the alloc tier may use,
+and so compare, a type from another unit whose layout reaches an alloc-tier type — where its body
+would have no arm to meet it — is open, spec#101.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is

@@ -460,7 +460,9 @@ match a {
 
 Both compose existing syntax (the variant-pattern `.`-spelling, the `comptime for` unrolling) with the comptime
 universe — **no new keyword** (OP-1) — so the **enum** case of the v1 structural derives (Stdlib appendix §2.6) is
-ordinary library code over `typeinfo`, and the compiler keeps **no** built-in structural-comparison knowledge.
+ordinary library code over `typeinfo`, and the compiler keeps **no** built-in structural-comparison knowledge: the
+derives are prelude code, and the one arm that names alloc-tier types (the owning containers) sits in the
+compiler-provided prelude built per translation unit with its limits (Stdlib appendix §2.6; STD-8).
 
 ---
 

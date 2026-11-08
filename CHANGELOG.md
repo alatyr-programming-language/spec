@@ -49,6 +49,16 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the owning-container comparison arm lives in the compiler-provided prelude, built
+per translation unit (Stdlib appendix §2.6; Comptime §5.5; STD-8).**  STD-6's content arm for
+`Vec(T)` / `String` sits in the base-tier generic `eq` / `lt` / `hash`, whose body must name
+alloc-tier types that do not exist under `no_alloc`. The arm is part of the compiler-provided
+prelude, which is built per translation unit with that unit's limits: a unit with the alloc
+tier gets a default body with the arm, one without gets a body without it. No tier-presence
+predicate is added. Open: a unit without the alloc tier using a type whose layout reaches an
+alloc-tier type (spec#101). Rejected: a comptime tier predicate; an extension point in the base
+walk. (spec#55.)
+
 **Normative — `format` returns `Result(usize, E)` and stops at the first failed write; the v1
 hole set is closed (Stdlib appendix §2.7; Functions §7.1; STD-7).**  `format(w, t, args…)` had
 no stated result or failure behaviour, and `print`, being `format` to stdout, inherited the
