@@ -144,7 +144,9 @@ the explicit `comptime` is required only for *non-type* comptime parameters (`co
 usize`, e.g. an array size). `comptime` thus implies *immutable and known at compile time*
 — a phase distinct from mutability (MEM-7).
 
-**Rejected.** *Auto-inference of phase* — it makes erasure unpredictable, against I1/I7.
+**Rejected.** *Auto-inference of phase* — it makes erasure unpredictable, against I1/I7. (A
+*constant expression* — literals combined by the built-in scalar operators — is comptime by its
+form, CT-13: a rule about the text, not inference.)
 
 ### CT-8. The comptime execution surface — shape the emitted code, don't create runtime control
 *spec: Comptime §8*
@@ -304,3 +306,62 @@ that, and it would make a constant's value depend on where it was computed. Maki
 evaluator model a specific machine's fault behaviour for `unchecked` division by zero —
 imports target-dependence into an evaluation the spec requires to be reproducible across
 machines (§2.2).
+
+### CT-13. A constant expression is comptime by its form — spec#39
+*provenance: refines CT-7 (runtime by default, no phase inference) and CT-12 (a failed guard at comptime is
+  a diagnostic); reads Type System §2.3, §9.1, Assembly §1.1, §5, §7 and CG-12/CG-15/CG-16 · spec:
+  Comptime §1.1, §1.6, §2.6, §11; Type System §2.3, §9.1; Declarations §3.4; Memory §4.5; Assembly §1.1, §5,
+  §7*
+
+**Question.** Comptime §1.1 makes evaluation runtime by default and rejects phase inference;
+Type System §9.1 makes an *integer literal* a compile-time number but says nothing of an
+operator applied to literals. The grammar has no negative literal — `-16` is unary `-` over
+`16` — yet the specification writes `at(base = rbp, disp = -16)` (Assembly §7; the arch
+appendix's addressing tables) and expects an encodable displacement, Assembly §5 makes an
+immediate a comptime value, and Memory §4.5 reads `p == -1` through unary `-` over `1`. Read
+strictly, §1.1 made `-16` and `0 - 1` runtime values, so not immediates; the other reading was
+phase inference. CG-15 and CG-16 were written to hold either way and left the question open.
+
+**Decision (owner, 2026-11-08).** **A constant expression is comptime by its form.** A
+constant expression is a scalar literal, or scalar literals combined (with parentheses) by the
+built-in scalar operators — arithmetic, comparison, bitwise, `and`/`or`, and the unary `-`,
+`~`, `not` — the arithmetic, comparison and bitwise ones each the prelude's operator function for
+its operands' type, `and`/`or`/`not` the built-in short-circuit forms over `bool` (OP-2). It is
+comptime like the literals it is built from. The rule reads the text, not
+values or uses, so it is not phase inference: an expression naming a binding, a call or a place
+does not become comptime by it, and a named operation-function such as `shl` is a call. The
+expression is checked against its context type like a literal, with the literal default where
+there is no context, and its evaluation is a comptime one, so outside an `unchecked` scope a
+failed integer guard in it (an overflow, a division by zero) is a located compile-time
+diagnostic (CT-12), never a run-time trap: `x : u8 = 200 + 100` is rejected where it is written. A named constant (`NaN`, `Infinity`, a `comptime` binding) is not
+a literal, and the range forms are not scalar operators, so neither makes a constant expression.
+`disp = -16` and `0 - 1` are immediates.
+
+**Why.** The specification's own examples need a negative immediate, and with no negative
+literal the only spelling is an operator over a literal. A rule fixed by the form keeps the phase
+line readable off the source (I1/I7), which is what CT-7 rejects inference to protect; checking
+the result at compile time keeps I11 (no silent wrap) without a run-time guard on a value the
+compiler already knows.
+
+**Not decided here.** *How* the check reads where checking each operator in the context type
+and checking the mathematical result differ — `-1` at an unsigned type (Memory §4.5's
+`p == -1`), `-128 : i8`, `1 - 2 + 3 : u64`, a constant expression under `unchecked`, including whether `unchecked (0 - 1)` is itself one — and how a
+floating-point constant expression is evaluated (step by step in its IEEE format, Concurrency §7.4,
+or exactly with one rounding) are spec#62;
+Memory §4.5 reads `p == -1` per operator (Concurrency §6.5) while Type System §2.3 calls comptime
+numbers mathematical, and spec#62 reconciles them. The context type an immediate slot or an
+`at(…)` field gives is spec#63. Admission under `no_abstractions`, whose list forbids the
+value-operators as surface syntax (Assembly §1.1, CG-12), is spec#59.
+
+**Rejected.** *Only literals and unary `-` on a literal are comptime* — a second, narrower notion
+of constant, with `0 - 1` and `1 + 1` runtime for no reason a reader can see. *Everything that is
+not a literal is runtime, a negative immediate being spelled through a `comptime` binding* —
+contradicts the specification's own `disp = -16` and makes the commonest displacement a two-line
+form.
+
+**Consequences.** Comptime §1.1 gains the rule and §11's conformance item 1 names it; Type
+System §2.3, §9.1, Declarations §3.4, Memory §4.5 and Assembly §5, §7 point to it, and
+Assembly §5's register example
+moves to a runtime operand (`y - 1`). CG-15 and CG-16 no longer leave the phase of `0 - 1` open;
+Assembly §1.1 and CG-12 mark spec#59 open. Comptime §1.6 notes that a scalar comptime operand is
+an immediate, and §2.6's `unchecked` paragraph points to §1.1 and spec#62.

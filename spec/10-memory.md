@@ -415,7 +415,8 @@ wherever its own site is well-formed (below); this sentence does not reach it. N
 `usize`, and the pointer contributes **its address bits at that same width** to a relation the compiler
 knows (below); neither operand is a `usize` copy of the other, and that is exactly why no edge is added
 to the lattice. Both operands therefore **occupy one width**, which is what makes the answer
-determinate. An integer literal at this position — `0`, `4096`, `-1` — takes `usize` from the position,
+determinate. An integer literal or constant expression at this position — `0`, `4096`, `-1` (comptime by its form, Comptime
+§1.1, CT-13; whether `p == -1` keeps the reading below is spec#62) — takes `usize` from the position,
 the same rule that settles `p == -1`: the literal `1` takes `usize` from
 the position and unary `−` over an unsigned operand keeps that type and yields the
 two's-complement negation (Concurrency §6.5, CC-8) — so it asks for the all-ones address of

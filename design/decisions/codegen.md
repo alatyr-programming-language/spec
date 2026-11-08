@@ -455,7 +455,8 @@ programmer did not write is forbidden. This resolves the boundary construct-by-c
 
 **Forbidden — structured abstractions, a compile error located at the site:**
 - **The library value-operators as surface syntax** — arithmetic `+ - * / %`, comparison,
-  bitwise, `and`/`or`, unary `-`/`not`. A native operator is an ordinary *library function*
+  bitwise, `and`/`or`, unary `-`/`not` (whether this reaches a constant expression such as
+  `-16`, comptime by its form under CT-13, is open — spec#59). A native operator is an ordinary *library function*
   (Type System §3.1) whose 1:1 body is the instruction intrinsic, but in checked code the
   compiler emits the operation's **checked guard** at the operator site (CG-13), and a
   guarded checkable operation is **not 1:1** (Assembly §3). Write the intrinsic
@@ -670,16 +671,17 @@ basis. If the compiler's test expectations are generated from fixture prose, the
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
 **Decision.** **For an instruction intrinsic in an ABI-framed function the form is
-well-formed (where its operator is admitted — not the value-operators under `no_abstractions`, Assembly §1.1): the source operand is an ordinary expression,
+well-formed (where its operator is admitted — not the value-operators under `no_abstractions`, Assembly §1.1; for a constant expression that is spec#59): the source operand is an ordinary expression,
 evaluated by the rules for any expression; a comptime value is an immediate, and any other
 value is materialized in a register exactly as an operand local is (§2.2).** So
-`movq(rbx, 0 - 1)` lowers either as an immediate or as `x := 0 - 1; movq(rbx, x)` does; which
-one depends on the phase of `0 - 1`, a general question this decision does not settle (filed
-as spec#39) — the form is well-formed in both. The evaluation's instructions belong to the
+`movq(rbx, 0 - 1)` lowers with an immediate source operand, `0 - 1` being a constant
+expression and so comptime by its form (CT-13, which settled the phase question this decision
+had left open as spec#39), while `movq(rbx, y - 1)` with a runtime local `y` lowers as
+`x := y - 1; movq(rbx, x)` does — the form is well-formed in both. The evaluation's instructions belong to the
 expression; the intrinsic still emits exactly one instruction (§3). A naked body has no §2.2
 materialization, so there an operand must already be of a listed kind. Operand-kind validity
 stays always checked (§3, §4); the decision admits no kind a table does not list, and decides
-neither the type nor the value of `0 - 1`. An implementation that cannot yet lower
+neither the type nor the value of `0 - 1` (its phase is CT-13's). An implementation that cannot yet lower
 the operand **refuses with a located diagnostic** — the right interim behaviour, since the
 alternative failure is silently taking `$0` from an unevaluated tree, an operand nobody wrote
 (I1) — but the refusal is a **known deviation** of that implementation (Overview §6: the rule
@@ -701,8 +703,9 @@ whatever the general rules give the operand expression, and the present refusal 
 deviation. The fifth, `reject_raw_asm_tmpl_operand`, passes the expression through
 `asm(…)`, whose operands §4 restricts to §5 kinds; the materialization above is for
 instruction intrinsics only, and through `asm(…)` a runtime operand is a compile error the
-specification mandates (CG-16); whether `0 - 1` is a runtime value there is the phase
-question of spec#39, which CG-16 does not settle either. The same correction applies to the
+specification mandates (CG-16). That fixture's operand is `0 - 1`, a constant expression and so
+comptime (CT-13): an immediate, a §5 kind, so `asm(…, 0 - 1)` is well-formed and the fixture's
+refusal becomes a known deviation of the compiler once its pin reaches a release with CT-13. The same correction applies to the
 other headers in the #1443 cluster that cite chapters saying the opposite. No new mechanism: this is where an
 existing refusal is *labelled*, which is what makes the eventual fix a fix rather than a spec
 break.
@@ -729,8 +732,8 @@ expression that is not itself of a §5 kind fails it. Whether a binding pinned b
 materialization of §2.2 / CG-15 applies to instruction intrinsics only. The
 explicit form stays expressible: place the value in a register with an instruction intrinsic
 (`movq(rcx, x)`) and pass that register to the template — the placing instruction is then one
-the programmer wrote. This decides neither the phase of a given expression (whether `0 - 1` is
-comptime is spec#39's question) nor any new operand kind.
+the programmer wrote. This decides neither the phase of a given expression (that `0 - 1` is
+comptime, a constant expression, is CT-13's rule) nor any new operand kind.
 
 **Why.** `asm(…)` is the uncurated escape that only `as` validates (§4). Its value is that its
 output is the text the programmer wrote; materializing an operand would make it emit
@@ -747,5 +750,6 @@ the explicit form costs one written instruction.
 
 **Consequences.** Assembly §4, §5, §11 and §12 carry the rule. The compiler fixture
 `reject_raw_asm_tmpl_operand` (an expression operand through `asm(…)`) now asserts a rejection
-the specification mandates rather than a known deviation, to the extent its operand is not
-comptime — which is spec#39's question for `0 - 1`.
+the specification mandates rather than a known deviation only to the extent its operand is not
+comptime; its `0 - 1` is a constant expression (CT-13), an immediate, so for that operand the
+refusal is not mandated (CG-15's Consequences).

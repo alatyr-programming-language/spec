@@ -68,7 +68,8 @@ MUST forbid exactly:
   Functions §6.4); and **comptime** in full (permitted and erased, I7 / FND-10).
 - **Forbidden** (a compile error) — the library value-operators as surface syntax
   (`+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`not`: a guarded operation is not
-  1:1, §3); structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);
+  1:1, §3; whether this reaches a constant expression such as `-16`, comptime by its form
+  per Comptime §1.1, is open — spec#59); structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);
   the `?` tryable; calls to non-instruction functions — including the prelude intrinsic
   **`trap()`**, which emits a target-chosen instruction the programmer did not name (write the
   per-arch checked-failure instruction itself — `ud2` / `brk #0` / `udf #0` / `ebreak`, per-arch
@@ -245,11 +246,14 @@ System / Declarations) — there is **no** special operand grammar.
 Because operands are ordinary expressions, an **instruction intrinsic**'s operand may be
 any expression: `movq(rbx, 0 - 1)` in an ABI-framed function is
 **well-formed** (CG-15), wherever its operator is admitted (`no_abstractions` forbids the
-value-operators, §1.1). The source operand is evaluated by the rules that govern any
+value-operators, §1.1; whether that reaches a constant expression such as `-16` is
+spec#59). The source operand is evaluated by the rules that govern any
 expression — its type, its phase and, for a checkable operation, its guard (§3). If its
-value is comptime it is an **immediate** (the table above); if not, it is **materialized in
-a register** exactly as an operand local is (§2.2) — the instruction is emitted on that
-register, as it would be for `x := 0 - 1; movq(rbx, x)` — and the evaluation's instructions
+value is comptime it is an **immediate** (the table above) — as `0 - 1` is, a constant
+expression being comptime by its form (Comptime §1.1, CT-13), so in `movq(rbx, 0 - 1)` its
+source operand is an immediate; if not, it is **materialized in a register**
+exactly as an operand local is (§2.2) — `movq(rbx, y - 1)` with a runtime local `y` is
+emitted on that register, as it would be for `x := y - 1; movq(rbx, x)` — and the evaluation's instructions
 belong to the expression, not to the one instruction the intrinsic emits (§3). Either way
 the operand has a kind. Materialization is §2.2's, so it applies in an ABI-framed function;
 a naked body has no such step (Functions §6.4), and there an operand must already be of a
@@ -300,7 +304,10 @@ at(base = rip, offset = sym)
 It yields an **operand value** usable wherever a memory operand is accepted (§5). The
 **valid field combinations** (which of `base` / `index` / `scale` / `disp` / `offset`
 an addressing mode allows) are **per-arch data** (§4). There is no special `[ … ]`
-addressing grammar — `at(…)` is an ordinary named-argument call (decisions CG-2).
+addressing grammar — `at(…)` is an ordinary named-argument call (decisions CG-2). A
+displacement written `disp = -16` is a constant expression, so it is comptime by its form
+(Comptime §1.1, CT-13): a comptime displacement, whose encodability the per-arch table
+checks like any operand (§3, §4).
 
 ---
 

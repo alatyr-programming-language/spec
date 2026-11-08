@@ -37,6 +37,39 @@ the phase axis is *runtime* (unnamed default) / `comptime` (marker) /
 `no_comptime` (limit)). Phase auto-inference is **rejected** — it would make
 erasure unpredictable, against I1/I7.
 
+**Constant expressions are comptime by form.** A **constant expression** is a literal of
+a scalar type (integer, floating-point, boolean, character; Type System §9.1), or such
+literals combined — with parentheses — by the **built-in scalar operators**: the glyph
+and keyword operators of Grammar §3.4 (arithmetic, comparison, bitwise, `and`/`or`, and
+the unary `-`, `~` and `not`): the arithmetic, comparison and bitwise operators and
+unary `-`/`~` each resolve to the prelude's operator function for their operands' type
+(Type System §3.1, §4.5), and `and`/`or`/`not` are the built-in short-circuit forms over
+`bool` (OP-2). A named operation-function such as `shl` is a call and does not qualify,
+and neither do the range forms `..`/`..=`. A constant expression is **comptime**, like
+the literals it is built from. This is a rule about the **text** — one reads it off the
+expression without examining any value or use — not phase inference, which stays
+rejected: no expression naming a binding, a call or a place becomes comptime by it, and
+a named constant — `NaN`, `Infinity`, a `comptime` binding — is not a literal (`true`
+and `false` are: they are `bool-lit`, Grammar §2.4). Whether `unchecked` applied to a
+constant expression (`unchecked (0 - 1)`) is itself one is open with the rest of the
+`unchecked` case (spec#62). So `-16` (the grammar has no negative literal: it is unary
+`-` over `16`, Grammar §3.4) and `0 - 1` are comptime values, and where an immediate is
+accepted they are immediates (Assembly §5, §7; the context type an immediate slot gives
+is spec#63).
+
+A constant expression is checked against its context type like a literal (Type System
+§9.1); with no context it takes the documented default, so `0 - 1` alone is the native
+signed integer −1. Its evaluation is a comptime evaluation, so outside an `unchecked`
+scope a failed integer guard in it — an overflow, a division by zero — is a located
+compile-time diagnostic (§2.6; CT-12), never a run-time trap: `x : u8 = 200 + 100` is
+rejected where it is written. Where checking each operator in the context type and
+checking the mathematical result would differ — `-1` at an unsigned type (Memory §4.5's
+`p == -1`), `-128 : i8`, `1 - 2 + 3 : u64`, a constant expression inside an `unchecked`
+scope — and how a floating-point constant expression is evaluated, the reading is open
+(spec#62), which also reconciles Memory §4.5, whose `p == -1` already reads per
+operator, with Type System §2.3, which calls comptime numbers mathematical (decision
+CT-13).
+
 #### 1.2 What `comptime` marks
 
 `comptime` applies to:
@@ -71,7 +104,10 @@ is **explicit and checkable** by the programmer (§1.1).
 
 A comptime value that is **used at run time** is **materialized into static
 storage** (`.rodata`/`.data`), **never** the runtime heap (Memory §2;
-preserving I3). This is the bridge from the comptime arena (§2.5) to the runtime
+preserving I3). (A scalar comptime value used as an instruction operand is
+instead an **immediate**, encoded in the instruction itself rather than placed in static
+storage — Assembly §5; whether the instruction accepts one is its table's operand-kind
+check, Assembly §3, §4. No heap is involved.) This is the bridge from the comptime arena (§2.5) to the runtime
 memory model.
 
 **Phase separation:** comptime knows **types, sizes, layouts, constants, and symbol
@@ -180,7 +216,8 @@ behaviour is *hardware-defined* rather than *defined* — division by zero, an o
 shift, **`MIN / -1`** and **`MIN % -1`** (Concurrency §6.2) — remains a **diagnostic** at comptime,
 because the evaluator has no hardware behaviour to reproduce and I11 forbids inventing
 one. The two's-complement wrap of `+`, `−`, `*` and unary `−` is fully defined, so those
-evaluate normally and reproducibly under `unchecked`.
+evaluate normally and reproducibly under `unchecked`; how this applies to a constant
+expression inside an `unchecked` scope is open (§1.1, spec#62).
 
 ---
 
@@ -669,11 +706,14 @@ Normative notes:
 
 A conforming implementation MUST:
 
-1. treat runtime as the default phase and `comptime` as the explicit marker; treat
-   `type` parameters as comptime without a marker; not auto-infer phase (§1);
+1. treat runtime as the default phase and `comptime` as the explicit marker; treat `type`
+   parameters as comptime without a marker; treat a constant expression as comptime by
+   its form and report a failed integer guard in it, outside `unchecked`, as a
+   compile-time diagnostic; not auto-infer phase otherwise (§1.1);
 2. fully erase all comptime computation before run time, leaving no runtime cost or
    artifact, and materialize a boundary-crossing comptime value into **static**
-   storage, never the heap (§1.5–1.6; I7/I3);
+   storage — or, as an instruction operand, an immediate (§1.6) — never the heap
+   (§1.5–1.6; I7/I3);
 3. evaluate comptime as the same language with arbitrary recursion/loops bounded by
    a **reproducible step budget** that is a ceiling (deterministic result or
    "budget exhausted", never a silent partial), counted in abstract steps (§2.2);

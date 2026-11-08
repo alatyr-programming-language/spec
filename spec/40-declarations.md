@@ -210,7 +210,8 @@ the target place/parameter — and its representability is checked at compile ti
 (Type System §9.1). With **no** context it takes the documented default (an integer
 literal: the target's native signed integer; a floating-point literal: `f64` — Type System
 §9.1, TYP-13); a literal that needs a non-default type with no context MUST be annotated or
-constructed (`T(v)`).
+constructed (`T(v)`). A constant expression — literals combined by the built-in scalar operators,
+such as `-1` — is checked against its context the same way (Comptime §1.1; CT-13).
 
 ---
 

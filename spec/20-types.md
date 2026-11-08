@@ -88,7 +88,8 @@ The `bitsN` ontology describes **run-time storage**. In compile-time evaluation,
 numbers are mathematical numbers, not fixed-width blocks (Comptime chapter); a
 comptime number is **materialized** into a fixed-width block when it crosses the
 boundary into run time. `bitsN` is therefore the substrate of run-time data, not a
-constraint on compile-time arithmetic.
+constraint on compile-time arithmetic. (Whether a constant expression — Comptime §1.1 — is
+evaluated this way or per operator in its context type is open, spec#62.)
 
 #### 2.4 Mapping to the surface
 
@@ -1042,7 +1043,10 @@ its type is
 **inferred from context**, and its representability in that type is **checked at
 compile time** — a literal outside the target type's range is a compile error (I11),
 never a silent wrap. With **no** context, an integer literal takes a **documented default**:
-the target's native signed integer.
+the target's native signed integer. Literals combined by the built-in scalar operators —
+`-16`, `0 - 1`, `(1 + 2) * 4` — form a **constant expression**, comptime by its form and
+checked against the context type like a literal, a failed integer guard in it outside
+`unchecked` being a compile-time diagnostic (Comptime §1.1; CT-13).
 
 A **floating-point literal is likewise a compile-time number**, its type inferred from
 context, and that context type MUST be a **floating-point** type: a float-spelled literal
