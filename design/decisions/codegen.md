@@ -447,17 +447,19 @@ programmer did not write is forbidden. This resolves the boundary construct-by-c
   *fixed, spec-defined* frame (Memory §2.5 / Codegen §3.4), fully determined by the source —
   not a compiler-chosen abstraction. A binding's initializer must itself be a surface
   expression (an intrinsic result / register / immediate / local / data constructor).
-- **Comptime** in full (`comptime if`/`for`/`match`, `when`-gating, immediates, `embed`) —
-  **permitted and erased** (FND-10, I7): it emits no runtime artifact of its own machinery,
-  so it cannot break the 1-to-1 property. This is the one wholesale exemption.
+- **Comptime** in full (`comptime if`/`for`/`match`, `when`-gating, immediates, `embed`, a
+  constant expression such as `-16` — CG-17) — **permitted and erased** (FND-10, I7): it
+  emits no runtime artifact of its own machinery, so it cannot break the 1-to-1 property.
+  This is the one wholesale exemption.
 - Compile-time **attributes/effectors** (`@reg`, `@section`, `@endian`, `@abi`, `@label`,
   `@align`, …) — they shape emission; they are not themselves emitted.
 
 **Forbidden — structured abstractions, a compile error located at the site:**
-- **The library value-operators as surface syntax** — arithmetic `+ - * / %`, comparison,
-  bitwise, `and`/`or`, unary `-`/`not` (whether this reaches a constant expression such as
-  `-16`, comptime by its form under CT-13, is open — spec#59). A native operator is an ordinary *library function*
-  (Type System §3.1) whose 1:1 body is the instruction intrinsic, but in checked code the
+- **The library value-operators as surface syntax at a run-time operator site** — arithmetic
+  `+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`~`/`not` (a constant expression such as
+  `-16`, comptime by its form under CT-13, is not such a site and is admitted, CG-17; `and`/`or` are
+  forbidden too because their short-circuit emits a branch the programmer did not write). A native
+  operator is an ordinary *library function* (Type System §3.1) whose 1:1 body is the instruction intrinsic, but in checked code the
   compiler emits the operation's **checked guard** at the operator site (CG-13), and a
   guarded checkable operation is **not 1:1** (Assembly §3). Write the intrinsic
   (`add(out, b)`) directly — an intrinsic never carries a guard.
@@ -670,8 +672,9 @@ basis. If the compiler's test expectations are generated from fixture prose, the
 lowering limit into specified behaviour and the compiler bug disappears behind its own test.
 
 **Decision.** **For an instruction intrinsic in an ABI-framed function the form is
-well-formed (where its operator is admitted — not the value-operators under `no_abstractions`, Assembly §1.1; for a constant expression that is spec#59): the source operand is an ordinary expression,
-evaluated by the rules for any expression; a comptime value is an immediate, and any other
+well-formed (where its operator is admitted — not a run-time value-operator under `no_abstractions`,
+Assembly §1.1, while a constant expression is admitted there, CG-17): the source operand is an
+ordinary expression, evaluated by the rules for any expression; a comptime value is an immediate, and any other
 value is materialized in a register exactly as an operand local is (§2.2).** So
 `movq(rbx, 0 - 1)` lowers with an immediate source operand, `0 - 1` being a constant
 expression and so comptime by its form (CT-13, which settled the phase question this decision
@@ -754,6 +757,39 @@ the explicit form costs one written instruction.
 the specification mandates rather than a known deviation only to the extent its operand is not
 comptime; its `0 - 1` is a constant expression (CT-13), an immediate, so for that operand the
 refusal is not mandated (CG-15's Consequences).
+
+### CG-17. Under `no_abstractions`, a constant expression is admitted — spec#59
+*provenance: refines CG-12 (the allow-list) after CT-13 (a constant expression is comptime by its form);
+  reads CG-15 · spec: Assembly §1.1, §5*
+
+**Question.** After CT-13, `-16` and `0 - 1` are comptime by their form. CG-12 and Assembly §1.1 admit
+"comptime in full" and immediates by the operative rule (a construct that emits no runtime instruction
+is admitted), but the same list forbids "the library value-operators as surface syntax", unary `-`
+included, so `at(base = rbp, disp = -16)` in a `no_abstractions` unit had two answers. CG-15's
+qualifier ("not the value-operators under `no_abstractions`") left it open.
+
+**Decision (owner, 2026-11-08).** **Admitted.** A constant expression is comptime, emits no instruction
+and carries no guard, so CG-12's operative rule admits it under `no_abstractions`; the forbidden
+value-operator list governs **run-time operator sites** only. So `at(base = rbp, disp = -16)` and
+`movq(rbx, 0 - 1)` are well-formed in a `no_abstractions` unit, and `x + 1` with a runtime `x` stays
+forbidden. (Derived: `D * 8` with `D` a `comptime` binding is a run-time operator site in `disp = D * 8` or as
+an instruction operand — naming a binding does not make an expression comptime, and an operand's
+phase is its expression's own, Assembly §5; CT-13 — so it is forbidden there; with `D : i32`,
+`disp = comptime { D * 8 }` is admitted.)
+
+**Why.** It follows from CG-12's own criterion: the value-operators are forbidden because at run time
+they make the compiler emit instructions the programmer did not write (a checked guard, Assembly §3;
+a short-circuit branch), and a constant expression emits none — a failure in it is a compile-time
+diagnostic (Comptime §1.1, §2.6; CT-12). Forbidding it would make the commonest displacement expressible only through a separate `comptime` binding.
+
+**Rejected.** *Forbidden as surface syntax regardless of phase* — the unit writes
+`comptime D : i32 = -16; … disp = D`, itself admitted under "comptime in full", so the rule would forbid
+a spelling, not a construct. *Only unary `-` on a literal admitted* — a second, narrower notion of
+constant beside CT-13's.
+
+**Consequences.** Assembly §1.1 admits the constant expression under comptime and confines the
+forbidden list to run-time operator sites; Assembly §5, CG-12, CG-15, CT-13 and the glossary's
+`no_abstractions` entry follow.
 
 ### CG-18. An immediate slot and an `at(…)` field take a signed per-width slot type from the arch table — spec#63
 *provenance: refines CG-2 (the operand schema, per-arch data) and the immediate of Assembly §5; reads CT-13

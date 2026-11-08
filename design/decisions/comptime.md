@@ -351,7 +351,7 @@ and checking the mathematical result differ — `-1` at an unsigned type, `-128 
 CT-14 (spec#62). The context type an immediate slot or an
 `at(…)` field gives was spec#63, since settled by CG-18 (its slot type; spec#80 for the fields
 no v1 type describes). Admission under `no_abstractions`, whose list forbids the
-value-operators as surface syntax (Assembly §1.1, CG-12), is spec#59.
+value-operators as surface syntax (Assembly §1.1, CG-12), is CG-17 (spec#59): admitted.
 
 **Rejected.** *Only literals and unary `-` on a literal are comptime* — a second, narrower notion
 of constant, with `0 - 1` and `1 + 1` runtime for no reason a reader can see. *Everything that is
@@ -363,7 +363,7 @@ form.
 System §2.3, §9.1, Declarations §3.4, Memory §4.5 and Assembly §5, §7 point to it, and
 Assembly §5's register example
 moves to a runtime operand (`y - 1`). CG-15 and CG-16 no longer leave the phase of `0 - 1` open;
-Assembly §1.1 and CG-12 mark spec#59 open. Comptime §1.6 notes that a scalar comptime operand is
+Assembly §1.1 and CG-12 marked spec#59 open, since settled by CG-17. Comptime §1.6 notes that a scalar comptime operand is
 an immediate, and §2.6's `unchecked` paragraph points to §1.1.
 
 ### CT-14. An integer constant expression is exact, then checked; a floating-point one is per operation — spec#62

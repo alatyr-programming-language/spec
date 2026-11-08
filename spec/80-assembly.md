@@ -65,11 +65,21 @@ MUST forbid exactly:
   whose initializers are surface expressions, with the destination `return`ed by an
   ABI-framed enclosing function (a naked function has no parameters, no result and no stack
   slots — its locals are `@reg(name)`-pinned — and is entered by raw transfer only,
-  Functions §6.4); and **comptime** in full (permitted and erased, I7 / FND-10).
+  Functions §6.4); and **comptime** in full (permitted and erased, I7 / FND-10) — including
+  a **constant expression** (`disp = -16`, `0 - 1`), which is comptime by its form (Comptime
+  §1.1), emits no instruction and carries no guard, so the constant expression itself is admitted;
+  the construct it appears in is judged by its own entry in this list (decision CG-17).
 - **Forbidden** (a compile error) — the library value-operators as surface syntax
-  (`+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`not`: a guarded operation is not
-  1:1, §3; whether this reaches a constant expression such as `-16`, comptime by its form
-  per Comptime §1.1, is open — spec#59); structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);
+  (`+ - * / %`, comparison, bitwise, `and`/`or`, unary `-`/`~`/`not`) at a **run-time**
+  operator site — an operator application that is neither a constant expression (Comptime
+  §1.1) nor evaluated at compile time — in a comptime context or a position the
+  specification makes comptime (Comptime §1.2, §1.3, §8; the code a `comptime if`/`match`/
+  `for` emits is runtime, Comptime §8.5) — since a guarded operation is not 1:1 (§3) and a
+  short-circuit form emits a branch nobody wrote. An instruction operand or an `at(…)` field
+  is not made comptime by its position: its phase is its expression's own (§5; CT-13), so
+  `disp = D * 8`, with `comptime D : i32`, is a run-time operator site, and
+  `disp = comptime { D * 8 }` is admitted;
+  structured control flow (`if`/`while`/`for`/`loop`/`match`/`break`/`continue`);
   the `?` tryable; calls to non-instruction functions — including the prelude intrinsic
   **`trap()`**, which emits a target-chosen instruction the programmer did not name (write the
   per-arch checked-failure instruction itself — `ud2` / `brk #0` / `udf #0` / `ebreak`, per-arch
@@ -272,8 +282,8 @@ spec#80 (decision CG-18).
 Because operands are ordinary expressions, an **instruction intrinsic**'s operand may be
 any expression: `movq(rbx, 0 - 1)` in an ABI-framed function is
 **well-formed** (CG-15), wherever its operator is admitted (`no_abstractions` forbids the
-value-operators, §1.1; whether that reaches a constant expression such as `-16` is
-spec#59). The source operand is evaluated by the rules that govern any
+value-operators at a run-time operator site and admits a constant expression such as
+`0 - 1` or `-16`, §1.1). The source operand is evaluated by the rules that govern any
 expression — its type, its phase and, for a checkable operation, its guard (§3). If its
 value is comptime it is an **immediate** (the table above) — as `0 - 1` is, a constant
 expression being comptime by its form (Comptime §1.1, CT-13), so in `movq(rbx, 0 - 1)` its
