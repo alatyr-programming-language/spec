@@ -132,7 +132,8 @@ and **deferred (additive) growth**.
   list or operator chain holding an always multi-line element is wrapped one element per line
   (TOOL-25); and a trailing comment on a line `fmt` expands trails the first output line (TOOL-26).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`
-  only, no comma after an arm, SYN-8), declarations/expressions (SYN-5),
+  only, no comma after an arm, SYN-8), declarations/expressions (SYN-5), the explicit discard `_ := expr`,
+  the lone `_` not a name (SYN-9),
   attributes `@` — flat syntax + a **family taxonomy** (storage/layout/contract/abi/codegen/linkage/build/
   control/test) for docs & diagnostics, no `@family.name` (SYN-7/3B; isolation via the diagnostic, which names
   the family), control/blocks (CF-1), memory word-functions `ptr`/`deref`/`size`/`align` (MEM-7), `snippet`-removed/`@label`-labels (CF-6/CF-4).

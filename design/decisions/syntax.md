@@ -166,6 +166,40 @@ and the value's role is already fixed by its **consumption slot** (`when`/`compt
 for predicates, `@`/UFCS for levers, CT-10), so a definition-site introducer would only save
 names while losing the value's role-agnosticism.
 
+### SYN-9. `_ := expr` is the explicit discard; the lone `_` is not a name — spec#81
+*provenance: refines SYN-1 (identifiers) and SYN-6 (no silent result); reads STD-7 (`print` returns
+  `Result(usize, IoError)`) and MEM-2 (strict linearity) · spec: Grammar §2.2, §3.1; Functions §3.3;
+  Control Flow §3; Stdlib appendix §2.7*
+
+**Question.** A block's value is its final expression (Grammar §3.1) and a function with no result
+whose body ends in a value-expression is ill-formed (Functions §3.3). Since STD-7 `print(…)` returns
+`Result(usize, IoError)`, so `main := fn() { print("hello\n") }` is ill-formed, and the only way to drop
+the value was an unused named binding (`r := print(…)`). No form said "discarded on purpose".
+
+**Decision (owner, 2026-11-08).** **`_ := expr` is an explicit discard: `_` is no longer a bindable
+name, may be repeated in one scope, and cannot be read.** It is the form for a procedure body ending in
+`print(…)`, and covers the branching forms of the same question consistently.
+
+**Derived (not the owner's wording).** The lone `_` is not an identifier; it stays the wildcard pattern
+and is the discard's target. The discard is a block statement, not an expression, so a block ending in
+it has no value; at module scope it is not in the grammar. A final `if` with `else`, or a final `match`,
+whose non-diverging arms all yield a value is a value-expression, and the discard is written on it or as each arm's last
+element; an `if` without `else` yields no value already (Control Flow §4). An owning value is not
+discarded — `_ := e` with `e` owning leaves it neither released nor transferred, so it is ill-formed
+(Memory §5.9), as STD-7 already said of a result over an owning error type.
+
+**Why.** The discard is visible at the site (I3), has one spelling, and reuses `_` and `:=` with no new
+keyword (PRIN-1). Functions §3.3's "no silent result" stays: a function that meant to return a value but
+declares none still fails to compile.
+
+**Rejected.** *Keep the rule and write a named unused binding* — a dummy name in every such procedure and
+no way to say the drop is intended. *Discard the final expression of a body with no result* — brings
+back the silent result §3.3 forbids.
+
+**Left open.** The value of a deferred expression (`defer print(…)`): spec#113. The lone `_` in other
+binding positions — `for _ in`, a projection target, a parameter, `_ : T = e`, module scope — is refused
+for now: spec#114. A final `if`/`match` whose arms are partly value-less: spec#119.
+
 ---
 
 ## `@` attributes

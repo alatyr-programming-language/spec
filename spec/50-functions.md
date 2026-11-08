@@ -347,7 +347,12 @@ position:
 For a **`-> T`** anonymous output, a body that **is** an expression — `{ expr }` — fills it (sugar
 for `{ return expr }`). With **named** `out`s, the results are written in the body by
 assignment. A function with **no** result whose body ends in a value-expression is
-**ill-formed** (no silent result).
+**ill-formed** (no silent result); a value it does not want is discarded explicitly with
+`_ := expr` (Grammar §3.1; SYN-9): `fn() { _ := print("hi\n") }`. A final `if` with an
+`else`, or a final `match`, whose non-diverging arms all yield a value is a value-expression
+too; the discard is written on it or as the last element of each arm
+(`if c { _ := print("a") } else { _ := print("b") }`). An `if` without `else` yields no value (Control Flow §4), so a body ending in
+one does not end in a value-expression.
 
 #### 3.4 `return`
 

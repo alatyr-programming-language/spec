@@ -63,7 +63,7 @@ token (`+=`, not `+` then `=`); none of them collides with the comparison tokens
 #### 2.2 Identifiers
 
 ```ebnf
-ident      ::= ident-start { ident-cont }
+ident      ::= ident-start { ident-cont }   (* except the lone "_", which is not an ident *)
 ident-start ::= letter | "_"
 ident-cont  ::= letter | digit | "_"
 
@@ -79,6 +79,10 @@ Identifiers are **case-sensitive and underscore-significant**: `my_func`, `myfun
 `MyFunc` denote **three distinct** entities, `_tmp` ≠ `tmp`, and identifiers are compared
 **by their code points, as written** (SYN-1). The underscore is a non-significant separator
 only in **numeric literals** (`1_000` = `1000`, §2.4) — never in identifiers.
+
+The **lone `_`** is **not** an identifier: it is used only as the wildcard pattern (§3.5)
+and in the discard `_ := expr` (§3.1). It is **not a bindable name** and **cannot be read**
+(SYN-9). `_tmp` is an ordinary identifier.
 
 A linker symbol is the **spelling as declared**, with `::` paths mangled to `__`
 (Modules §6; MOD-6), unless overridden by `@export("name")` (§3.11). Keywords (§2.3) are
@@ -246,13 +250,15 @@ statement   ::= declaration                            (* a local binding (§3.2
               | while-stmt | for-stmt | labeled-loop-stmt (* @label(name) while/for (§3.7) *)
               | labeled-point                             (* @label(name) <instruction> — code-point/jmp target (§3.7; CF §11); CF-5 *)
               | defer-stmt
+              | discard                                 (* _ := expr (below; SYN-9) *)
               | expr                                    (* expression statement: if/match/loop/block, call, … *)
+discard     ::= "_" ":=" expr                           (* explicit discard: evaluates expr for effect, binds nothing *)
 ```
 
 **Module scope is a region of declarations plus top-level-only items** (order-independent;
 Declarations §7.1): a file's top level, and an inline module body, contain `module-item`s
 only. Executable statements — `assignment`, `return`/`break`/`continue`, `while`/`for`,
-`defer`, and a bare expression — belong to **function and control-flow blocks**, not
+`defer`, a discard, and a bare expression — belong to **function and control-flow blocks**, not
 module scope. Because `module-body` admits only `module-item`, such a statement at module
 scope is **not in the grammar** and is rejected at the **Parse stage** (Tooling §5). An
 inline module is an ordinary binding whose value is the `mod`-introducer (§3.4):
@@ -264,7 +270,7 @@ A `block` is an **expression** (Control Flow §3/§7; SYN-6). **Its value is its
 element when that element is an expression**; a non-final expression is an expression
 *statement* evaluated for effect with its value discarded, and a trailing `sep` is
 collapsed (§2.6) and does **not** suppress the value. If a block's last element is
-**not** an expression (a declaration, assignment, `while`/`for`, `defer`), the block
+**not** an expression (a declaration, discard, assignment, `while`/`for`, `defer`), the block
 yields **no value** — there is no unit type — and using such a block where a value is
 required is ill-formed. A block whose last element **diverges** (`return`/`break`/
 `continue`, or a call of type `Never`) is **not** in this list: it has type **`Never`**
@@ -272,6 +278,15 @@ required is ill-formed. A block whose last element **diverges** (`return`/`break
 value position (e.g. the `else { return }` of a value-position `if`). `if`/
 `match`/`loop` and a nested `block` are expressions and reach statement position
 through `expr`; `while`/`for` are statements, never expressions.
+
+**The discard** `_ := expr` evaluates `expr` for effect and binds nothing (SYN-9); `expr` is
+in value position, so a call of a function with no result there is ill-formed (Functions §3.5). It is not
+an expression, so as a block's last element it leaves the block with no value — the form for
+a function with no result whose body ends in a call that has one (Functions §3.3):
+`main := fn() { _ := print("hello\n") }`. It binds no name, so it may appear any number of
+times in one scope (Declarations §6.2 does not apply). An owning value is not discarded:
+`_ := e` with `e` owning is ill-formed, the value being neither released nor transferred
+(Memory §5.9).
 
 #### 3.2 Declarations, top-level items, and bindings (Declarations §9; SYN-5)
 

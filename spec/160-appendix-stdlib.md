@@ -329,8 +329,8 @@ distinct from a compile-time-known string, which is just a literal).
   `?` (§2.2), or, when `E` is not owning, lets it be discarded as a non-final statement of a block
   (Grammar §3.1); a result over an owning `E` is consumed like any owning value (Memory §5.9). As the final
   element of the body of a function with no result the call is a value-expression, so that
-  body is ill-formed (Functions §3.3): the result is bound there instead (`r := print("…")`;
-  an explicit discard form is open, spec#81). A writer returning `Ok(k)` beyond the slice it
+  body is ill-formed (Functions §3.3): the result is discarded there explicitly
+  (`_ := print("…")`, Grammar §3.1) or bound. A writer returning `Ok(k)` beyond the slice it
   was given, and a total past `usize`, are open (spec#82). The hole set is `format`'s: the
   template trigger of Functions §7.1 itself restricts no argument type;
 - **`print("…", args…)`** is **`format` to standard output**: `print(t, args…)` ≡

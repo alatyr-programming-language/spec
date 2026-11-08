@@ -305,8 +305,8 @@ Consequences, not separate decisions: after a short write, the unconsumed remain
 again (a writer that keeps returning `Ok(0)` keeps being called); a result over an owning `E`
 is consumed like any owning value, not discarded (Memory §5.9); and, by Grammar §3.1 and
 Functions §3.3, a call to `print` as the final element of a procedure body is a
-value-expression there and makes the body ill-formed — the result is bound (`r := print(…)`) or
-handled. Left open: whether a user brand or `@require` type over a hole type is in the set
+value-expression there and makes the body ill-formed — the result is discarded explicitly
+(`_ := print(…)`, SYN-9), bound or handled. Left open: whether a user brand or `@require` type over a hole type is in the set
 (spec#99); which `write` calls carry the fragments (spec#100).
 
 **Why.** The result mirrors `Writer.write` and STD-2's `?` story, so a failure is a value the
@@ -322,7 +322,7 @@ values or prints noise; shortest round-trip is exact and minimal.
 
 **Left open.** The exact text of a float hole (notation, ties, integral values, non-finite and
 signed zero): spec#75. `format`'s tier and the module paths of `format`, `print` and the §7 std
-surface: spec#74. An explicit discard form for a value in final position: spec#81. A writer
+surface: spec#74. The explicit discard form for a value in final position: settled by SYN-9 (spec#81). A writer
 returning `Ok(k)` beyond its slice, and a total count past `usize`: spec#82. Whether a user
 brand or `@require` type over a hole type is in the hole set: spec#99. Which `write` calls carry
 the fragments (an empty fragment, joining fragments): spec#100.

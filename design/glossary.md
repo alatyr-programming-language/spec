@@ -293,6 +293,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Binding** (*binding*) — the association of a name with a place; the carrier of scope.
 
+- **Discard** (SYN-9) — the statement `_ := expr`: evaluates `expr` for effect and binds nothing. The
+  lone `_` is not a name — it cannot be bound or read and may repeat in one scope; it is otherwise only
+  the wildcard pattern. A block ending in a discard has no value (Grammar §3.1; Functions §3.3).
+
 - **Address** (*address*, pointer) — a pointer-width value designating a place-in-memory.
 
 - **Storage class** — where a place lives: register / stack / static / allocator-managed
