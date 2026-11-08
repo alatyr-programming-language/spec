@@ -464,7 +464,7 @@ both bind only once the pin moves to the release that carries this text.
 
 ---
 
-### TYP-15. An enum variant constructor takes exactly its declared component count — compiler#1443
+### TYP-15. An enum variant constructor takes no argument beyond its declared components — compiler#1443
 *provenance: extends TYP-5/TYP-8 (construction) and carries TYP-11's arity rule, stated in
   §6.3 for raw unions, to enum variants · spec: Types §9.3; Grammar §3.4*
 
@@ -479,16 +479,17 @@ without an arity rule. Three compiler fixtures (`issue513_variant_arity_too_many
 exercised by `_too_few`, `_one_empty` and `_generic_too_few` — and the compiler silently
 dropped the written argument.
 
-**Decision.** **An enum variant constructor takes exactly its declared component count: no
-argument beyond the declared components, and, for components declared positionally, exactly
-their count in declaration order.** A surplus argument is a Semantic diagnostic, never
+**Decision.** **An enum variant constructor takes no argument beyond its declared components,
+and, for components declared positionally, exactly their count in declaration order** (for
+components declared by name, the binding is TYP-17's). A surplus argument is a Semantic diagnostic, never
 discarded; for positional components so is omitting one, and so is supplying one argument
 where the variant declares several (unless the variant's single component *is* that tuple).
 The rule sits in Types §9.3 beside the enum bullet and is restated in Grammar §3.4, where
 the union-only wording sat. It does **not** import §6.3's other raw-union prohibitions
-(named arguments, `m()`): whether a variant may declare named, defaulted components, as the
-manifest appendix's `Machine` does, and whether `E.N()` spells a parenthesis-less `E.N`, are
-separate questions filed as spec#36.
+(named arguments, `m()`) by itself. Those two questions — whether a variant may declare named,
+defaulted components, as the manifest appendix's `Machine` does, and whether `E.N()` spells a
+parenthesis-less `E.N` — were filed as spec#36 and are decided by TYP-17: named components
+are admitted and bind by name as a struct's fields do, and `E.N()` is ill-formed.
 
 **Rejected.** *Permitting surplus arguments and discarding them, on the ground that the rule
 was named only for unions.* Rejected on I3 and FND-3: an argument the author wrote that the
@@ -540,3 +541,57 @@ specification states it, and the explicit form (`x : T = 5`, `T(5)`) stays expre
   is later passed to a `usize` parameter). Action at a distance: the type of a binding would
   depend on lines below it, against §3.2's local inference, and which use counts as "first"
   would need its own rules that the specification does not have.
+
+---
+
+### TYP-17. Variant components may take the struct field form; a nullary variant has one spelling — spec#36
+*provenance: extends TYP-5/TYP-8 (construction, declared defaults) and TYP-15 (variant
+  constructor arity) to named variant components; carries TYP-11's `m()` rule to enum variants;
+  makes TOOL-18's `Machine` declaration expressible · spec: Types §6.2, §9.3, §9.4; Grammar §3.3,
+  §3.4; manifest appendix §3.1 (and every `Machine.Com` site)*
+
+**Question.** The manifest appendix's prelude `Machine` enum (TOOL-18) declares variants with
+**named, defaulted components** — `Linux(arch : Arch, env : Env = ‹arch-default›, …)` — and
+constructs them by name with defaults omitted (`Machine.Bare(arch = Arch.aarch64)`), but
+Grammar §3.3's `variant` production admitted only positional component types and Types
+§6.2/§9.3 defined no named or defaulted component: the language could not produce the
+declaration its own appendix requires. Separately, for a variant declared without
+parentheses, nothing said whether `E.N()` spells `E.N` (a raw-union member's `m()` is a
+diagnostic, §6.3), and the appendix wrote `Com ( )` / `Machine.Com()`.
+
+**Decision (owner, 2026-11-08).** **A variant's components take the struct field form
+`ident : type-expr [= expr]`, and the variant is constructed by name, a defaulted component
+omittable, exactly as a struct constructor; positional components stay valid. A nullary
+variant has one spelling, without parentheses: declared `N`, constructed `E.N`; `E.N()` is
+ill-formed, as for a raw-union member.** Two consequences of "the struct field form … exactly as
+a struct constructor", not separate decisions: one variant's components are all positional or
+all named — the two forms are the tuple and the struct shapes, and a variant takes one of
+them — and a named-component variant takes **named** arguments only (a struct constructor has
+no positional form); TYP-15's surplus rule applies unchanged (no argument without a component to
+bind). The manifest's `Com ( )` becomes `Com` and `Machine.Com()` becomes `Machine.Com` in every
+chapter, appendix and decision.
+
+**Why.** The manifest is the most visible v1 surface, and the struct field form with defaults
+already exists (Types §9.3/§9.4), so admitting it in a variant adds a place where an existing
+form is accepted, not a mechanism (PRIN-1). A default is still a value the author wrote in the
+declaration, so §9.4's "no language-imposed default" holds. One spelling for a nullary variant
+keeps enum variants and raw-union members under the same rule, and gives a reader and a second
+implementation one form to expect (FND-3).
+
+**Rejected.**
+- *Rewrite `Machine` with positional variants and a struct payload* (`Linux(LinuxTarget)`): no
+  language change, but every manifest example and TOOL-18 changes and each construction gains a
+  nested constructor — the cost lands on the most-written v1 surface.
+- *Accept `E.N()` as a second spelling of `E.N`* (what the compiler did, fixture
+  `issue513_variant_arity_nullary_control`): two spellings for one value, and an asymmetry with
+  raw-union members for no gain.
+
+**Not decided here** (filed as spec#44): the payload type a named-component variant presents to
+`typeinfo` and `T.(v)(p)` (the tuple of component types, as the text reads now, or the anonymous
+struct of those fields); how a pattern binds named components (by name only? may it omit some?);
+and whether `E.N()` is a valid **pattern**.
+
+**Consequences.** Grammar §3.3 gains `variant-components` / `variant-field` and drops the empty
+parentheses from `variant`; Grammar §3.4 and Types §9.3 state the named binding and the `T.V()`
+diagnostic; Types §6.2 describes the three component forms and §9.4 the component default. The
+compiler accepts `E.N()` today; that becomes a refusal the spec mandates.

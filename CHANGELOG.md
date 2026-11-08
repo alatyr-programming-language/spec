@@ -49,6 +49,19 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — variant components may take the struct field form, and a nullary variant has
+one spelling (Types §6.2, §9.3, §9.4; Grammar §3.3, §3.4; manifest appendix §3.1, Tooling §2.2,
+ABI appendix §2, per-arch appendix §1; TYP-17).**  The manifest appendix's `Machine` enum
+declared named, defaulted variant components (`Linux(arch : Arch, env : Env = …)`) and built
+them by name (`Machine.Bare(arch = Arch.aarch64)`), which the `variant` production could not
+express. A variant's components may now be declared in the struct field form
+`ident : type-expr [= expr]` — all of one variant's components positional or all named — and
+such a variant is constructed by named arguments exactly as a struct is, a defaulted component
+omittable; positional components stay valid. A variant without components is written `N` and
+constructed `E.N`; `E.N()` is a Semantic diagnostic, as `m()` is for a raw-union member. The
+manifest's `Com ( )` / `Machine.Com()` are now `Com` / `Machine.Com` everywhere. The payload
+type and pattern form of a named-component variant are open as spec#44.
+
 **Normative — `asm(…)` emits exactly its template: an operand not of a §5 kind is a compile
 error, never materialized (Assembly §4, §5, §11, §12; CG-16).**  §4 restricts an
 `asm(template, …)` operand to an operand kind of §5, but did not say whether a runtime

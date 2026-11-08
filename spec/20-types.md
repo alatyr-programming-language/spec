@@ -489,6 +489,19 @@ A tagged enum is a **tag** followed by a **payload**:
   ill-formed;
 - the **payload** is sized for the largest variant and aligned accordingly.
 
+**Variant components (TYP-17).** A variant declares its components in one of two forms, or
+has none:
+
+- **positional** — a list of types, `Some(T)`, `Add(Expr, Expr)`, bound in declaration order;
+- **named** — a list in the **struct field form** `ident : type-expr [= expr]`,
+  `Bare(arch : Arch, env : Env = Env.none)`: each component has a name and MAY declare a
+  default, as a struct field does (§9.4);
+- **none** — the variant is written **without parentheses**, `N`; `N()` is not a second
+  spelling of it (as for a raw-union member, §6.3).
+
+One variant's components are all positional or all named (Grammar §3.3). How each form is
+constructed is §9.3.
+
 An enum with **zero variants** is **ill-formed**: it is uninhabited (no tag value, so no
 value can ever be constructed), and the language's single uninhabited type is the named
 bottom type **`Never`** (§3.7 / Stdlib §3.7) — a second one by an empty `enum {}` would be
@@ -1041,13 +1054,20 @@ privilege a fixed built-in set against the uniformity principle (§5.3).
   beyond the variant's declared components**: an argument with no component to bind —
   `T.V(a, b)` for a variant declared with one component, or any argument to a variant
   declared with none — is a Semantic diagnostic, never a construction that silently drops
-  it (I3; TYP-15). For components declared positionally (the Grammar's `variant`
-  production), the arguments bind in declaration order and their count is **exact**, as
+  it (I3; TYP-15). For components declared positionally (the positional alternative of the
+  Grammar's `variant-components`), the arguments bind in declaration order and their count is **exact**, as
   for a raw-union member (§6.3): omitting one is ill-formed, since the language supplies
   no value the author did not write (§9.4), and so is a tuple supplied as one argument
   where the variant declares several components. A variant whose one declared component
   is a tuple type takes that tuple as its one argument; a pattern that binds a
-  multi-component payload as one tuple (Grammar §3.5) is a pattern, not a constructor;
+  multi-component payload as one tuple (Grammar §3.5) is a pattern, not a constructor.
+  For components declared **by name** (§6.2), the constructor is exactly a struct
+  constructor over them: **named** arguments, `Machine.Bare(arch = Arch.aarch64)`, each
+  bound to the component of that name, a component with a declared default omittable
+  (§9.4) and every other one required; a positional argument is a Semantic diagnostic, since
+  a struct constructor has none (§11 `struct-ctor`). A variant declared **without** components is
+  constructed `T.V`; `T.V()` is a Semantic diagnostic, as `m()` is for a raw-union member
+  (§6.3; TYP-17);
 - **raw-union member** — `Cell.none`, `Cell.word(v)`, `Cell.pair(a, b)`; the
   constructor produces a whole canonical union value and activates that member
   (§6.3);
@@ -1067,7 +1087,9 @@ preserving I3).
   lowering; it is not a default initializer.
 - **Programmer-declared defaults are explicit and permitted.** A struct field may
   declare a default (`struct { x: u64 = 0, y: u64 }`), applied when the field is
-  omitted at construction (`Point(y = 2)` ⇒ `x = 0`). An array type carries a
+  omitted at construction (`Point(y = 2)` ⇒ `x = 0`); a variant component declared by
+  name may declare one the same way, applied when it is omitted from the variant's
+  constructor (§6.2, §9.3; TYP-17). An array type carries a
   **type-level** element default symmetrically (`[T = v; N]`), supplied at
   construction by calling the type: `[T = v; N]()` fills every element with `v`, and
   `[T = v; N](1, 2, 3)` takes the leading elements explicitly and defaults the rest
@@ -1123,7 +1145,7 @@ The forms this chapter introduces are given here as **grammar fragments**; the
 **consolidated EBNF** and lexical rules (numeric/string/character literals, identifiers)
 are assembled in the Grammar chapter, and these fragments conform to the unified
 declaration model (Declarations chapter). Nonterminals not defined here (`ident`,
-`expr`, `arg-list`, `int`, `float`, `bool-lit`, `char-lit`, `string`, `item-sep`,
+`expr`, `arg-list`, `call-args`, `int`, `float`, `bool-lit`, `char-lit`, `string`, `item-sep`,
 `field-list`, `variant-list`) come from those chapters.
 
 ```ebnf
@@ -1182,7 +1204,7 @@ struct-ctor   ::= type-expr "(" [ field-init { "," field-init } ] ")"  (* Point(
 field-init    ::= ident "=" expr
 tuple-ctor    ::= "(" ")"                                               (* unit value; type `()` *)
                 | "(" expr "," [ expr { "," expr } ] ")"              (* (1, 2) *)
-variant-ctor  ::= type-expr "." ident [ "(" arg-list ")" ]            (* Color.Red | Option.Some(v) | Cell.pair(a,b); arity §9.3, §6.3 *)
+variant-ctor  ::= type-expr "." ident [ "(" [ call-args ] ")" ]      (* Color.Red | Option.Some(v) | Cell.pair(a,b) | Machine.Bare(arch = Arch.aarch64); arity and named binding §9.3, §6.3 *)
 array-ctor    ::= "[" expr { "," expr } "]"                          (* [1, 2, 3] — listed *)
                 | "[" expr ";" expr "]"                              (* [v; N] — replicated *)
                 | array-type "(" [ expr { "," expr } ] ")"          (* [T = v; N]() all defaulted to v;

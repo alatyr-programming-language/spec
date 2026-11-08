@@ -143,7 +143,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **`Machine` variant** (TOOL-18) — how a manifest states the platform: `Target.machine` is a variant of
   the `Machine` enum — `Linux(arch, env, startup)` / `Freebsd` / `Windows(arch, subsystem, startup)` /
-  `Macos(arch, startup)` / `Android(arch, api, startup)` / `Bare(arch, env)` / `Com()` — each carrying **only** the fields that platform
+  `Macos(arch, startup)` / `Android(arch, api, startup)` / `Bare(arch, env)` / `Com` — each carrying **only** the fields that platform
   has, so an inapplicable field (a PE `subsystem` off PE, a `startup` on a freestanding target) cannot be
   written rather than being diagnosed. There is no `os`/`container`/`endian` field: those are **`target.*`
   projections** of the variant (`target.os`, `target.container`, `target.endian`), which is why the

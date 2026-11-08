@@ -68,7 +68,7 @@ data-value    ::= literal                                (* int / float / bool /
                 | array-ctor                              (* [a, b, c] / [v; N] *)
                 | tuple-ctor                              (* (a, b) *)
                 | struct-ctor                             (* Type(field = value, …) — incl. Package(…) *)
-                | variant-ctor                            (* Enum.Variant | Enum.Variant(value) *)
+                | variant-ctor                            (* Enum.Variant | Enum.Variant(value) | Enum.Variant(name = value, …) *)
                 | type-name                               (* a prelude type used as a value — for profile-flag types (§3.6) *)
                 | ident                                   (* a reference to another manifest binding *)
                 | path                                    (* a prelude config name: Arch.x86_64, Kind.executable *)
@@ -168,7 +168,7 @@ Machine   := enum {                          # THE PLATFORM — one variant per 
   Macos  ( arch : Arch, startup : Startup = Startup.raw )                                # Mach-O, hosted
   Android( arch : Arch, api : u32 = ‹min-supported›, startup : Startup = Startup.raw )   # ELF, bionic
   Bare   ( arch : Arch, env : Env = Env.none )                                           # ELF, freestanding
-  Com    ( )                                                                            # i386 real-mode flat image
+  Com                                                                                   # i386 real-mode flat image (no components: no parentheses)
 }
 
 Target    := struct {
@@ -269,7 +269,7 @@ The columns are the **`target.container` projection** of the `Machine` variant (
 arrives as a new `Machine` variant with no container projection, so its artifact naming is
 fixed **with that backend** (additive, FND-6), not by this table.
 
-`Machine.Com()` is a real-mode flat image: only `Kind.executable` is defined for it, and
+`Machine.Com` is a real-mode flat image: only `Kind.executable` is defined for it, and
 any other `kind` there is a **Config diagnostic**. Likewise the **freestanding**
 `Machine.Bare(…)` has no dynamic loader, so `Kind.shared_lib` there is a **Config
 diagnostic** — a freestanding target builds an `executable`, a `static_lib`, an `object`,
@@ -314,7 +314,7 @@ diagnostic.
   (`main` on ELF and Mach-O; on PE the CRT start-up selected by `subsystem`). libc's link
   mode is `Lib(name = "c")`'s if stated, else the ordinary `LinkMode.static` (§3.5).
 - The **freestanding** variants carry no `startup` at all: `Machine.Bare(…)` and
-  `Machine.Com()` have no start-up files and no libc to link, so `raw` is not a choice
+  `Machine.Com` have no start-up files and no libc to link, so `raw` is not a choice
   there but the only shape — which is why the field lives on the hosted variants only
   (TOOL-18) rather than being a `Target` field with a diagnostic attached.
 
@@ -353,7 +353,7 @@ architecture's native width** (from `arch`, per-arch appendix §1): `i386`/`aarc
 bootloaders/real mode) — a **codegen** knob, **not** part of the machine model: it does
 **not** change the pointer width, register widths, or endianness (those are the
 triple's, Tooling §1; I6). Its **default is the architecture's native encoding**
-(`x86_64` → `b64`, `i386` → `b32`). A **`Machine.Com()`** target (the `i386` real-mode
+(`x86_64` → `b64`, `i386` → `b32`). A **`Machine.Com`** target (the `i386` real-mode
 flat image) **MUST** have `code_size = CodeSize.b16` (its default there; any other value is
 a Config diagnostic), emitting 16-bit-encoded instructions; real-mode `segment:offset` addressing
 is then a hand-written (`naked`/`asm`) concern below the typed surface (per-arch appendix
@@ -714,7 +714,7 @@ A conforming implementation MUST:
    `Target.name`s when there is more than one — take each `Target`'s platform from its
    **`machine` variant**, reject a `(variant, arch)` pair outside the supported set
    (per-arch appendix §1), publish the `target.*` **projections** of that variant
-   (§3.1; TOOL-18), and enforce the **arch-specific** rules of §3.2: `Machine.Com()`
+   (§3.1; TOOL-18), and enforce the **arch-specific** rules of §3.2: `Machine.Com`
    requires `CodeSize.b16` (its default there), `code_size` off x86 and `arm_mode` off
    `aarch32` are rejected — with a Config diagnostic; **validate every `features` / `FeatureAlias.members` name against
    the selected architecture's canonical *opt-in* feature set** (per-arch appendix),
@@ -722,7 +722,7 @@ A conforming implementation MUST:
    query-only** name (`sse2`/`neon`, …) that appears in a manifest-declared feature list
    — baseline names are queryable in `target.features` but are **not** opt-ins (§3.7);
    features gate instructions and select the RISC-V ABI float sub-variant (ABI §2(c));
-   and reject the remaining per-`Target` inconsistencies of §3.2: a `Machine.Com()` target
+   and reject the remaining per-`Target` inconsistencies of §3.2: a `Machine.Com` target
    whose `kind` is not `executable`, `Kind.shared_lib` on `Machine.Bare(…)`, an explicit
    `entry` on a library kind or under `startup = libc`, and an `output` that is empty or carries
    a path separator (`/`, `\`, NUL) or that is stated at all under `kind = source`;
