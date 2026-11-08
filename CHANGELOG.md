@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `Vec(T)` and `String` compare by content, not by buffer identity (Stdlib
+appendix §2.6, §6, §8; Comptime §5.4; STD-6).**  STD-4 made comparison over `[T]` and `str`
+compare content, but the owning containers took the plain field walk, which reaches their data
+pointer and compared buffer addresses. `==`/`<`/`hash` over a `Vec(T)` are now §3.5's rule over
+its `len` elements (requiring `T`'s `eq`/`lt`/`hash`), and over a `String` §3.6's rule over its
+bytes; capacity, allocator and address take no part, the cost is O(n), and identity is an
+explicit comparison of the data pointers. `HashMap` is open as spec#50.
+
 **Normative — a floating-point literal with no context takes `f64` in Declarations §3.4 too
 (Declarations §3.4; TYP-13).**  §3.4 gave "an integer/float literal" with no context "the
 documented default (the target's native signed integer)", which read literally gives

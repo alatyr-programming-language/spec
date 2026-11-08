@@ -63,7 +63,7 @@ and **deferred (additive) growth**.
   comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
   `typeinfo` for **every** type, struct/array/enum, no built-in comparison in the compiler; a slice or `str`
-  compares by content through the derive's view arm, STD-4),
+  compares by content through the derive's view arm, STD-4, and so do the owning `Vec(T)` and `String`, STD-6),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6;
   `a[i] ⊕= rhs` on a library aggregate = `index_set(a, j, at(a, j) ⊕ rhs)`, `a` and `i` each evaluated once, OP-7;
   a write into the element through it, `a[i].f = x`, is refused, OP-8).

@@ -160,13 +160,27 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
 **The view arm (STD-4).** A slice `[T]` (§3.5, the library pair `{ ptr, len }`) and `str`
-(§3.6; `typeinfo` kind `Str{}`, Comptime §5.1) are the one place the walk does not go by the
-`typeinfo` shape: their default `eq` / `lt` / `hash` are the **content** rules of §3.5 and
+(§3.6; `typeinfo` kind `Str{}`, Comptime §5.1) are not walked by the `typeinfo` shape (nor
+are the owning containers below, STD-6): their default `eq` / `lt` / `hash` are the **content** rules of §3.5 and
 §3.6, never a descent into the `{ ptr, len }` pair. That holds wherever the walk meets a view —
 as the operand of `==` or `<`, or as a field, element or component of an aggregate being
 walked — so a view never reaches the `Pointer` arm above. The arm is keyed on the prelude's
 own `Slice` and `str` types (a `[mut T]` view included), not on a shape: an author's struct that happens to hold a
 pointer and a length is not a view and keeps the field walk.
+
+**The owning containers take the same arm (STD-6).** The alloc-tier **`Vec(T)`** and **`String`**
+(§6) are not views, but their fields include a data pointer, so the plain field walk would reach the
+`Pointer` leaf and compare **buffer addresses** — the trap the view arm exists to avoid. Their default
+`eq` / `lt` / `hash` are therefore the **content** rules too: a `Vec(T)` compares as the `[T]` of its
+`len` elements (§3.5), a `String` as the `str` of its bytes (§3.6) — capacity, allocator and buffer
+address take no part. Like the view arm, this one is keyed on the prelude's own `Vec` and `String`
+types, wherever the walk meets them (as an operand, or as a field, element or component); it is an
+arm of the structural default rather than a per-type override, because FN-7 admits one generic
+definition per name and `Vec(T)` is generic. The arm exists exactly when the alloc tier does:
+under `no_alloc` there is no `Vec` or `String` for it to meet, and the base-tier signature of
+`eq` / `lt` / `hash` names no alloc-tier type, so it is no tier inversion (Stdlib §1).
+How a base-tier library body names the alloc-tier types is open as spec#55; the observable
+rule above does not depend on it.
 
 A comparison site resolves over its **operand pair**, not over a name (Memory §4.5, MEM-10): it is
 **well-formed at the site** when a comparison relation is **declared** for that pair — or when the pair is
@@ -192,7 +206,7 @@ never the comparison, which is determined by the two `usize` values it is given 
 The **default** is a single **generic** prelude function — `eq := fn(T : type, in a : T,
 in b : T) -> bool` (likewise `lt` / `hash`), with the comptime type parameter `T` **inferred
 from the operands** (TYP-1/CT-2; Comptime §5.4 shows the struct arm of the body; the view arm
-above takes a slice or `str` before it) — so `a == b` applies it without
+and the owning-container arm above take a slice, `str`, `Vec(T)` or `String` before it) — so `a == b` applies it without
 naming `T`. (The conformance shape above is that generic instantiated at one `T`; there is
 no implicit-type-parameter form — every generic names `T : type`, Functions §1.4.) A type
 **overrides** the structural default by defining its own **concrete** `eq` / `lt` / `hash`
@@ -922,6 +936,18 @@ carries a **`usize` count** in its `Ok` arm — the new length for `push`/`push_
 the count convention of `write` → `Result(usize, …)` §4.2 and `StrBuf::push_*`); this fixes
 the success type unambiguously for an independent implementation (FND-3).
 
+**Comparison over `Vec(T)` and `String` is by content** (STD-6; §2.6's arm for the owning
+containers). `a == b` over two `Vec(T)`s holds when their lengths are equal and their elements
+are pairwise equal by `T`'s `eq`; `<` is the lexicographic order by `T`'s `lt`; `hash` folds the
+element hashes in order — exactly §3.5's rule over the `len` live elements. So `==` over
+`Vec(T)` **requires** `T`'s `eq`, `<` requires `T`'s `eq` and `lt` (§3.5), and `hash` requires `T`'s `hash` —
+each element pair goes through `T`'s own relation, never a bytewise compare, as for `[T]`. Over `String` it is
+§3.6's rule over its UTF-8 bytes, so a `String` equals another with the same text whatever their
+buffers, capacities or allocators. The cost is **O(n)** (in the shorter length for `==` and
+`<`, in its own length for `hash`), stated here because the operator hides it. A caller who wants identity compares the **data pointers**
+explicitly — `v[0..v.len()].ptr` for a `Vec`, `bytes(s.as_str()).ptr` for a `String` (and the
+lengths) — an ordinary pointer comparison, legal in checked code (Memory §4.5).
+
 ---
 
 ### 7. std tier
@@ -980,7 +1006,8 @@ A conforming implementation MUST:
    §6.2) — make `bool` truthy, `Option`/`Result` tryable, ranges/slices/arrays iterable,
    the std byte streams writers (§2.7), **derive `eq`/`lt`/`hash` structurally** over
    `typeinfo`, overridable per type, with a slice or `str` compared by content (§2.6's
-   view arm, §3.5/§3.6), and provide the v1 `Ord` consumers `min` / `max` /
+   view arm, §3.5/§3.6) and a `Vec(T)` or `String` likewise (§2.6, §6;
+   STD-6), and provide the v1 `Ord` consumers `min` / `max` /
    `clamp` and in-place slice `sort` (§2.6/§3.5);
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,
    slice `[T]`, `str`, and **`Never`** (the bottom/divergence type, CF-7) — with the
