@@ -231,6 +231,12 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Comptime value** — a value known and computed at compile time; `type` — one of
   such values.
 
+- **Constant expression** (CT-13) — a scalar literal, or scalar literals combined (with parentheses) by
+  the built-in scalar operators, unary `-` included: `-16`, `0 - 1`, `(1 + 2) * 4`. **Comptime by its
+  form** — a rule about the text, not phase inference; checked against its context type like a literal,
+  a failed integer guard in it outside `unchecked` a compile-time diagnostic (Comptime §1.1; where the
+  per-operator and mathematical readings differ is spec#62). Where an immediate is accepted it is an immediate.
+
 - **Value introducer** (*introducer*) — surface syntax for writing a value-literal on the
   RHS of a declaration: `struct/enum/union{}` (type-literals), `fn(){}` (a function), `mod{}`
   (a module) (FN-1/SYN-6). An **ABI** value is **not** an introducer — it is an ordinary `Abi`

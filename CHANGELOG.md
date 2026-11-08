@@ -49,6 +49,23 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a constant expression is comptime by its form (Comptime §1.1, §1.6, §2.6, §11;
+Type System §2.3, §9.1; Declarations §3.4; Memory §4.5; Assembly §1.1, §5, §7;
+CT-13).**  Evaluation is runtime by default with no phase inference, and only a *literal* was a
+compile-time number, so `-16` (unary `-` over `16`; there is no negative literal) and `0 - 1`
+read as runtime values, against the specification's own `disp = -16` immediates. A constant
+expression — scalar literals combined by the built-in scalar operators, unary `-` included — is
+now comptime by its form, a rule about the text and not inference. It is checked against its
+context type like a literal, and outside `unchecked` a failed integer guard in it is a
+compile-time diagnostic (`x : u8 = 200 + 100` is rejected). `disp = -16` and `0 - 1` are
+immediates; CG-15 and CG-16 no longer leave the phase of `0 - 1` open. How the check reads where
+per-operator and mathematical evaluation differ (`-1` at an unsigned type, `-128 : i8`,
+`unchecked`), and how a floating-point constant expression is evaluated, are open as spec#62;
+the context type of an immediate slot as spec#63. Whether a constant expression is admitted
+under `no_abstractions` is open as spec#59. Rejected: only a literal and unary `-` on a literal
+comptime; every non-literal runtime, with negative immediates spelled through a `comptime`
+binding. (spec#39.)
+
 **Normative — `fmt` lays out every `match` wrapped, one arm per line (Tooling §4.3.3, §4.3.4;
 TOOL-23).**  §4.3.3 put any construct that fits in 100 columns on one line and wrapped a
 `match` arm list only when it did not fit, while §4.3.2 puts a block's `}` on its own line;
