@@ -54,8 +54,9 @@ and `false` are: they are `bool-lit`, Grammar §2.4). Whether `unchecked` applie
 constant expression (`unchecked (0 - 1)`) is itself one is open with the rest of the
 `unchecked` case (spec#62). So `-16` (the grammar has no negative literal: it is unary
 `-` over `16`, Grammar §3.4) and `0 - 1` are comptime values, and where an immediate is
-accepted they are immediates (Assembly §5, §7; the context type an immediate slot gives
-is spec#63).
+accepted they are immediates (Assembly §5, §7), whose context type is the slot type the
+arch table gives that slot or `at(…)` field (CG-18; the fields no v1 type describes are
+spec#80).
 
 A constant expression is checked against its context type like a literal (Type System
 §9.1); with no context it takes the documented default, so `0 - 1` alone is the native

@@ -139,7 +139,8 @@ function.)
   is present in the function's **checked** instantiation and comptime-absent in its
   **unchecked** one; a check mirroring the built-in family fails through `trap()`, the
   same instruction (Stdlib §4.1).
-- **Compile-time checks are always applied**: a constant out of range, a write
+- **Compile-time checks are always applied**: a constant out of range (an immediate
+  outside its slot type, §5), a write
   through an immutable path, operand-kind validity (§5), and arity.
 - **`no_abstractions` is orthogonal to verification** (CG-6): it restricts a unit to
   the 1:1 form — a guarded checkable operation is *not* 1:1, so it is unavailable
@@ -233,7 +234,7 @@ Operands follow a **fixed kind schema**:
 | Kind | What | Notes |
 |------|------|-------|
 | **register** | an arch register (§6) | from the machine model |
-| **immediate** | a **comptime** value | range/validity checked at compile time (§3) |
+| **immediate** | a **comptime** value | checked at compile time against its slot type (below; §3) |
 | **memory** | an addressing operand (§7) | `at(…)` arch-surface operand |
 | **label** | a code label | a `@label` code-point (Control Flow §2.1) |
 | **reloc / TLS** | a symbol operand under a relocation/TLS decorator | per-arch decorators, §8.2 |
@@ -242,6 +243,29 @@ Operands follow a **fixed kind schema**:
 Which kinds a given instruction accepts is **part of its table** (§4); operand-kind
 validity is **always** checked (§3). Operands are **ordinary expressions** (Type
 System / Declarations) — there is **no** special operand grammar.
+
+**Slot types (normative).** Each **immediate slot** of an instruction form, and each
+integer field of `at(…)` (§7), has a **slot type**: the **signed** integer type of the width
+that form encodes there, given per architecture as data (the arch appendix, its §2(f) table)
+— on x86_64, `i8` for the immediate of `movb`, `i32` for that of a 64-bit `add`
+(sign-extended by the hardware), `i64` for that of `movq` into a register, `i32` for `disp`. A comptime
+operand in such a slot — an immediate — MUST be assignable to the slot type, as a value is
+to an annotated type (Declarations §3.1): a constant expression takes the slot type as its
+context type (Declarations §3.4; Comptime §1.1) and is checked against it at compile time, so
+`movb(al, 200 + 100)` and `movb(al, 200)` are compile errors and `movb(al, -56)` writes the
+byte `0xC8`. A value of the slot type is **encodable** in that slot: the slot type is the
+whole compile-time range check of §3 for it, with no second range in the table. A runtime
+operand that §2.2 materializes in a register is not an immediate and keeps its own type. A
+`comptime` binding keeps the type it was declared with, so on x86_64 `comptime N := 16`
+(the native signed integer, `i64`) is not assignable to an `i32` slot, narrowing being
+explicit (Type System §4.3); `comptime N : i32 = 16`
+is. An `asm(…)` operand is in no table row, so it has no slot type (§4).
+A field whose encoding **no v1 type describes** — a sub-native width (RISC-V's 12-bit
+immediate, aarch64's 9-bit `disp`), a zero-extended field (x86 `int`'s vector number, a
+`shufps` selector, a shift count), a pattern-encoded one (an aarch64 logical immediate, an
+aarch32 rotated immediate, `scale` ∈ {1, 2, 4, 8}) — has **no slot type** in this revision:
+the arch appendix lists those fields as open, and their typing and encodable range are
+spec#80 (decision CG-18).
 
 Because operands are ordinary expressions, an **instruction intrinsic**'s operand may be
 any expression: `movq(rbx, 0 - 1)` in an ABI-framed function is
@@ -306,8 +330,11 @@ It yields an **operand value** usable wherever a memory operand is accepted (§5
 an addressing mode allows) are **per-arch data** (§4). There is no special `[ … ]`
 addressing grammar — `at(…)` is an ordinary named-argument call (decisions CG-2). A
 displacement written `disp = -16` is a constant expression, so it is comptime by its form
-(Comptime §1.1, CT-13): a comptime displacement, whose encodability the per-arch table
-checks like any operand (§3, §4).
+(Comptime §1.1, CT-13): an immediate of `disp`'s **slot type** (§5), which is `i32` on
+x86_64 and i386 — so `disp = -0x80000001` is a compile error there, and every `i32` value is
+encodable. `offset` takes a symbol operand (§8.2) and `base`/`index` a register, so neither
+has an integer slot type; `scale`, and `disp` on aarch64, aarch32 and RISC-V, are fields
+whose slot type is open (§5; spec#80).
 
 ---
 
@@ -376,7 +403,7 @@ sym.pcrel_hi()      # riscv:   %pcrel_hi(sym)
   operand forms (§5), and ABI (Functions §6). New architectures are **additive**
   (FND-6) — a new arch is new data, not new language.
 - The per-arch tables themselves (registers, instructions, operand forms,
-  relocations, decorators) are the **per-architecture appendix**
+  relocations, decorators, slot types) are the **per-architecture appendix**
   (`170-appendix-arch.md`); this chapter fixes only the schema they populate.
 - The **target** is selected by the manifest (configuration; Tooling chapter); the
   **machine model** (Type System §1) is the per-arch data the rest of the language is
@@ -416,7 +443,9 @@ Normative notes:
   grant and is validated only by `as`; only the per-target operand *spelling* (shared
   with typed instructions) is Codegen's. It emits exactly its template: an operand
   not already of a §5 kind is a compile error, never materialized (§4; CG-16).
-- An immediate operand is a **comptime** value, range-checked at compile time (§5).
+- An immediate operand is a **comptime** value, checked at compile time against its slot's
+  signed per-width **slot type** from the arch table (§5; CG-18; the fields no v1 type
+  describes are spec#80).
 
 ---
 
@@ -441,7 +470,8 @@ A conforming implementation MUST:
    rejects an operand not already of a §5 kind, never materializing it (§4, §intro; I4/FND-6/FND-3; CG-16);
 5. accept the fixed operand-kind schema (register / immediate / memory / label /
    reloc / per-arch SIMD) as ordinary expressions, checking operand-kind validity,
-   with immediates comptime and range-checked (§5);
+   with immediates comptime and checked against the slot type the arch table gives their
+   slot or `at(…)` field (§5, §7; CG-18);
 6. treat registers as arch-data identifiers (not keywords) from the machine model,
    put the selected target's (or a `when`-gated arch's) surface in scope, and
    otherwise require qualification or a binding — **no `use`** (§6; MOD-4);
