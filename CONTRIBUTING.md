@@ -67,6 +67,16 @@ plainly in the text, that is itself a gap worth recording.
   settled by the contributor, recorded as usual, and listed to the owner afterwards.
   Layout that would change meaning or well-formedness is not layout, and a layout rule
   already recorded is not a gap. `AGENTS.md` has the full rule.
+- **Latent gaps.** A gap found by reading — in review, or while writing a decision — that
+  the decision at hand does not need in order to be written consistently is filed with the
+  label `latent` and is not taken to the owner. It goes to the owner only when compiler
+  work (a fix, a fixture, a pilot) hits it, or when it blocks a decision already made; the
+  issue then loses the label. Until then the compiler refuses the form with a located
+  diagnostic; a refusal can be relaxed later, additively (`I10`), while a guess cannot be
+  taken back.
+- **Stay in scope.** A pull request adds no wording beyond its decision, and a review is
+  scoped to the decision and the passages it changes. Findings outside that scope are
+  filed (as `latent`, if they are gaps), not folded in.
 - **One decision = one commit.** A change to a norm updates *every* affected source in
   the same commit: invariants, decisions, glossary, aspects-map, and the chapters. The
   cross-cutting pass is what holds coherence; splitting it across commits is what breaks
