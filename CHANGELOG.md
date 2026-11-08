@@ -49,6 +49,34 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a trailing comment on a line `fmt` expands trails the first output line (Tooling
+§4.3.4; TOOL-26).**  A trailing comment suppresses re-wrapping of its line, but an always
+multi-line construct (a `match`, a `comptime for` template, a value-`if`, a non-empty block, a
+list or chain holding one) has no one-line form to keep, and nothing said which of the output
+lines the comment then trails. It trails the first: `y := match x { A => 1; B => 2 }  # why`
+becomes `y := match x { # why` followed by the arms; a line holding only some arms keeps the
+comment on its first arm's line. Rejected: the last output line; an own line above the
+statement. Settled under the standing delegation for formatter layout. (spec#57.)
+
+**Normative — `fmt` wraps a list holding an always multi-line element one element per line
+(Tooling §4.3.3; TOOL-25).**  §4.3.3's outermost-construct rule assumed every construct has a
+one-line form; a `match`, a `comptime for` template, a value-`if` and a non-empty block (a `fn`
+value's body included) have none, so `f(a, match x { … })` had no single layout. A construct
+whose canonical layout breaks whatever the width is now *always multi-line*, never "fits"; a
+call argument list, array/list literal, constructor field list or parameter list holding one is
+wrapped one element per line with the trailing comma, and a binary-operator chain holding one
+breaks before each operator; the rule climbs to the enclosing list or chain. Rejected: the list
+staying on its opening line with `)` after the element's `}`. Settled under the standing
+delegation for formatter layout. (spec#58.)
+
+**Normative — `fmt` lays out every value-`if` wrapped (Tooling §4.3.3, §4.3.4; TOOL-24).**
+§4.3.2 makes `if` a block header whose `}` stands on its own line, while §4.3.3 kept a fitting
+value-`if` (`x := if c { a } else { b }`) on one line, so a short value-`if` had two canonical
+answers. A value-`if` is now always laid out with the statement-`if` shape, like `match`
+(TOOL-23); a one-line source value-`if` is reformatted that way, and a trailing comment does not
+keep it on one line. The grammar is unchanged. Rejected: one line when it fits. Settled under the
+standing delegation for formatter layout. (spec#60.)
+
 **Normative — a constant expression is comptime by its form (Comptime §1.1, §1.6, §2.6, §11;
 Type System §2.3, §9.1; Declarations §3.4; Memory §4.5; Assembly §1.1, §5, §7;
 CT-13).**  Evaluation is runtime by default with no phase inference, and only a *literal* was a
@@ -73,7 +101,7 @@ neither said which governs a short `match`, nor how a one-line arm list would be
 `match` arm list is now always wrapped, like the `comptime for` arm template: each arm on its
 own line, the `}` at the `match`'s indent; a one-line source `match` with `;` between arms is
 reformatted that way, with no `;` left between arms, and a trailing comment does not keep two
-arms on one line (§4.3.4; which output line the comment then trails is open, spec#57). The
+arms on one line (§4.3.4; the comment then trails the first output line, TOOL-26). The
 grammar is unchanged. Rejected: a fitting `match` on one line with arms joined by `; `.
 (spec#35.)
 

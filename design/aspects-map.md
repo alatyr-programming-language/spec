@@ -106,8 +106,10 @@ and **deferred (additive) growth**.
   reporting the specification revision — conformed to, or a target revision with its published
   deviations (FND-13) — and a bare invocation failing with help on stderr (TOOL-21); an
   **unrecognised argument** is an invocation-level Config diagnostic, never a source path (TOOL-14);
-  **output verbosity** may not affect a build (TOOL-22); and `fmt` lays out every `match` wrapped, one arm
-  per line, with no one-line form (TOOL-23).
+  **output verbosity** may not affect a build (TOOL-22); `fmt` lays out every `match` wrapped, one arm
+  per line, with no one-line form (TOOL-23); a value-`if` is likewise always wrapped (TOOL-24); a
+  list or operator chain holding an always multi-line element is wrapped one element per line
+  (TOOL-25); and a trailing comment on a line `fmt` expands trails the first output line (TOOL-26).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`
   only, no comma after an arm, SYN-8), declarations/expressions (SYN-5),
   attributes `@` — flat syntax + a **family taxonomy** (storage/layout/contract/abi/codegen/linkage/build/

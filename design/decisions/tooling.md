@@ -47,7 +47,7 @@ that owns assembly/linking itself — rejected in favour of shelling out to `as`
 *spec: Tooling §4.3*
 
 *(Extended: §4.3.3's wrapping rule now also covers a `match` arm list, a `comptime for` arm template
-and an inline value-`if` — the three forms whose wrapped layout it originally omitted. A single
+and a value-`if` — the three forms whose wrapped layout it originally omitted. A single
 canonical form means the wrapped spelling of **every** construct that can overflow is the
 specification's to fix, not the formatter's: with the rule absent, an implementation had to invent
 one, which is a formatter deciding language surface. The arm rule is arm-per-line with **no** comma
@@ -56,7 +56,8 @@ there is a Parse diagnostic (SYN-8; superseded: the trailing comma on expression
 first gave contradicted the grammar); a `match` is always wrapped, with no one-line form (TOOL-23);
 an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
-layout so no construct has two shapes.)*
+layout, always, with no one-line form (TOOL-24), so no construct has two shapes; a list or
+operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25).)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -925,7 +926,8 @@ arms is reformatted wrapped, and no `;` survives between arms or before the `}` 
 between arms follow §4.3.1). A trailing comment does not keep two arms of a `match`, or of a
 `comptime for` arm template, on one line — whether it trails the whole list or only some arms;
 §4.3.4's suppression of re-wrapping still applies to every other construct on the line it
-trails (which output line the comment trails is spec#57). The source form stays well-formed
+trails, except a construct that is always multi-line (TOOL-24, TOOL-25); the comment then trails
+the first output line (TOOL-26). The source form stays well-formed
 (Grammar §2.6 is unchanged); only `fmt`'s output is fixed.
 
 **Why.** One layout for every `match` means the formatter never decides between two shapes by
@@ -936,3 +938,88 @@ one-line arm list, so `;` stays a statement separator in canonical text.
 **Rejected.** *A fitting `match` on one line, arms joined by `; `* — a second shape decided by
 width, a whole-`match` reflow when one arm grows past the limit, and `;` as visible arm syntax
 in canonical output.
+
+### TOOL-24. `fmt` lays out a value-`if` wrapped, always — spec#60
+*provenance: refines TOOL-2's §4.3.3 extension (the inline value-`if` clause), after TOOL-23 ·
+  settled under the standing delegation for formatter layout (owner, 2026-11-08) ·
+  spec: Tooling §4.3.3, §4.3.4*
+
+**Question.** Tooling §4.3.2 lists `if` among the block headers whose `}` stands on its own
+line; §4.3.3 kept an inline value-`if` (`x := if c { a } else { b }`) on one line while it fit
+in 100 columns and wrapped it only past that. A short value-`if` had two readings, and `fmt`
+output must be byte-identical across implementations (TOOL-2): an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** **Always wrapped**, like `match` (TOOL-23) and
+the `comptime for` arm template: a value-`if` is laid out with the statement-`if` shape — the
+condition on the `if` line, each branch's block on its own lines one level deeper, `} else {`
+between branches, `else if` links at the same indent — whether or not it would fit on one
+line. §4.3.3's inline value-`if` clause is withdrawn; a one-line source value-`if` is
+reformatted wrapped, and a trailing comment does not keep it on one line (§4.3.4). The source
+form stays well-formed; only `fmt`'s output is fixed.
+
+**Why.** One canonical shape per construct, with no width-dependent alternative beyond list
+wrapping: an `if` then has one layout wherever it stands, §4.3.2's block-header rule holds
+without an exception, and lengthening one branch never reflows the whole expression.
+
+**Rejected.** *One line when it fits in expression position* — a second, width-decided shape
+for one construct, and an exception to §4.3.2's block-header rule.
+
+### TOOL-25. A list holding an always multi-line element is wrapped one element per line — spec#58
+*provenance: refines TOOL-2's §4.3.3 outermost-construct rule, after TOOL-23 and TOOL-24 ·
+  settled under the standing delegation for formatter layout (owner, 2026-11-08) ·
+  spec: Tooling §4.3.3, §4.3.4*
+
+**Question.** §4.3.3 wraps "at the outermost construct that makes the line fit" and never wraps
+a construct that fits — which assumes every construct has a one-line form. A `match`, a
+`comptime for` template, a value-`if` and a non-empty block (a `fn` value's body included) have
+none. For `f(a, match x { … })`, nothing said whether the call "fits" (its first line does, the
+call spans several) and so whether its argument list wraps one element per line or stays on the
+`f(` line with `)` after the `match`'s `}`. The same held for a binary-operator chain
+(`a + match x { … }`) and for struct-constructor fields. Byte-identical output (TOOL-2) needs one
+answer: an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** Option (a). A construct is **always multi-line**
+when its canonical layout has a line break whatever the width: the three always-wrapped
+constructs, a non-empty block, and any expression containing one. A list — call arguments,
+array/list literal, struct/enum constructor fields, parameters — with an always multi-line
+element is always wrapped, one element per line with the trailing comma; the element opens on its
+own line at the element indent, and the closing `)` / `]` stands on its own line. A
+binary-operator chain with such an operand breaks before each operator. A list or chain so
+wrapped is itself always multi-line, so the rule climbs to the enclosing list or chain. An
+always multi-line construct never "fits".
+
+**Why.** One canonical shape per construct, with list wrapping as the only width-dependent
+alternative: a list is laid out one way whenever it cannot be one line, whether width or a
+mandatory break is the reason, so the "fits" test needs no second, partial meaning ("every line
+it produces fits"), and no third shape appears between the one-line and the wrapped list.
+
+**Rejected.** *(b) The list stays on the opening line when every line it produces fits* — the
+multi-line element opening in place and `)` after its `}` (`f(a, match x {` … `})`): a second
+list shape beside the wrapped one, and a "fits" defined over the lines a construct produces
+rather than the construct.
+
+### TOOL-26. A trailing comment on a line `fmt` expands trails the first output line — spec#57
+*provenance: refines TOOL-2's §4.3.4 comment rule, after TOOL-23, TOOL-24 and TOOL-25 · settled
+  under the standing delegation for formatter layout (owner, 2026-11-08) · spec: Tooling §4.3.4*
+
+**Question.** §4.3.4 keeps a trailing same-line comment "on that line" and lets it suppress
+re-wrapping of the line it trails. An always multi-line construct (§4.3.3: a `match` arm list,
+a `comptime for` template, a value-`if`, a non-empty block, a list or chain holding one) has no
+one-line form for the suppression to keep, so `y := match x { A => 1; B => 2 }  # why` — or a
+line holding only some arms, `A => 1; B => 2  # why` — becomes several output lines, and
+nothing said which one the comment trails. Byte-identical output (TOOL-2): an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** Option (a). The comment trails the **first**
+output line the commented source line produces, one space after its code: the header ending in
+`{` for a whole `match`, `if` or block; the opening line of a list; the line of the first arm
+when the source line held only some arms. A comment does not keep an always multi-line
+construct on one line; it still suppresses re-wrapping of every other construct on its line.
+
+**Why.** The comment stays where its line began, which is where a reader of the source met it;
+the placement is the same for every expansion, so it needs no per-construct rule; and the
+header line is the one that names what the comment describes.
+
+**Rejected.** *(b) The last output line* (after the closing `}`) — it separates the comment
+from the header it was written beside, by the whole body. *(c) An own line above the
+statement* — against §4.3.4's rule that a trailing same-line comment stays on its line, and a
+`#` moved up can join an adjacent comment block (Grammar §2.5).
