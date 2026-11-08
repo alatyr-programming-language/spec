@@ -246,7 +246,7 @@ function that **observes** the mode (`comptime if verify.checked { <guard> }`) i
 DCE'd, zero-cost I2, the choice visible I1/I3): a library operator is written **once** and
 describes both modes. A library check that mirrors a member of the built-in family — a
 library-defined numeric type's overflow or division/remainder by zero, a container's bounds
-check (`Vec` indexing, `str` byte access, the arena's `get`) — fails through `trap()`, the
+check (`Vec` indexing, the arena's `get`) — fails through `trap()`, the
 built-in guard's own instruction (CG-13), so `unchecked xs[i]` drops it and a checked
 `xs[10]` fails alike for an array and a `Vec`; ordinary library logic (an explicit
 assertion, `unwrap` on `None`) may `panic`. A function that does **not** observe it is

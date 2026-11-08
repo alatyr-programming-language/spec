@@ -88,7 +88,8 @@ Every expression is classified as either a **place-expression** or a
 **value-expression**.
 
 - **Place-expressions** denote a place: a variable reference, a field access
-  `s.f`, a tuple component, an index `a[i]` on an array or slice (Type System §6.4), and a
+  `s.f`, a tuple component, an index `a[i]` on an array or slice (Type System §6.4) or on
+  a `str` (read-only; Stdlib appendix §3.6), and a
   dereference (§4.3) — except a field or raw-union member, tuple component or array index reaching into a library
   aggregate's element through its index (below).
 - **Value-expressions** denote a value: literals, arithmetic, comparisons, a call

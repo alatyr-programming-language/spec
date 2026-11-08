@@ -69,7 +69,8 @@ and **deferred (additive) growth**.
   compares by content through the derive's view arm, STD-4, and so do the owning `Vec(T)` and `String`, STD-6),
   `when`-guard (CT-5), operators (OP-2; bit shift/rotate `shl`/`shr`/`rotl`/`rotr` = named call/UFCS ops, OP-6;
   `a[i] ⊕= rhs` on a library aggregate = `index_set(a, j, at(a, j) ⊕ rhs)`, `a` and `i` each evaluated once, OP-7;
-  a write into the element through it, `a[i].f = x`, is refused, OP-8).
+  a write into the element through it, `a[i].f = x`, is refused, OP-8; a `str` index is the built-in slice read
+  plus the code-point-boundary check, a read-only place, so `ptr(s[0])` is well-formed, OP-9).
 - `[x]` **10. Assembly correspondence.** Instruction intrinsics/1:1 (CG-2); checked-guards emitted at the operation site, never by an intrinsic (CG-13); operands/registers/
   `at()` (arch surface)/UFCS-SIMD (CG-2), data (`[u8;N]`/embed) + data-driven arches (CG-2); an operand is an ordinary
   expression, so `movq(rbx, 0 - 1)` in an ABI-framed function is well-formed where its operator is admitted (its

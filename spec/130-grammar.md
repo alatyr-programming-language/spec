@@ -313,7 +313,7 @@ path        ::= ident { "::" ident }                  (* :: = namespace navigati
 place       ::= ident                                  (* an assignable location (lvalue) *)
               | place "." ident                        (* struct field / raw-union member *)
               | place "." tuple-index                  (* tuple element *)
-              | place "[" expr "]"                      (* index — a place on an array/slice; on a library aggregate a value, so a store into its element's own storage is refused; `a[i] = v` itself is the `index_set` call (Memory §1.6; Type System §4.5; OP-8) *)
+              | place "[" expr "]"                      (* index — a place on an array/slice or a `str` (read-only, Stdlib appendix §3.6); on a library aggregate a value, so a store into its element's own storage is refused; `a[i] = v` itself is the `index_set` call (Memory §1.6; Type System §4.5; OP-8) *)
               | "deref" "(" expr ")"                      (* dereference as a place; ≡ expr.deref() (Memory §4.3) *)
               | path
 

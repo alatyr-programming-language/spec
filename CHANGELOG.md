@@ -49,6 +49,16 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a `str` index is the built-in slice read plus the code-point-boundary check, a
+read-only place (Stdlib appendix §3, §3.6; Memory §1.6; Type System §4.5; Stdlib §4.1; OP-9).**
+The `str` entry admitted byte access as either the built-in slice read or library code, and
+since OP-8 that choice decided whether `s[i]` is a place, so whether `ptr(s[0])` is
+well-formed. `s[i]` is now the built-in slice read over the bytes plus the code-point-boundary
+check: a read-only place like a `[u8]` element, so `ptr(s[0])` is well-formed (a `ptr(u8)`) and
+`s[i] = b` is ill-formed. The boundary check is part of the compiler's one bounds guard at the
+site, which `unchecked` drops. The library-check examples no longer list `str`/`String` byte
+access. Rejected: `str` as a library aggregate, `s[i]` ≡ `at(s, i)` a value-expression. (spec#53.)
+
 **Normative — a named-component variant's payload is the anonymous struct of its fields;
 patterns bind it by name, a subset (Types §6.2; Comptime §5.1, §5.5; Control Flow §5.2;
 Grammar §3.5; Stdlib appendix §4.1; TYP-18).**  `Variant.payload` of a variant whose
