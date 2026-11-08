@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` lays out every value-`if` wrapped (Tooling §4.3.3, §4.3.4; TOOL-24).**
+§4.3.2 makes `if` a block header whose `}` stands on its own line, while §4.3.3 kept a fitting
+value-`if` (`x := if c { a } else { b }`) on one line, so a short value-`if` had two canonical
+answers. A value-`if` is now always laid out with the statement-`if` shape, like `match`
+(TOOL-23); a one-line source value-`if` is reformatted that way, and a trailing comment does not
+keep it on one line. The grammar is unchanged. Rejected: one line when it fits. Settled under the
+standing delegation for formatter layout. (spec#60.)
+
 **Normative — a constant expression is comptime by its form (Comptime §1.1, §1.6, §2.6, §11;
 Type System §2.3, §9.1; Declarations §3.4; Memory §4.5; Assembly §1.1, §5, §7;
 CT-13).**  Evaluation is runtime by default with no phase inference, and only a *literal* was a

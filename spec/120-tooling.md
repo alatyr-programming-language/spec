@@ -616,9 +616,10 @@ immediately after an opening `{` or before a closing `}`.
 
 The **soft maximum line width is 100 columns** (counting Unicode scalar values, not bytes).
 A construct that fits within 100 columns at its indent is written on **one** line, except a
-`match` arm list and a `comptime for` arm template, which are always wrapped (below). One that
-does **not** fit is wrapped by the following deterministic rule, so the choice to wrap is a pure
-function of width, or unconditional for those two (never of the input's original line breaks):
+`match` arm list, a `comptime for` arm template and a value-`if`, which are always wrapped
+(below). One that does **not** fit is wrapped by the following deterministic rule, so the choice
+to wrap is a pure function of width, or unconditional for those three (never of the input's
+original line breaks):
 
 - A **call argument list**, an **array/list literal**, a **struct/enum constructor's
   fields**, and a **parameter list** wrap with **each element on its own line**, indented
@@ -646,16 +647,18 @@ function of width, or unconditional for those two (never of the input's original
   deeper by the arm rule above, and `}` at the template's indent. It is never collapsed to
   one line, even if it would fit — a template and a plain arm are visually distinct because
   they mean different things.
-- An **inline value-`if`** (`if c { a } else { b }` in expression position, Grammar §3.4)
-  that overflows wraps with the condition on the `if` line and **each branch's block
-  brace-delimited on its own lines**, one level deeper, `else` on the line closing the
-  previous branch (`} else {`) — the same shape a statement-position `if` has, so an
-  expression `if` never grows a second layout. A trailing `else if` chain continues at the
-  same indent (`} else if c2 {`), never nesting one level per link.
+- A **value-`if`** (`if c { a } else { b }` in expression position, Grammar §3.4) is
+  **always** wrapped, whether or not it would fit on one line (TOOL-24): the condition on the
+  `if` line and **each branch's block brace-delimited on its own lines**, one level deeper,
+  `else` on the line closing the previous branch (`} else {`) — the same shape a
+  statement-position `if` has (§4.3.2), so an `if` has one layout wherever it stands. A trailing
+  `else if` chain continues at the same indent (`} else if c2 {`), never nesting one level per
+  link. A source value-`if` written on one line is laid out this way; there is **no** one-line
+  canonical value-`if`.
 - Wrapping is applied at the **outermost** construct that makes the line fit; an inner
   construct wraps only if it still overflows once the outer one has. A construct is never
-  wrapped if it fits — **except** a `match` arm list and the `comptime for` arm template,
-  above, which are always wrapped.
+  wrapped if it fits — **except** a `match` arm list, the `comptime for` arm template and a
+  value-`if`, above, which are always wrapped.
 
 ##### 4.3.4 Comments
 
@@ -668,8 +671,8 @@ re-wrapping of the line it trails (the line is kept as the author wrote it modul
 rules) so a deliberately-laid-out, commented line is not reflowed. A comment does **not** keep
 two arms of a `match` arm list, or of a `comptime for` arm template, on one line — whether the
 line holds the whole list or only some of its arms, those are always wrapped one arm per line
-with no `;` between arms (§4.3.3; TOOL-23); the suppression still applies to every other
-construct on the line it trails. Which output line the comment then trails is open (spec#57).
+with no `;` between arms (§4.3.3; TOOL-23) — nor a value-`if` (TOOL-24); the suppression still
+applies to every other construct on the line it trails. Which output line the comment then trails is open (spec#57).
 
 ---
 

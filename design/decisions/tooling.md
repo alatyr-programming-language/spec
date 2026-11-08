@@ -47,7 +47,7 @@ that owns assembly/linking itself — rejected in favour of shelling out to `as`
 *spec: Tooling §4.3*
 
 *(Extended: §4.3.3's wrapping rule now also covers a `match` arm list, a `comptime for` arm template
-and an inline value-`if` — the three forms whose wrapped layout it originally omitted. A single
+and a value-`if` — the three forms whose wrapped layout it originally omitted. A single
 canonical form means the wrapped spelling of **every** construct that can overflow is the
 specification's to fix, not the formatter's: with the rule absent, an implementation had to invent
 one, which is a formatter deciding language surface. The arm rule is arm-per-line with **no** comma
@@ -56,7 +56,7 @@ there is a Parse diagnostic (SYN-8; superseded: the trailing comma on expression
 first gave contradicted the grammar); a `match` is always wrapped, with no one-line form (TOOL-23);
 an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
-layout so no construct has two shapes.)*
+layout, always, with no one-line form (TOOL-24), so no construct has two shapes.)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -925,7 +925,7 @@ arms is reformatted wrapped, and no `;` survives between arms or before the `}` 
 between arms follow §4.3.1). A trailing comment does not keep two arms of a `match`, or of a
 `comptime for` arm template, on one line — whether it trails the whole list or only some arms;
 §4.3.4's suppression of re-wrapping still applies to every other construct on the line it
-trails (which output line the comment trails is spec#57). The source form stays well-formed
+trails, except a value-`if` (TOOL-24); which output line the comment trails is spec#57. The source form stays well-formed
 (Grammar §2.6 is unchanged); only `fmt`'s output is fixed.
 
 **Why.** One layout for every `match` means the formatter never decides between two shapes by
@@ -936,3 +936,28 @@ one-line arm list, so `;` stays a statement separator in canonical text.
 **Rejected.** *A fitting `match` on one line, arms joined by `; `* — a second shape decided by
 width, a whole-`match` reflow when one arm grows past the limit, and `;` as visible arm syntax
 in canonical output.
+
+### TOOL-24. `fmt` lays out a value-`if` wrapped, always — spec#60
+*provenance: refines TOOL-2's §4.3.3 extension (the inline value-`if` clause), after TOOL-23 ·
+  settled under the standing delegation for formatter layout (owner, 2026-11-08) ·
+  spec: Tooling §4.3.3, §4.3.4*
+
+**Question.** Tooling §4.3.2 lists `if` among the block headers whose `}` stands on its own
+line; §4.3.3 kept an inline value-`if` (`x := if c { a } else { b }`) on one line while it fit
+in 100 columns and wrapped it only past that. A short value-`if` had two readings, and `fmt`
+output must be byte-identical across implementations (TOOL-2): an FND-3 gap.
+
+**Decision (owner, 2026-11-08, under the standing delegation for formatter layout).** **Always wrapped**, like `match` (TOOL-23) and
+the `comptime for` arm template: a value-`if` is laid out with the statement-`if` shape — the
+condition on the `if` line, each branch's block on its own lines one level deeper, `} else {`
+between branches, `else if` links at the same indent — whether or not it would fit on one
+line. §4.3.3's inline value-`if` clause is withdrawn; a one-line source value-`if` is
+reformatted wrapped, and a trailing comment does not keep it on one line (§4.3.4). The source
+form stays well-formed; only `fmt`'s output is fixed.
+
+**Why.** One canonical shape per construct, with no width-dependent alternative beyond list
+wrapping: an `if` then has one layout wherever it stands, §4.3.2's block-header rule holds
+without an exception, and lengthening one branch never reflows the whole expression.
+
+**Rejected.** *One line when it fits in expression position* — a second, width-decided shape
+for one construct, and an exception to §4.3.2's block-header rule.
