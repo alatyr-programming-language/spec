@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a value-expression gets a temporary in a read-only receiver slot; a store into a
+field or index of one is ill-formed (Memory §1.6; Type System §4.5; MEM-11).**  Memory §1.6 made
+any field access a place and Type System §4.5's auto-ref did not say what a read-only `ptr(R)`
+slot does with a value, so `f().x = 1` and `make_pair().sum()` / `vv[i].len()` had no stated
+meaning. A field, tuple component or array index of a value-expression is now a value-expression,
+so `f().x = 1` is ill-formed; a value-expression in a read-only `ptr(R)` receiver slot is
+materialized in a caller-owned temporary living to the end of the full expression, and its
+address is passed. A slice or `str` index stays a place whatever its base. Whether an owning temporary's
+end discharges its linearity obligation is open as spec#73. Rejected: allowing the store into a
+temporary's field (a discarded write); no temporaries at all. (spec#47.)
+
 **Normative — under `no_abstractions` a constant expression is admitted (Assembly §1.1, §5;
 CG-17).**  CG-12 admitted comptime in full but forbade the value-operators as surface syntax, so a
 constant expression such as `disp = -16` (comptime by its form since CT-13) had two answers in a

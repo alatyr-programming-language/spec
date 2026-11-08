@@ -59,7 +59,8 @@ The two access operators are distinct (decisions MOD-3):
   functions without importing bare names (`p.atomic::load(ord)`, `p.volatile::load()`;
   MOD-3/CT-10). `a.f(args)` is **always UFCS** — a function-valued field is called
   `(a.f)(args)` (β). The receiver (and a `.`-field / `[]`-index base) coerces one level between
-  a value and a pointer to it — **auto-ref** (`a` → `ptr(a)`) or its dual **auto-deref**
+  a value and a pointer to it — **auto-ref** (`a` → `ptr(a)`; a value-expression `a` at a read-only slot
+  through a caller-owned temporary, Memory §1.6) or its dual **auto-deref**
   (`p` → `deref(p)`) — per the receiver/access coercion rule (Type System §4.5 / MOD-3 / OP-5).
 
 This disambiguates a **qualified call** `geometry::length(x)` from a **UFCS call**

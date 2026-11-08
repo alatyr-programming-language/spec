@@ -129,7 +129,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   and a pointer to it, applied to the operand of a **value-access position**: a UFCS method receiver, a field
   `a.field`, an index `a[i]`. **Auto-ref** lifts a value to a scoped reference when the position wants
   `ptr([mut] R)` and the operand is `R` (`a` → `ptr(a)` — how a method borrows its receiver without
-  consuming it). **Auto-deref**, its dual, lowers a pointer to its pointee when the position wants `R` and the
+  consuming it; a value-expression at a read-only `ptr(R)` slot passes the address of a caller-owned
+  temporary, MEM-11). **Auto-deref**, its dual, lowers a pointer to its pointee when the position wants `R` and the
   operand is `ptr([mut] R)` (`p` → `deref(p)` — `p.field` ≡ `deref(p).field`, likewise for `[i]` and a
   method receiver). Resolved **exact match → auto-ref → auto-deref**, applied **exactly one level** (a
   pointer-to-pointer derefs once; further needs explicit `deref`, so deref depth is never hidden, I3). Both are
@@ -301,10 +302,13 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Scope** (*scope*) — where in the source a binding name is accessible.
 
-- **place-expression / value-expression** — classification: a place yields a place (variable, field, tuple
-  component, index on an array, slice or `str` (read-only), dereference — except a path into a library aggregate's element
-  through its index, OP-8), a value yields a value (literal, arithmetic, by-value call — including an
-  index on a library aggregate, `at(a, i)` — taking an address) (Memory §1.6).
+- **place-expression / value-expression** — classification: a place yields a place (variable; field, tuple
+  component or array index of a place, a pointer base auto-dereffed first; index on a slice or `str` (read-only); dereference — except a path into a library aggregate's
+  element through its index, OP-8), a value yields a value (literal; arithmetic; by-value call — including an
+  index on a library aggregate, `at(a, i)`; a field, tuple component or array index of a value; taking an
+  address) (Memory §1.6). A store into a value-expression is ill-formed (`f().x = 1`); a value-expression in a
+  read-only `ptr(R)` receiver slot is materialized in a caller-owned temporary to the end of the full
+  expression (MEM-11).
 
 - **Library aggregate** — an indexable type whose index operator is not the compiler-known one of an array or
   slice but resolves to its own source-level `at`/`index_set`/`index_range` (`Vec(T)`; Types §4.5, OP-3). An index on it

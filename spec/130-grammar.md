@@ -483,7 +483,7 @@ access.
 `a.(f)` (a `.` immediately followed by `(`, **distinct** from UFCS `a.f(args)` / `a.ns::f(args)`,
 which begin with an `ident`/`path`) is **comptime field projection**: `f` is a comptime value
 naming a field of `a` — a `Field` (from `typeinfo(T).fields`) or its `str` `name` — and `a.(f)`
-≡ the named access `a.<f.name>` (same place/type/permission), resolved at comptime and emitting
+≡ the named access `a.<f.name>` (same classification/type/permission), resolved at comptime and emitting
 identical code (TYP-9; Comptime §5.4). It is the form that lets a structural derive read the field
 it is iterating.
 

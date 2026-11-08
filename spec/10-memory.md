@@ -87,15 +87,20 @@ live — is the dangling problem, addressed in §5.
 Every expression is classified as either a **place-expression** or a
 **value-expression**.
 
-- **Place-expressions** denote a place: a variable reference, a field access
-  `s.f`, a tuple component, an index `a[i]` on an array or slice (Type System §6.4) or on
-  a `str` (read-only; Stdlib appendix §3.6), and a
-  dereference (§4.3) — except a field or raw-union member, tuple component or array index reaching into a library
-  aggregate's element through its index (below).
+- **Place-expressions** denote a place: a variable reference; a field or raw-union member
+  access `s.f`, a tuple component, or an index `a[i]` on an array (Type System §6.4), whose base is itself a place-expression — the
+  base taken after the access coercion of Type System §4.5, so a pointer-typed base
+  auto-derefs (`p.f` ≡ `deref(p).f`, `p[i]` ≡ `deref(p)[i]`) and `make_ptr().x` is a field
+  of a dereference, a place, whatever produced the pointer; an index `a[i]` on a slice (Stdlib
+  appendix §3.5) or on a `str` (read-only; Stdlib appendix §3.6), whose element lies behind the
+  view's pointer whatever its base; and a dereference (§4.3) — except a field or raw-union
+  member, tuple component or array index reaching into a library aggregate's element through
+  its index (below).
 - **Value-expressions** denote a value: literals, arithmetic, comparisons, a call
   whose result is taken by value — including an index `a[i]` on a library aggregate,
-  which is the by-value call `at(a, i)` (Type System §4.5) — and an address-of (which
-  yields an address *value*).
+  which is the by-value call `at(a, i)` (Type System §4.5) — a field or raw-union member access,
+  tuple component or array index whose base is a value-expression (`f().x`, `make_pair().0`, `make_arr()[0]`), and an
+  address-of (which yields an address *value*).
 
 The fundamental operations relating values and places are:
 
@@ -108,11 +113,34 @@ The fundamental operations relating values and places are:
   (§4).
 
 A store's left operand MUST be a place-expression; assigning to a value-expression
-is ill-formed. A field or raw-union member, tuple component or array index reaching into the storage of a
+is ill-formed — so a store into a field or index of a value-expression, `f().x = 1` with `f`
+returning a struct by value, is ill-formed, not a write into a discarded copy. Whether a
+call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target is open as spec#84:
+Grammar §3.3 does not derive one. A field or raw-union member, tuple component or array index reaching into the storage of a
 library aggregate's element through its index is not a place either, so a store into the
 element (`a[i].f = x`) is ill-formed (Type System §4.5; OP-8); a dereference out of the
 element (through a pointer- or slice-typed element or component of it) still yields a place. `a[i] = v` on a library
 aggregate is not a store but the call `index_set(a, i, v)`.
+
+**A value-expression in a read-only receiver slot gets a temporary.** When a method receiver's
+slot is the read-only scoped reference `ptr(R)` and the operand is a value-expression of type `R`
+(receiver auto-ref, Type System §4.5), the value is **materialized in a caller-owned temporary**:
+an automatic of type `R`, placed by the §2.5 strategy as a memory-resident one (§2.6), initialized
+from the value, which lives to the end of the **full expression** containing it (§5.3.1); its address is
+passed. So `make_pair().sum()` and `vs[i].norm()` on `vs : Vec(Point)`, each with a `ptr(R)`
+receiver, are well-formed; an index on a nested library aggregate with a non-owning element
+type, `vv[i][j]` ≡ `at(vv[i], j)`, is the same case, `at` taking its receiver through a `ptr(R)` slot (Type System §4.5). The passed
+address is an ordinary scoped reference (§5.3.1): in checked code a `scoped` result derived from
+it is transient within the full expression, as any is, while inside `unchecked { … }` a local
+bound to such a result can outlive the temporary, and its use is the programmer's responsibility
+— a stale access is hardware-defined (§5.3.1; I11). The rule gives a temporary only to a
+read-only receiver: a `ptr(mut R)` slot still requires a mutable place, so a value-expression there is ill-formed
+(`a[i].push(x)` on a library aggregate, Type System §4.5), and a store into a value-expression
+stays ill-formed (above). If `R` is **owning** (§5.9), the temporary is subject to §5.9 as any
+owning value is: nothing at the end of its extent releases, transfers or `forget`s it. Whether
+that end should discharge the obligation instead is spec#73, and so is whether `Vec(T)` and
+`String` are themselves owning (for an owning element, spec#96). An owning element of a `Vec` is
+never read by value at all (Stdlib appendix §6, STD-10).
 
 A **compound assignment** `place ⊕= rhs` (Grammar §3.2; OP-2), where `⊕` is one of the
 binary glyph operators `+ - * / % & | ^` (OP-2), is **sugar** lowered by this documented
@@ -921,7 +949,9 @@ construction must preserve the result while supplying `pred` an ordinary by-valu
 A **read accessor** on an owning value is therefore written as a function taking a
 **`ptr([mut] R)`** scoped reference (not `in R`, which would move it); the UFCS
 **auto-ref** form (Type System §4.5 / MOD-3) supplies the address, so `a.len()` ≡
-`len(ptr(a))` reads `a` without consuming it. A container's `free`/`close` takes the
+`len(ptr(a))` reads `a` without consuming it (for a non-owning value-expression `a`, through the
+address of a caller-owned temporary, §1.6; an owning one is rejected as a leak under this section
+as written, and whether the temporary's end discharges the obligation is spec#73). A container's `free`/`close` takes the
 value `in` (the consume); its inspectors and element accessors borrow by scoped reference — the
 arena's `close(in self : Arena)` consumes it, its `get(in a : ptr(Arena), …)` borrows it, and its
 `allocate` takes it `in out` (Stdlib appendix §5.2.1). A `Vec(T)` of owning elements has no
@@ -1039,7 +1069,8 @@ Normative notes:
 A conforming implementation MUST:
 
 1. classify expressions as place- or value-expressions and reject a store to a
-   value-expression (§1.6);
+   value-expression (§1.6), and materialize a value-expression in a read-only `ptr(R)`
+   receiver slot in a caller-owned temporary living to the end of the full expression (§1.6);
 2. place bindings by storage class per §2, derive static sections per §2.3, and
    document and obey a deterministic placement strategy per §2.5;
 3. forbid taking the address of a register-resident place under `no_abstractions`,

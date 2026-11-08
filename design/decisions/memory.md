@@ -357,3 +357,51 @@ costs no new syntax, because FN-7 already admits the binding and the protocol co
 arm above `ty_eq`, guarded by the kind pair and `PTRINT_GRANT == 0` (compiler#1034). That location stays;
 when the pair rule lands the same marker covers a declared heterogeneous pair, because the condition is the
 same kind pair at the site.
+
+### MEM-11. A value-expression gets a temporary only in a read-only receiver slot; a store into one is ill-formed — spec#47
+*provenance: refines MEM-6 (places and values) and the receiver auto-ref of MOD-3/OP-5; reads OP-8 and
+  Memory §5.3.1 · spec: Memory §1.6, §5.9, §8; Type System §4.5; Functions §1.4; Modules §2; Comptime
+  §5.4, §11; Grammar §3.4 · owner decision 2026-11-08, spec#47*
+
+**Question.** Memory §1.6 listed "a field access `s.f`" among the place-expressions with no condition on
+`s`, so nothing said whether `f().x = 1` (with `f` returning a struct by value) stores into a discarded
+copy or is ill-formed. And Type System §4.5's auto-ref passes the receiver "by its address" at a read-only
+`ptr(R)` slot without requiring a place, so `make_pair().sum()`, or `vv[i].len()` and `vv[i][j]` after
+OP-8 made `vv[i]` a value-expression, had no stated meaning: a temporary (with what extent), or ill-formed.
+
+**Decision (owner, 2026-11-08).** **A value-expression in a read-only `ptr(R)` receiver slot is
+materialized in a caller-owned temporary that lives to the end of the full expression, and its address
+is passed** (`vv[i].len()`, `make_vec().len()`, `vv[i][j]`). **A field or index of a value-expression is a
+value-expression, so a store into it (`f().x = 1`) is ill-formed.**
+
+**Derived (not the owner's wording).** The temporary is an automatic placed by the Memory §2.5 strategy as a memory-resident
+one, like a spilled binding (§2.6); "full expression" is §5.3.1's. A slice index stays a place whatever its base — the
+element lies behind the view's pointer — and so does a field through a pointer base: OP-8, an earlier
+decision, already rules both, and the owner's sentence is read alongside it, so "index" here is an
+array's or a library aggregate's. The base is classified after the access coercion of Type System §4.5, so a
+pointer-typed base auto-derefs and `make_ptr().x` is a field of a dereference, a place. A
+`ptr(mut R)` slot still requires a mutable place; the rule creates no temporary for any other slot.
+
+**Not decided here.** An **owning** temporary (Memory §5.9): a temporary of an owning `R` that ends
+with its full expression is neither released, transferred nor `forget`-ed; §5.9 applies to it as
+written, and whether that end should discharge the obligation instead is spec#73. Whether `Vec(T)`
+and `String` are themselves owning in §5.9's sense — they are not `@owning`-declared, and STD-6's
+"owning containers" is descriptive — is spec#73 (with spec#96 for an owning element), so `make_vec().len()` is
+the open case only if they are. Whether a call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target
+is spec#84 (Grammar §3.3 derives none). (An owning element of a `Vec` is not read by value at all, STD-10, so `vv[i]` with
+an owning element never reaches this case.)
+
+**Why.** A read-only receiver only needs *an* address to read through; the caller can always supply one
+for a value it already holds, at the cost of one stack slot it can see in the source (I1), and the
+extent is the one §5.3.1 already gives anything scoped. A store into a copy that no one can read again is
+a silent no-op — the program says it writes and nothing observable is written (I3) — so it is rejected
+rather than given a place.
+
+**Rejected.** *(b) As (a), but a store into a field of a temporary is a place and is allowed* — the write
+is discarded, a silent no-op. *(c) No temporaries* — `vv[i].len()` and `make_pair().sum()` ill-formed,
+the program binding first (`e := vv[i]; e.len()`) for a read that needs no name.
+
+**Consequences.** Memory §1.6 conditions the field/tuple/array-index place forms on a place base, lists
+their value-base forms among the value-expressions, rejects `f().x = 1` and states the temporary rule;
+Type System §4.5's auto-ref bullet, Functions §1.4's and Modules §2's auto-ref equivalences and Memory
+§5.9's `a.len()` example point to it; the glossary entries follow.
