@@ -81,7 +81,9 @@ and **deferred (additive) growth**.
   integer `at(…)` field take a signed per-width slot type from the arch table, the constant checked against it (`disp : i32`
   on x86_64; the slots no v1 type describes are open, spec#80) (CG-18); a `@reg(name)` binding is a register operand
   (naked body, intrinsic, `asm`), a bare-`@reg` one is not and `asm(…)` rejects it, and a register the source names is
-  reserved from that function's placement (CG-19; across a call, in removed branches and from `@inline` bodies open, spec#93). Content — additive data.
+  reserved from that function's placement (CG-19; across a call, in removed branches and from `@inline` bodies open, spec#93);
+  under `no_abstractions` a constant expression (`disp = -16`) is admitted, the value-operators being forbidden only at a
+  run-time operator site (CG-17). Content — additive data.
 - `[x]` **11. Codegen / lowering / GAS.** Pipeline structured→backend-specific assembly-correspondence→backend emission
   (GAS→as→ld for register-ISA backends); lowering rules = contract I1;
   determinism; centralized emission; containers by target (CG-1).

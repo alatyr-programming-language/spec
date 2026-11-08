@@ -49,6 +49,13 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — under `no_abstractions` a constant expression is admitted (Assembly §1.1, §5;
+CG-17).**  CG-12 admitted comptime in full but forbade the value-operators as surface syntax, so a
+constant expression such as `disp = -16` (comptime by its form since CT-13) had two answers in a
+`no_abstractions` unit. It is admitted: it emits no instruction and carries no guard, and the
+forbidden list governs run-time operator sites only. Rejected: forbidden regardless of phase (a
+`comptime` binding would be required); only unary `-` on a literal admitted. (spec#59.)
+
 **Normative — an integer constant expression is evaluated exactly and its result checked; a
 floating-point one per operation (Comptime §1.1, §2.6, §11; Type System §2.3, §9.1; Declarations
 §3.4; Memory §4.5; Concurrency §6.5, §8; CC-8; CT-14).**  CT-13 checked a constant expression "like a literal" without saying
@@ -173,7 +180,7 @@ per-operator and mathematical evaluation differ (`-1` at an unsigned type, `-128
 `unchecked`), and how a floating-point constant expression is evaluated, are open as spec#62
 (since settled by CT-14, above); the context type of an immediate slot as spec#63 (since settled by
 CG-18, above). Whether a constant expression is admitted
-under `no_abstractions` is open as spec#59. Rejected: only a literal and unary `-` on a literal
+under `no_abstractions` is open as spec#59 (since settled by CG-17, above). Rejected: only a literal and unary `-` on a literal
 comptime; every non-literal runtime, with negative immediates spelled through a `comptime`
 binding. (spec#39.)
 

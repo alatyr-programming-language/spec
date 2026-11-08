@@ -12,8 +12,9 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   wrote, 1-to-1 with GAS. **Admits** instruction intrinsics + `asm`, operands (registers /
   immediates / `at(…)` memory / labels / decorations), raw transfer (native — no grant here),
   data definitions, the ABI-framed-or-naked function frame over local operands with a returned
-  destination, and **comptime** (erased, so exempt). **Forbids** (compile error) the *structured
-  abstractions*: the library value-operators (`+`/`-`/`*`/…), structured control flow
+  destination, and **comptime** (erased, so exempt — a constant expression such as `-16` included,
+  CG-17). **Forbids** (compile error) the *structured abstractions*: the library value-operators
+  (`+`/`-`/`*`/…) at a run-time operator site, structured control flow
   (`if`/`while`/`for`/`match`/…), `?`, calls to non-instruction functions, structured data
   access (`s.f`, enum `match`, `a[i]`, slices), and `ptr`/`deref` + pointer arithmetic — each
   re-expressed via an intrinsic, labels + raw transfer, or an `at(…)` operand. Binds the unit's
