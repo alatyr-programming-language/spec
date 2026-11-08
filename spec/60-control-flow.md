@@ -133,7 +133,7 @@ discards that value. Statements within a block are separated by a **newline or `
 | Final element | Block value / type |
 |---|---|
 | an **expression** `e` | the value and type of `e` |
-| a **declaration / assignment / `while` / `for` / `defer`** | **no value** — there is no unit type (Grammar §3.1); using the block for a value is ill-formed |
+| a **declaration / discard (`_ := e`) / assignment / `while` / `for` / `defer`** | **no value** — there is no unit type (Grammar §3.1); using the block for a value is ill-formed |
 | a **diverging** statement (`return` / `break` / `continue`, or a call of type **`Never`** — `panic`/`exit`, Stdlib appendix §3.7) | the block **diverges**: its type is **`Never`** and code after it is unreachable (§9) |
 
 For the structured expressions: an `if`/`match` consumed for a value takes the

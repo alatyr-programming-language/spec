@@ -49,6 +49,19 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `_ := expr` is the explicit discard; the lone `_` is not a name (Grammar §2.2, §3.1;
+Functions §3.3; Control Flow §3; Stdlib appendix §2.7; SYN-9).**  Since STD-7 made `print(…)` return a
+`Result`, a function with no result ending in `print(…)` was ill-formed with no way to drop the value
+but an unused named binding. `_ := expr` now evaluates `expr` for effect and binds nothing; as a block's
+last element it leaves no value, so `main := fn() { _ := print("hello\n") }` is well-formed. The lone
+`_` is no longer an identifier: it cannot be bound or read and may repeat in one scope; it remains the
+wildcard pattern. A final `if`/`else` or `match` whose non-diverging arms all yield a value takes
+the discard on it or in each arm. An owning value cannot be discarded. `for _ in`, `(q, _) :=`, a `_` parameter and a
+module-scope discard are refused (spec#114); the value of `defer print(…)` is open (spec#113), and
+a final `if`/`match` with partly value-less arms (spec#119).
+Rejected: an unused named binding as the only form; discarding a body's final expression implicitly.
+(spec#81.)
+
 **Normative — `String` and `Vec(T)` are `@owning`, released by `free`; a call on an owning
 value-expression at a read-only receiver slot is ill-formed (Memory §1.6, §5.9, §8; Type System
 §4.5; Functions §1.4; Modules §2; Comptime §5.4; Stdlib appendix §1, §2.4, §2.6, §6, §8; MEM-12).**  Both containers
@@ -94,8 +107,8 @@ renders an integer (base-10), a `bool`, a `char` (UTF-8), a `str` (its bytes) or
 shortest decimal that reads back to the same value); any other type is a comptime error until
 `Display` is added. Because a procedure body may not end in a value-expression (Functions
 §3.3), `print(…)` as the last element of a function with no result is now ill-formed there;
-bind the result (`r := print(…)`) or handle it. Open: the exact text of a float (spec#75);
-`format`'s tier and the module paths (spec#74); an explicit discard form (spec#81); a writer
+discard the result (`_ := print(…)`, SYN-9), bind it or handle it. Open: the exact text of a float (spec#75);
+`format`'s tier and the module paths (spec#74); a writer
 over-reporting its count, and a total past `usize` (spec#82); a user brand or `@require` type
 in a hole (spec#99); which `write` calls carry the fragments (spec#100). Rejected: a count-less
 result; a `print` that traps or ignores a stdout failure; `Display` in v1; a fixed-fraction float. (spec#46.)
