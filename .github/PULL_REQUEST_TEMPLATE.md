@@ -7,6 +7,8 @@
 - [ ] Editorial (typo, wording, cross-reference, example) — no implementation can observe it
 - [ ] Normative — an implementation could behave differently because of this
 - [ ] Design decision recorded (a decision entry added or refined)
+- [ ] Settled by the contributor under the standing rule (formatter-layout gap or editorial
+      inconsistency, `AGENTS.md`) — to be listed to the owner after merge
 
 ## Related issue
 
