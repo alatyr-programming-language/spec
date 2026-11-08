@@ -289,7 +289,8 @@ minimal layer does not need — adding them changes neither the protocol shape n
 **Checked prelude operations and `unchecked` (CG-13, CT-11).** The checked operators and
 conversions of the **built-in** numeric interpretations — `+` `-` `*` (overflow), `/` `%`
 (division by zero, `MIN / -1`), narrowing conversions, array/slice indexing and
-sub-slicing bounds — are guarded by the **compiler at the operation site** (Concurrency
+sub-slicing bounds, a `str` index's bounds (which include its code-point boundary, §3.6) — are
+guarded by the **compiler at the operation site** (Concurrency
 §6.1); their prelude operator bodies carry **no** guard. So `unchecked (a + b)` **wraps**
 and `unchecked xs[i]` **skips the bounds check** because the compiler drops the family
 inside the scope (Concurrency §6.2 / CG-7), not because the operator body observes the
@@ -301,8 +302,8 @@ comptime-absent inside `unchecked`. This is a **convention of the prelude**, rel
 users: a checked operation from the prelude responds to `unchecked`. A library check that
 mirrors a member of the built-in family fails through **`trap()`** (§4.1), never `panic`:
 a library-defined numeric type's overflow or division/remainder by zero, `char(n)`'s
-conversion check, and a container's bounds check — `Vec` indexing (§6), `str` byte access
-(§3.6), the arena's `get` (§5.2.1) — so `xs[10]` fails identically for an array, a slice
+conversion check, and a container's bounds check — `Vec` indexing (§6), the arena's `get`
+(§5.2.1) — so `xs[10]` fails identically for an array, a slice
 and a `Vec` (Stdlib §4.1; CG-13). `panic` stays for ordinary library logic: an explicit
 `assert`, `unwrap` on `None` / `Err` (§3.3, §3.4). A
 *user-defined* function is **mode-opaque** unless it itself reads `verify.checked` — a
@@ -438,10 +439,15 @@ bytes(in self) -> [u8]                 # the underlying bytes
 str_at(in p : usize, in n : usize) -> str   # raw view: `n` bytes at address `p` (raw inverse of `bytes`; a call requires `unchecked`)
 ```
 
-Indexing by **byte** offset is bounds-checked and checked to land on a code-point boundary
-(an out-of-range or mid-code-point index traps, I11). Where `str` byte access is library
-code rather than the built-in slice read, these checks sit under `comptime if
-verify.checked` and fail through `trap()` (§3, §4.1), exactly as the built-in index does.
+Indexing by **byte** offset, `s[i] : u8`, is the **built-in slice read** over the `str`'s
+bytes plus a **code-point-boundary check** (OP-9). Its bounds guard requires `i < s.byte_len()`
+**and** that byte `i` begin a code point — it is not a UTF-8 continuation byte, `(b & 0xC0) !=
+0x80` — so an out-of-range or mid-code-point index traps (I11). The boundary condition is part
+of that one bounds guard, the compiler's, emitted at the operation site like any built-in
+index's (Concurrency §6.1; CG-13), so `unchecked s[i]` drops it whole, and at comptime its
+failure is a diagnostic (Comptime §2.6). Like a `[u8]` element, `s[i]` is a **place** (Memory
+§1.6), read-only because its bytes are `[u8]`, not `[mut u8]` (Memory §4.4): `ptr(s[0])` is well-formed and yields a
+`ptr(u8)`, and a store `s[i] = b` is ill-formed.
 A growable string is `String` (alloc tier, §6).
 
 **Comparison over `str` is by content** (STD-4): it is §3.5's rule at `T = u8` — `a == b`

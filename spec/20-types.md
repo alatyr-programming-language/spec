@@ -248,7 +248,8 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
 
 - a scalar index `a[i]` ≡ `at(a, i)` — the **bounds-checked element access**
   (out of range traps, I11; for arrays and slices the compiler emits the bounds guard,
-  below; a library aggregate's `at` makes its own check, failing through `trap()` exactly
+  below, and for a `str` the same guard with its code-point boundary, Stdlib appendix
+  §3.6; a library aggregate's `at` makes its own check, failing through `trap()` exactly
   as the built-in guard does — Stdlib §4.1);
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
 - a compound assignment `a[i] ⊕= rhs` on a library aggregate ≡
@@ -259,7 +260,9 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
 
 Arrays and slices supply these as the **compiler-known** built-ins (the bounds
 check / pointer arithmetic emitted directly; §3.5 / §6.4 / Memory §4.3) — there is
-no source-level prelude function to override for them. A **library aggregate**
+no source-level prelude function to override for them. A `str`'s scalar index is the same
+built-in slice read over its bytes, plus the code-point-boundary check, and a read-only
+place (Stdlib appendix §3.6; OP-9). A **library aggregate**
 (`Vec(T)`, Stdlib §6) supplies its own `at` / `index_set` / `index_range`, so
 `v[i]` on a `Vec` is exactly `v.at(i)` (receiver auto-ref applies, so `at`
 borrows `v`). The read arm reuses the container's **established named read `at`** —
@@ -286,7 +289,7 @@ receiver. Reading through the index
 
 A **checked** operator or conversion (one that traps by default and whose check is
 dropped inside `unchecked`, §4.2 / CG-8) of a **built-in** numeric interpretation, and
-built-in array/slice indexing, is guarded by the **compiler at the operation site**
+built-in array/slice and `str` indexing, is guarded by the **compiler at the operation site**
 (Concurrency §6.1 / CG-13): the operator body carries no guard, and `unchecked` drops the
 guard because the compiler emits it. **Library code** makes its *own* checks mode-dependent
 by reading the verification mode as a comptime fact — `comptime if verify.checked { <guard>
@@ -754,7 +757,7 @@ an `unchecked` scope** the bounds check is omitted (the verification mode, CG-7/
 
 Indexing **through a pointer** auto-derefs one level: when the base has type
 `ptr([mut] R)` for an indexable `R`, `p[i]` ≡ `deref(p)[i]` (§4.5 / OP-5), after which
-the index operator resolves on the pointee `R` (this built-in for an array/slice, or the type's
+the index operator resolves on the pointee `R` (this built-in for an array/slice or a `str` (Stdlib appendix §3.6), or the type's
 own `at`/`index_set`/`index_range`, §4.5 / OP-3). A raw pointer carries no arithmetic indexing of its own,
 so `[i]` on a pointer always means dereference-then-index.
 

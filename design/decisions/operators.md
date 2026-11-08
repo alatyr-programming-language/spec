@@ -104,7 +104,8 @@ over-width trap — inconsistent with I11's correct-or-trap default (the wrap is
 ### OP-3. Indexing `a[i]` is an overloadable operator — sugar over `at` / `index_set` / `index_range`
 *spec: Types §4.5, §5.3; spec/20-types.md*
 
-**Why.** The stdlib promised `v[i]` and `v[a..b]` on library `Vec(T)`/`str`, but the
+**Why.** The stdlib promised `v[i]` and `v[a..b]` on library `Vec(T)` (a `str` index is the
+built-in slice read, OP-9), but the
 operator material specified `[]` only for **built-in arrays/slices** — so an implementer
 could not tell **which function `v[i]` desugars to** for a library type (a
 reproducibility defect: the surface was mandated, the dispatch unspecified). The fix
@@ -124,7 +125,7 @@ new entity is minted and **one indexing surface spans built-in and library seque
 reusing the existing "operators are sugar over functions" mechanism (OP-1), naming no new
 entity beyond the two range/write prelude names, with no grammar growth.
 
-**Rejected.** **`[]` built-in-only** (drop `self[i]` from `Vec`/`str`) — a real loss of
+**Rejected.** **`[]` built-in-only** (drop `self[i]` from `Vec`) — a real loss of
 the uniform-operator surface already committed to for `+`/`==`; the overloadable-operator
 model makes `v[i]` free. **A dedicated `Index` protocol type** (a nominal interface) —
 Alatyr's protocols are *structural* comptime predicates and operators dispatch by plain
@@ -214,6 +215,38 @@ later be relaxed additively (I10); a defined sugar could never be withdrawn.
 - *A place-returning index operation* (`index_ptr` → `ptr(mut T)`, a third function, distinct
   from OP-3's rejected single read-write function) — deferred as additive growth: it enlarges OP-3's function set and needs its own decision on how long the pointer
   stays valid across a reallocation.
+
+### OP-9. A `str` index is the built-in slice read plus the code-point-boundary check — a read-only place — spec#53
+*provenance: refines OP-3 (indexing) and OP-8 (the place/value split for an index); reads Stdlib appendix
+  §3 / §3.6 and CG-13 · spec: Stdlib appendix §3, §3.6; Memory §1.6; Type System §4.5; Stdlib §4.1*
+
+**Question.** The Stdlib appendix's `str` entry said "where `str` byte access is library code rather
+than the built-in slice read", admitting both. Since OP-8, Memory §1.6 makes an index on an array or
+slice a place and an index on a library aggregate a value-expression (the by-value `at`), so whether
+`ptr(s[0])` is well-formed depended on that implementation choice (FND-3).
+
+**Decision (owner, 2026-11-08).** **A `str` index `s[i]` is the built-in slice read over the `str`'s
+bytes plus the code-point-boundary check: a read-only place, like a `[u8]` element.** `ptr(s[0])` is
+well-formed and yields a `ptr(u8)`; a store `s[i] = b` is ill-formed, a `str` view admitting no write.
+The bounds and code-point-boundary checks are the compiler's guards at the operation site, as the
+built-in index's bounds guard is (CG-13) — the boundary condition is part of the index's bounds
+guard, so every list of the guard family that names bounds covers it — and `unchecked s[i]` drops it,
+as `unchecked` drops every checked guard (CG-7). The "where … rather than …" alternative is deleted.
+
+**Why.** A `str` *is* a slice of UTF-8 bytes (Type System §7); reading one of its bytes is the slice
+read, and making it a library call would give the same bytes a second classification and leave the
+address of a byte reachable only through `s.bytes()`. One extra check on the same built-in keeps the
+access 1:1 with what a reader sees (I1).
+
+**Rejected.** *`str` as a library aggregate*, `s[i]` ≡ `at(s, i)` a value-expression, with
+`ptr(s[i])` ill-formed and a byte's address reached through `s.bytes()` — a second classification for
+the bytes of a slice, for no capability gained.
+
+**Consequences.** Stdlib appendix §3.6 states the rule; §3 lists the `str` index among the
+compiler-guarded built-ins and drops `str` byte access from the library-check examples, as do Stdlib
+§4.1, CG-13, CT-11 and the glossary (`String` defines no index of its own, §6; its bytes are read
+through `as_str()`, which is this built-in). Memory §1.6 lists a `str` index among the
+place-expressions; Type System §4.5 names it beside the array/slice built-ins.
 
 ---
 

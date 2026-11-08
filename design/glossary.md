@@ -58,7 +58,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   hook, no OS exit, no unwinding, identical in every context — but **not** admitted under `no_abstractions`, where the
   instruction (`ud2` / `brk #0` / `udf #0` / `ebreak`) is written directly (CG-12). A library check that mirrors the built-in family fails through
   it, never through `panic` — a library-defined numeric type's overflow or division by zero, and a library container's
-  bounds check (`Vec` indexing, `str`/`String` byte access, the arena's `get`), so `xs[10]` fails alike for an array and a
+  bounds check (`Vec` indexing, the arena's `get`), so `xs[10]` fails alike for an array and a
   `Vec`; `clamp` with `lo > hi`; and, in every mode, an `@alloc` that cannot allocate. `panic` is the failure of
   ordinary library logic (an explicit assertion, `unwrap` on `None`).
 
@@ -287,7 +287,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Scope** (*scope*) — where in the source a binding name is accessible.
 
 - **place-expression / value-expression** — classification: a place yields a place (variable, field, tuple
-  component, index on an array or slice, dereference — except a path into a library aggregate's element
+  component, index on an array, slice or `str` (read-only), dereference — except a path into a library aggregate's element
   through its index, OP-8), a value yields a value (literal, arithmetic, by-value call — including an
   index on a library aggregate, `at(a, i)` — taking an address) (Memory §1.6).
 
@@ -416,7 +416,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib §3.6): a
   `{ptr, byte-length}` view; its byte length is **not** its code-point count, and indexing is by
-  byte (an in-bounds byte read; out of range fails through `trap()` like an array index, CG-13);
+  byte (the built-in slice read plus the code-point-boundary check, a read-only place, OP-9; an
+  out-of-range or mid-code-point index fails through `trap()` like an array index, CG-13);
   `==`/`<` compare its bytes, not the view (STD-4). `String` is the
   **alloc-tier growable owned** UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
   `==`/`<` over `String` compare its text too, never its buffer address (STD-6).

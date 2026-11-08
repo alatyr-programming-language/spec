@@ -132,9 +132,8 @@ directly. It is a compiler intrinsic (§3): its one
 instruction is the target's, not a library choice. Its use is fixed for a library check
 that mirrors a member of the built-in guard family: a library-defined numeric type's
 overflow or division/remainder by zero (e.g. in `uint(N)`, Type System §7), a library
-container's bounds, alignment or narrowing check — `Vec` indexing and `at`, a
-library-implemented `str` / `String` byte access, the arena's `get` (Stdlib appendix §3,
-§5.2.1, §6) — and a conversion-constructor's target check, `char(n)`'s code point
+container's bounds, alignment or narrowing check — `Vec` indexing and `at`, the arena's
+`get` (Stdlib appendix §3, §5.2.1, §6) — and a conversion-constructor's target check, `char(n)`'s code point
 (§4.6, Stdlib appendix §3.2) — and an operand-domain check of a value primitive, `clamp`'s `lo <= hi` (Stdlib
 appendix §2.6). Such a check MUST be made under `comptime if verify.checked` (Comptime §7.5)
 and fail through `trap()`, never through `panic`, so the failure is indistinguishable from

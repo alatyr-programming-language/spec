@@ -520,7 +520,7 @@ which is the FND-3 bar, not a quality-of-implementation detail. It also made the
 failure of *one* family depend on which arithmetic the source happened to use.
 
 **The rule.** For the built-in numeric interpretations (the native-width `uN`/`iN`/`fN`
-operators and conversions, and the built-in array/slice indexing) the compiler emits the
+operators and conversions, and the built-in array/slice and `str` indexing, OP-9) the compiler emits the
 guard **at the operation site**; an instruction intrinsic never carries one (it is 1:1,
 Assembly §3). Every checked-guard failure — the checked-overflow set (`+`, `−`, `*`, unary
 `−`, `MIN / -1`), division by zero, an over-width shift, the bounds / alignment /
@@ -565,8 +565,7 @@ not following it when an architecture or backend is added.
 
 **A library container's checked access fails through `trap()` too.** The same holds for a
 library container's checks that mirror a family member — bounds, alignment, narrowing:
-`Vec`'s indexing (`at`, `index_set`, `index_range`) and `set`, a library-implemented
-`str` / `String` byte access (its range and code-point-boundary check), the arena's `get`
+`Vec`'s indexing (`at`, `index_set`, `index_range`) and `set`, the arena's `get`
 bounds check, and every `comptime if verify.checked { … }` bounds guard in the prelude and
 stdlib catalogue. Each is made under `comptime if verify.checked` (CT-11), so it drops
 inside `unchecked` exactly as the built-in bounds guard does, and fails through `trap()`,
