@@ -49,6 +49,15 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a floating-point literal with no context takes `f64` in Declarations §3.4 too
+(Declarations §3.4; TYP-13).**  §3.4 gave "an integer/float literal" with no context "the
+documented default (the target's native signed integer)", which read literally gives
+`x := 1.5` an integer type; Types §9.1, TYP-13 and the Stdlib appendix give it `f64`. §3.4's
+parenthetical now names both defaults — an integer literal the target's native signed
+integer, a floating-point literal `f64` — so the chapters give one answer; §3.2 says the same
+for a bare float binding (`x := 1.5` is `f64`), and Types §9.1's integer paragraph now says
+"an integer literal" where it said "a literal". (spec#33.)
+
 **Normative — a write into a library aggregate's element through its index is ill-formed
 (Types §4.5; Memory §1.6; OP-8).**  Types §4.5 gave a library aggregate such as `Vec(T)` a
 by-value read `a[i]` and a write `a[i] = v`, but said nothing of `a[i].f = x` when the element

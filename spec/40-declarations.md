@@ -195,7 +195,8 @@ integer type. The binding's later uses do not revisit that type. `mut i := 0` is
 native signed integer (e.g. `i64` on a 64-bit target), and passing `i` where `usize` is
 expected is a signed→unsigned **numeric** conversion, which is never implicit (Type System
 §4.2, §4.3; I8): it is ill-formed unless written `usize(i)`, or unless the binding is
-annotated `mut i : usize = 0`.
+annotated `mut i : usize = 0`. A bare floating-point literal likewise takes its default, `f64`
+(§3.4), so `x := 1.5` is well-formed.
 
 #### 3.3 Uninitialized — `name : T`
 
@@ -206,9 +207,10 @@ annotated `mut i : usize = 0`.
 
 An integer/float literal takes its type from **context** — the annotation `T`, or
 the target place/parameter — and its representability is checked at compile time
-(Type System §9.1). With **no** context it takes the documented default (the
-target's native signed integer); a literal that needs a non-default type with no
-context MUST be annotated or constructed (`T(v)`).
+(Type System §9.1). With **no** context it takes the documented default (an integer
+literal: the target's native signed integer; a floating-point literal: `f64` — Type System
+§9.1, TYP-13); a literal that needs a non-default type with no context MUST be annotated or
+constructed (`T(v)`).
 
 ---
 

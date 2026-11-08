@@ -367,7 +367,8 @@ predicate-body equivalence for type identity (requires undecidable semantic comp
 flattening stacked requirements (loses the immediate-underlying signature and ordering).
 
 ### TYP-13. A float-spelled literal is a float literal — never an integer initializer
-*provenance: refines TYP-1/TYP-4 (§9.1 literal typing) · spec: Types §9.1, §9.2; Grammar §2.4*
+*provenance: refines TYP-1/TYP-4 (§9.1 literal typing) · spec: Types §9.1, §9.2; Grammar §2.4;
+  Declarations §3.2, §3.4*
 
 **Why.** §9.1 fixed integer-literal typing (inferred from context, representability
 checked, no silent wrap) but said nothing about the float literal's context type. That
@@ -387,7 +388,10 @@ which is the same representability check §9.1 already applies to integers. Roun
 decimal float literal to the nearest binary value is representation, not loss; a literal
 outside the format's finite range is an error rather than a silent infinity. The prelude
 constants `NaN` and `Infinity` are typed by this same rule — a floating-point context, else
-`f64` — and `Infinity` is a named value, not an out-of-range literal (CG-9).
+`f64` — and `Infinity` is a named value, not an out-of-range literal (CG-9). With no context at
+all, a float literal takes the documented default `f64`; Declarations §3.4 states the same
+default beside the integer one (spec#33, a wording fix: its parenthetical had named only the
+native signed integer, which read literally gave `x := 1.5` an integer type).
 
 **Rejected.** Accepting an integral-valued float literal in an integer context — one
 character (`.0`) then decides nothing, the spelling stops carrying information, and the
