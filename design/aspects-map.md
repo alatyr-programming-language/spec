@@ -43,7 +43,8 @@ and **deferred (additive) growth**.
   predicate call (TYP-12).
 - `[x]` **5. Declarations and bindings.** Unified form `name:type=value` (FN-1), scope/shadowing/order,
   no `const` (FN-2); a bare integer literal binding `x := 5` takes the documented literal default, the
-  target's native signed integer, and a later use never re-types it (TYP-16).
+  target's native signed integer, and a later use never re-types it (TYP-16); a bare float literal takes
+  `f64` (TYP-13).
 - `[x]` **6. Functions / parameters / ABI.** Result via one output-place model: anonymous projected `-> T` or named `out`, with `in`/`in out` directions + projection (FN-4),
   function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**

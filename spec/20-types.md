@@ -1041,7 +1041,7 @@ value — §9.3, Grammar §2.4.) An **integer literal is a compile-time number**
 its type is
 **inferred from context**, and its representability in that type is **checked at
 compile time** — a literal outside the target type's range is a compile error (I11),
-never a silent wrap. With **no** context, a literal takes a **documented default**:
+never a silent wrap. With **no** context, an integer literal takes a **documented default**:
 the target's native signed integer.
 
 A **floating-point literal is likewise a compile-time number**, its type inferred from
