@@ -170,7 +170,19 @@ replaced by the **emitted operand text** of the `i`-th operand — a register na
 immediate, a memory operand (§7), or a symbol with its reloc (§8.2), i.e. an operand
 kind of §5. A literal brace is written `{{` / `}}`. It is a **compile error** if a
 placeholder index has no operand, an operand is unreferenced, or an operand is not a
-valid operand kind. The text outside placeholders is passed to `as` **verbatim**. The
+valid operand kind. The text outside placeholders is passed to `as` **verbatim**.
+`asm(…)` emits **exactly its template** with the operands substituted, and nothing more
+(I1): there is **no** materialization step, so each operand must already **be** of a §5
+kind. An operand that is not of a §5 kind — a local `x`, say, or a non-comptime
+expression (an immediate is comptime) — is a **compile error** under the rule above, in
+any function frame. Whether an operand is of a §5 kind is the same question here
+as for an instruction intrinsic in a naked body, which has no materialization either (§5);
+whether a binding pinned by `@reg` / `@reg(name)` is itself a register operand is open as
+spec#52. §5's register materialization belongs to the **instruction intrinsics** only. The
+explicit form stays expressible: move the value into a register with an instruction
+intrinsic first (`movq(rcx, x)`), then pass that register to the template
+(`asm("… {0} …", rcx)`); the instruction that places the value is then one the programmer
+wrote (decision CG-16). The
 only part deferred to Codegen is the **per-target textual spelling** of a substituted
 operand — which is exactly the spelling typed instructions already use — so the
 substitution scheme itself is fully defined here.
@@ -230,7 +242,8 @@ Which kinds a given instruction accepts is **part of its table** (§4); operand-
 validity is **always** checked (§3). Operands are **ordinary expressions** (Type
 System / Declarations) — there is **no** special operand grammar.
 
-Because operands are ordinary expressions, `movq(rbx, 0 - 1)` in an ABI-framed function is
+Because operands are ordinary expressions, an **instruction intrinsic**'s operand may be
+any expression: `movq(rbx, 0 - 1)` in an ABI-framed function is
 **well-formed** (CG-15), wherever its operator is admitted (`no_abstractions` forbids the
 value-operators, §1.1). The source operand is evaluated by the rules that govern any
 expression — its type, its phase and, for a checkable operation, its guard (§3). If its
@@ -245,8 +258,13 @@ implementation that cannot yet lower such an operand **refuses with a located di
 wrong value (I1: silently taking `$0` from an unevaluated tree emits an operand nobody
 wrote). That refusal is a **known deviation** of the implementation (Overview §6: its entry
 states the rule not met, this section, and the observable difference, the refusal) — **not**
-a rejection this specification mandates. (Informative: this chapter restricts no operand to
-a register name or an immediate literal, so it cannot be cited for such a refusal.)
+a rejection this specification mandates. (Informative: this chapter restricts no
+instruction-intrinsic operand to a register name or an immediate literal, so it cannot be
+cited for such a refusal.)
+
+The raw escape `asm(…)` has **no** such step: its operands are ordinary expressions too, but
+each must already be of a kind of the table above, as in a naked body, and an operand that is
+not is a compile error that this specification **does** mandate (§4; CG-16).
 
 ---
 
@@ -389,7 +407,8 @@ Normative notes:
 - The raw escape is the builtin **`asm("…GAS…", operands…)`** (this chapter fixes the
   form **and** the positional-`{i}` substitution scheme, §4): it needs an `unchecked`
   grant and is validated only by `as`; only the per-target operand *spelling* (shared
-  with typed instructions) is Codegen's.
+  with typed instructions) is Codegen's. It emits exactly its template: an operand
+  not already of a §5 kind is a compile error, never materialized (§4; CG-16).
 - An immediate operand is a **comptime** value, range-checked at compile time (§5).
 
 ---
@@ -411,7 +430,8 @@ A conforming implementation MUST:
 4. fix the instruction **schema** while enumerating the instruction **catalog** as
    normative per-arch appendices (v1-required; "additive" = future growth only), and
    provide the **raw GAS escape `asm(template, operands…)`** that requires an
-   `unchecked` grant and is validated only by `as` (§4, §intro; I4/FND-6/FND-3);
+   `unchecked` grant, is validated only by `as`, emits exactly its template, and
+   rejects an operand not already of a §5 kind, never materializing it (§4, §intro; I4/FND-6/FND-3; CG-16);
 5. accept the fixed operand-kind schema (register / immediate / memory / label /
    reloc / per-arch SIMD) as ordinary expressions, checking operand-kind validity,
    with immediates comptime and range-checked (§5);
