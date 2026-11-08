@@ -290,12 +290,13 @@ binding     ::= ident ":" type-expr [ when-clause ] "=" expr   (* typed + initia
 modifier    ::= "pub" | "mut" | "comptime" | attribute
 
 assignment  ::= place ( "=" | compound-op ) expr      (* store to an existing place — not a declaration *)
-compound-op ::= "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="  (* compound assignment, sugar: a ⊕= b ≡ a = a ⊕ b, place evaluated once (OP-2; Memory §1) *)
+compound-op ::= "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="  (* compound assignment, sugar: a ⊕= b ≡ a = a ⊕ b, place evaluated once (OP-2, OP-7; Memory §1.6) *)
 ```
 
 `:=` distinguishes a **declaration** from an **assignment** (`place = expr`, store).
 A **compound assignment** `place ⊕= expr` is **sugar** for `place = place ⊕ expr` with
-the place evaluated **once** (the desugaring is normative in Memory §1); `⊕` ranges over
+the place evaluated **once** (the desugaring is normative in Memory §1.6, including the
+`index_set`/`at` form for a library aggregate's index, OP-7); `⊕` ranges over
 exactly the binary glyph operators `+ - * / % & | ^` (OP-2) — there is no `and=`/`or=`
 (short-circuit control, not functions) and no shift/rotate compound (those have no glyph,
 OP-2). Because the operator is an overloadable operator-function (TYP-5), any type that
@@ -312,7 +313,7 @@ path        ::= ident { "::" ident }                  (* :: = namespace navigati
 place       ::= ident                                  (* an assignable location (lvalue) *)
               | place "." ident                        (* struct field / raw-union member *)
               | place "." tuple-index                  (* tuple element *)
-              | place "[" expr "]"                      (* index *)
+              | place "[" expr "]"                      (* index — a place on an array/slice; on a library aggregate a value, so a store into its element's own storage is refused; `a[i] = v` itself is the `index_set` call (Memory §1.6; Type System §4.5; OP-8) *)
               | "deref" "(" expr ")"                      (* dereference as a place; ≡ expr.deref() (Memory §4.3) *)
               | path
 
@@ -393,7 +394,7 @@ postfix     ::= "." ident                               (* named field/member of
               | "." "(" expr ")"                        (* comptime field projection: a.(f) — f a comptime Field/str; ≡ a.<f.name> (TYP-9; Comptime §5.4) *)
               | "." path "(" [ call-args ] ")"          (* UFCS (β): a.f(args) always = f(a,args); a.ns::f(b) ≡ ns::f(a,b) (TYP-5/MOD-3/CT-10) *)
               | "(" [ call-args ] ")"                    (* call *)
-              | "[" expr "]"                             (* index — the `index` operator: built-in for arrays/slices (§6.4), or a library type's own `index`/`index_range` (OP-3; Type System §4.5) *)
+              | "[" expr "]"                             (* index — the index operator: built-in for arrays/slices (Type System §6.4), or a library type's own `at`/`index_set`/`index_range` (OP-3; Type System §4.5) *)
               | "?"                                       (* try: unwrap-or-propagate (Control Flow §8) *)
 primary     ::= literal
               | path | ident

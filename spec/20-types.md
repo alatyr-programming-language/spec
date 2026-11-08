@@ -250,6 +250,10 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
   below; a library aggregate's `at` makes its own check, failing through `trap()` exactly
   as the built-in guard does — Stdlib §4.1);
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
+- a compound assignment `a[i] ⊕= rhs` on a library aggregate ≡
+  `index_set(a, j, at(a, j) ⊕ rhs)`, with `a` and `i` each evaluated once (`j` is the
+  temporary for `i`; Memory §1.6, OP-7) — on an array or slice the element is a place and
+  Memory §1.6's address-temporary rule applies;
 - a range index `a[lo..hi]` ≡ `index_range(a, lo, hi)` — the **sub-slice** view.
 
 Arrays and slices supply these as the **compiler-known** built-ins (the bounds
@@ -261,6 +265,23 @@ borrows `v`). The read arm reuses the container's **established named read `at`*
 no separate `index` shim with the identical body (OP-1). This keeps a single indexing surface across built-in and library
 sequences (the `+`/`==` treatment, applied to `[]`), without enlarging the grammar
 (the `[]` postfix already exists; Grammar §3.4).
+
+**A library aggregate's element, read through its index, is a value, not a place**
+(Memory §1.6; OP-8). `a[i] = v` (the `index_set` call) and `a[i] ⊕= rhs` (above) are the only
+writes to the element through such an index. A store or compound assignment whose target reaches **into
+the element's own storage** — a field or raw-union member, tuple component or array index of the element, at any
+depth (`a[i].f = x`, `a[i].f ⊕= x`, `a[i].f.g = x`) — is **ill-formed**, with a located
+diagnostic that names the explicit form `mut e := a[i]; e.f = x; a[i] = e`. A path that leaves
+the element through a dereference — an explicit `deref`, the auto-deref of a pointer-typed
+element or component of it (below), or an index on a slice-typed element or component —
+denotes the pointee, a place (Memory §1.6), and is unaffected: for `vs : Vec(ptr(mut S))`,
+`vs[i].f = x` writes `S`'s field, and `a[i].p.x = v` writes through a pointer field `p`. A
+mutating method on the element itself, such as `a[i].push(x)` whose slot is `ptr(mut R)`
+with `R` the element type, is ill-formed by the receiver rule below: auto-ref to
+`ptr(mut R)` requires a mutable place, and `a[i]` is not one — and so is
+`vv[i][k] = x` on `vv : Vec(Vec(T))`, whose `index_set` takes the element `vv[i]` as its
+receiver. Reading through the index
+(`a[i].f`) is unaffected.
 
 A **checked** operator or conversion (one that traps by default and whose check is
 dropped inside `unchecked`, §4.2 / CG-8) of a **built-in** numeric interpretation, and
@@ -724,7 +745,7 @@ an `unchecked` scope** the bounds check is omitted (the verification mode, CG-7/
 Indexing **through a pointer** auto-derefs one level: when the base has type
 `ptr([mut] R)` for an indexable `R`, `p[i]` ≡ `deref(p)[i]` (§4.5 / OP-5), after which
 the index operator resolves on the pointee `R` (this built-in for an array/slice, or the type's
-own `index`/`index_range`, §4.5 / OP-3). A raw pointer carries no arithmetic indexing of its own,
+own `at`/`index_set`/`index_range`, §4.5 / OP-3). A raw pointer carries no arithmetic indexing of its own,
 so `[i]` on a pointer always means dereference-then-index.
 
 #### 6.5 Zero-sized types

@@ -48,7 +48,8 @@ evaluation. Comparisons (`==` `!=` `<` `>` `<=` `>=`) are eager functions yieldi
 **Compound assignment** `place ⊕= rhs` rides this same glyph surface as **pure sugar**,
 not a new mechanism: it lowers to `place = place ⊕ rhs` with the **place evaluated once**
 (its address taken once into a fresh temporary, so a side-effecting `a[f()] ⊕= e` runs
-`f()` exactly once). `⊕` ranges over **exactly the binary glyph operators**
+`f()` exactly once; a library aggregate's index has no address, and its compound form is
+OP-7's `index_set`/`at` lowering). `⊕` ranges over **exactly the binary glyph operators**
 `+ - * / % & | ^` — the compound set **mirrors** the operator glyphs, it does not extend
 them. Hence by construction: **no** `and=`/`or=` (those are short-circuit control, not
 functions); **no** `<<=`/`>>=` (shifts have no glyph — call/UFCS form only); **no** clash
@@ -133,6 +134,86 @@ first-class return-a-place form for a library type (second-class references), so
 (`at` → value) and write (`index_set`) stay distinct, matching `get`/`set`. **A separate
 `index` read name** distinct from `at` — pure duplication (identical trapping-read body),
 so the operator resolves directly to `at` and the per-element `index → at` call vanishes.
+
+---
+
+### OP-7. Compound assignment on a library aggregate's index is `index_set(a, j, at(a, j) ⊕ rhs)` — spec#34
+*provenance: refines OP-2 (compound assignment, place evaluated once) on OP-3 (the index
+  operator over `at`/`index_set`) · spec: Memory §1.6; Types §4.5; Grammar §3.2; Stdlib
+  appendix §6*
+
+**Question.** Memory §1.6 and OP-2 lower `place ⊕= rhs` by taking the place's address once
+into a temporary. On a library aggregate (`Vec(T)`), `a[i]` is the by-value call `at(a, i)`
+(OP-3): the element has no address, so that lowering cannot apply, and `v[i] += 1` on a
+`Vec(i64)` had no specified meaning. Memory §1.6 also listed "an index `a[i]`" among the
+place-expressions without qualification, contradicting Types §4.5's by-value read.
+
+**Decision (owner, 2026-11-08).** **Defined sugar.** On a library aggregate,
+`a[i] ⊕= rhs` ≡ `index_set(a, j, at(a, j) ⊕ rhs)`, with `a` and `i` each evaluated exactly
+once into temporaries (`j` for `i`; `a`, when it is a place, by its address as in Memory
+§1.6), in the order `a`, `i`, the `at` read, `rhs` (Functions §5.4). The calls take their
+receiver as any call does, so `a` must meet what `index_set`'s receiver slot requires, exactly
+as for `a[i] = v` (this follows from Types §4.5; it is not part of the owner's choice).
+Memory §1.6's "an index `a[i]`" is qualified to arrays and slices; an index on a library
+aggregate is listed among the value-expressions, as the by-value call it is. On an array or slice nothing changes: the element is a place and the
+address-temporary rule applies.
+
+**Why.** It costs exactly what the hand-written `a[i] = a[i] ⊕ rhs` costs — the same `at`
+and `index_set` calls (I2) — and it evaluates `i` once where the hand-written form evaluates
+it twice, which is what "the place evaluated once" promises for arrays (OP-2). The lowering
+is written in the specification, so it is not hidden (I3; an implicit convenience with its
+explicit form still expressible, CG-11). And it keeps one indexing surface across built-in
+and library sequences (OP-3): `xs[i] += 1` means the same for an array and a `Vec`. Unlike
+a field write through the index (refused, OP-8), it copies nothing beyond what the
+hand-written form copies, so OP-8's I2 argument does not apply here.
+
+**Rejected.**
+- *Refuse `a[i] ⊕= rhs` on a library aggregate*, leaving `a[i] = a[i] ⊕ rhs`. It splits the
+  indexing surface between arrays and library sequences for no saving, and the explicit form
+  evaluates `i` twice.
+- *A place-returning index operation* (`index_ptr`) to make the element addressable so OP-2's
+  rule applies unchanged. It enlarges OP-3's function set and needs its own rule for the
+  pointer's lifetime across reallocation; it is deferred as additive growth (OP-8).
+
+---
+
+### OP-8. A write into a library aggregate's element through its index is refused — spec#23
+*provenance: refines OP-3 (the index operator over `at`/`index_set`) with OP-7's
+  classification of the index as a value-expression; the method case follows from MOD-3/OP-5's
+  receiver rule · spec: Types §4.5, §6.4; Memory §1.6; Grammar §3.3, §3.4*
+
+**Question.** Types §4.5 gave a library aggregate three index forms — the read `a[i]` ≡
+`at(a, i)` (by value), the write `a[i] = v` ≡ `index_set(a, i, v)`, and the range — but said
+nothing about a field write **through** the index, `a[i].f = x`, when the element is a
+struct. On an array the element is a place and the write lands in place; on a `Vec` the
+element read is a call result. Three readings were open: refuse; desugar to
+`mut e := a[i]; e.f = x; a[i] = e`; or add a place-returning index function.
+
+**Decision (owner, 2026-11-07).** **Refused.** On a library aggregate, a store or compound
+assignment whose target reaches into the element's own storage — a field or raw-union member, tuple component or
+array index of the element at any depth: `a[i].f = x`, `a[i].f ⊕= x`, `a[i].f.g = x` — is
+ill-formed, with a located diagnostic that names the explicit form
+`mut e := a[i]; e.f = x; a[i] = e`. A mutating method on the element itself, such as
+`a[i].push(x)` with a `ptr(mut R)` slot for the element type `R`, is refused too; that
+already follows from Types §4.5's receiver rule (auto-ref to `ptr(mut R)` requires a
+mutable place, and the element is a value). The whole-element forms `a[i] = v` and
+`a[i] ⊕= rhs` (OP-7) stay. A path that leaves the element through a dereference — an
+explicit `deref`, the auto-deref of a pointer-typed element or component, an index on a
+slice-typed element or component — writes the pointee, a place by Memory §1.6, not the element, so it is outside the
+refusal: `vs[i].f = x` on a `Vec(ptr(mut S))` copies nothing and is well-formed.
+
+**Why.** Nothing implicit happens to the program. Read-modify-write sugar would copy the
+whole element twice to change one field, above what hand-written code costs (I2): a program
+that batches several field changes into one `e`, or already holds the element, pays less,
+and the sugar would hide the two copies behind a one-field assignment. And refusal can
+later be relaxed additively (I10); a defined sugar could never be withdrawn.
+
+**Rejected.**
+- *Read-modify-write sugar* (`a[i].f = x` ≡ `mut e := a[i]; e.f = x; a[i] = e`) — the cost above,
+  hidden behind a field assignment's syntax.
+- *A place-returning index operation* (`index_ptr` → `ptr(mut T)`, a third function, distinct
+  from OP-3's rejected single read-write function) — deferred as additive growth: it enlarges OP-3's function set and needs its own decision on how long the pointer
+  stays valid across a reallocation.
 
 ---
 

@@ -49,6 +49,30 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a write into a library aggregate's element through its index is ill-formed
+(Types §4.5; Memory §1.6; OP-8).**  Types §4.5 gave a library aggregate such as `Vec(T)` a
+by-value read `a[i]` and a write `a[i] = v`, but said nothing of `a[i].f = x` when the element
+is a struct. It is now refused with a located diagnostic naming the explicit form
+`mut e := a[i]; e.f = x; a[i] = e`, as are `a[i].f ⊕= x` and any longer path into the element's
+own storage; a path that leaves it through a dereference (a pointer- or slice-typed element
+or component) writes the pointee and is unaffected. A mutating method on the element such as
+`a[i].push(x)`, and `vv[i][k] = x` on a `Vec(Vec(T))`, are refused by §4.5's existing receiver
+rule, since the element is not a mutable place. `a[i] = v` and `a[i] ⊕= rhs` (OP-7) stay.
+Types §6.4 now names the library functions `at`/`index_set`/`index_range` (it said `index`).
+Rejected: read-modify-write sugar; a place-returning index operation (deferred). (spec#23.)
+
+**Normative — a compound assignment on a library aggregate's index is `index_set(a, j,
+at(a, j) ⊕ rhs)` (Memory §1.6; Types §4.5; Grammar §3.2; Stdlib appendix §6; OP-7).**  Memory
+§1.6 lowered `place ⊕= rhs` by taking the place's address once, but on a library aggregate such
+as `Vec(T)` an index is the by-value call `at(a, i)` and has no address, so `v[i] += 1` had no
+specified meaning; §1.6 also listed every index `a[i]` as a place-expression, against Types
+§4.5. On a library aggregate `a[i] ⊕= rhs` now lowers to `index_set(a, j, at(a, j) ⊕ rhs)`,
+with `a` and `i` each evaluated once (`j` holds `i`), in the order `a`, `i`, the read, `rhs`;
+`a` meets `index_set`'s receiver slot as for `a[i] = v`. §1.6's place list now says an index
+on an array or slice, and an index on a library aggregate is a value-expression. Arrays and
+slices are unchanged. Rejected: refusing the form; a place-returning index operation
+(deferred). (spec#34.)
+
 **Normative — the `{}` template is v1, its trigger is the first fixed `str` parameter, and
 `print` is `format` to standard output (Functions §7.1; Stdlib appendix §2.7, §7; STD-5).**
 The template was called the normative trigger in Functions §7.1 but an additive convenience in
