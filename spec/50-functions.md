@@ -519,7 +519,8 @@ Because no convention places anything, a naked function has **no Alatyr-level in
   §3.3), or by the hardware (a vector table, an interrupt) — and the contract at that
   transfer is the programmer's.
 - having no frame, its body has **no stack slots**: a local binding in it must be pinned to a
-  named register (`@reg(name)`, Memory §2.6) or be comptime (erased).
+  named register (`@reg(name)`, Memory §2.6) — which makes it that register as an operand
+  (Assembly §6) — or be comptime (erased).
 
 On `Container.com`, whose default selector is `naked` (ABI appendix §2(b)), these rules apply
 to every function declared without `@abi`; a function meant to be called from Alatyr code

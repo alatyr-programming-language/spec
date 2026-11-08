@@ -49,6 +49,20 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a `@reg(name)` binding is a register operand; a register the source names is
+reserved from the function's placement (Assembly §4, §5, §6, §12; Memory §2.5, §2.6; Functions
+§6.4; Codegen §3.3, §3.4; CG-19).**  A naked body may only use `@reg(name)`-pinned locals, but
+nothing said such a binding is a register operand, so neither its instructions nor
+`asm("… {0} …", x)` had an answer; nor did anything stop the placement from reusing a register the
+programmer wrote. A `@reg(name)` binding now **is** that register as an operand (naked body,
+instruction intrinsic, `asm(…)`); a bare-`@reg` binding is not — an instruction intrinsic
+materializes it, `asm(…)` rejects it. A register named by an instruction intrinsic, an `asm(…)`
+operand or `@reg(name)` is reserved: the placement (S2, or the fixed `no_abstractions` rule) gives it
+to nothing else in that function, nor any register sharing storage with it (`al` → `rax`, `ymm3` →
+`xmm3`). Open: a reserved register across a call, names in a comptime-removed branch, and names in
+an `@inline` body (spec#93). Rejected: both kinds of binding as
+register operands; neither; reservation left to the programmer; per statement span. (spec#52.)
+
 **Normative — an immediate slot and an `at(…)` field take a signed per-width slot type from the
 arch table (Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch appendix §2(f), §3.6–§8.6, §9;
 CG-18).**  Nothing named the type of an immediate slot or of `disp`, so since CT-13 nothing fixed
@@ -217,7 +231,7 @@ the register materialization is for instruction intrinsics only. The explicit fo
 move the value into a register with an instruction intrinsic first. Materializing it was
 rejected because the escape would then emit instructions, and pick a register, that its
 template does not show (I1). Whether a `@reg` / `@reg(name)` binding is a register operand is
-open as spec#52.
+open as spec#52 (since settled by CG-19, above).
 
 **Normative — a backend that cannot lower an expression instruction-intrinsic operand
 refuses, and that refusal is its limit, not the language's (Assembly §5; CG-15).**  §5 says operands are

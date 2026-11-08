@@ -178,13 +178,15 @@ valid operand kind. The text outside placeholders is passed to `as` **verbatim**
 kind. An operand that is not of a §5 kind — a local `x`, say, or a non-comptime
 expression (an immediate is comptime) — is a **compile error** under the rule above, in
 any function frame. Whether an operand is of a §5 kind is the same question here
-as for an instruction intrinsic in a naked body, which has no materialization either (§5);
-whether a binding pinned by `@reg` / `@reg(name)` is itself a register operand is open as
-spec#52. §5's register materialization belongs to the **instruction intrinsics** only. The
-explicit form stays expressible: move the value into a register with an instruction
-intrinsic first (`movq(rcx, x)`), then pass that register to the template
-(`asm("… {0} …", rcx)`); the instruction that places the value is then one the programmer
-wrote (decision CG-16). The
+as for an instruction intrinsic in a naked body, which has no materialization either (§5):
+a binding pinned with `@reg(name)` **is** a register operand and is substituted by that
+register's name, while a binding with a bare `@reg` is not, so an `asm(…)` operand naming one
+is a compile error (§6; CG-19). §5's register materialization belongs to the **instruction
+intrinsics** only. The explicit form stays expressible: pin a binding to the register
+(`@reg(rcx) t := x`, then `asm("… {0} …", t)`), or move the value into a register with an
+instruction intrinsic first (`movq(rcx, x)`, then `asm("… {0} …", rcx)`); the placing of the
+value is then written in the source, a pinned binding or an instruction, and either way the
+register is named there, so the placement leaves it alone (§6; decisions CG-16, CG-19). The
 only part deferred to Codegen is the **per-target textual spelling** of a substituted
 operand — which is exactly the spelling typed instructions already use — so the
 substitution scheme itself is fully defined here.
@@ -281,7 +283,7 @@ emitted on that register, as it would be for `x := y - 1; movq(rbx, x)` — and 
 belong to the expression, not to the one instruction the intrinsic emits (§3). Either way
 the operand has a kind. Materialization is §2.2's, so it applies in an ABI-framed function;
 a naked body has no such step (Functions §6.4), and there an operand must already be of a
-kind the table lists. Operand-kind validity is still **always** checked (§3, §4). An
+kind the table lists — its locals, pinned with `@reg(name)`, are register operands (§6). Operand-kind validity is still **always** checked (§3, §4). An
 implementation that cannot yet lower such an operand **refuses with a located diagnostic** rather than emit a
 wrong value (I1: silently taking `$0` from an unevaluated tree emits an operand nobody
 wrote). That refusal is a **known deviation** of the implementation (Overview §6: its entry
@@ -304,6 +306,32 @@ GP, FP/SIMD, and system register **classes**, each register named per the arch t
 A register name is an ordinary **case-sensitive** identifier — the canonical lowercase
 spelling of the arch table (`rax`, not `RAX`; Lexis chapter). Pinning a binding to a specific register is `@reg(name)` (Memory-model
 §2.4).
+
+**A pinned binding is a register operand (normative).** A binding pinned with `@reg(name)`
+(Memory §2.4, §2.6) **is a register operand** wherever an operand is written — an instruction
+intrinsic's in any function frame, a naked body's (§5), an `asm(…)` operand (§4): it denotes
+the register `name`, no materialization step applies to it, and in an `asm(…)` template its
+placeholder is replaced by that register's name. A binding with a **bare `@reg`** is **not** a
+register operand, since its register is the strategy's choice and appears nowhere in the
+source: an instruction intrinsic in an ABI-framed function takes it as an operand local
+(§2.2), and an `asm(…)` operand naming it is a compile error (§4).
+
+**A register named in the source is reserved (normative).** A register that a function's
+source names — as an operand of an instruction intrinsic or of `asm(…)`, inside an `at(…)`
+operand too, or in a `@reg(name)` binding — is **reserved** for that function: its placement
+(the documented strategy, Memory §2.5, or under `no_abstractions` the fixed rule there) gives
+it to no binding or temporary whose register the placement chooses. Naming a register reserves
+every register that shares storage with it: the register a sub-register is part of (`eax`,
+`al` → `rax`; `w0` → `x0`) and every register part of it or overlapping it (`ymm3` → `xmm3`;
+aarch32 `d0` → `s0`, `s1`, `q0`). Reservation binds the placement
+only; the ABI framing of the function and of each call it makes (Functions §4; ABI appendix
+§4) uses the registers its convention names. Whether a value left in a reserved register
+survives a call the function makes, whether a register named only in a branch that `when` or
+`comptime if` removes is reserved, and whether a register named in an `@inline` body reserves it
+in the function the body is substituted into, are open as spec#93 (decision CG-19). Registers an
+instruction uses without naming them (`syscall`'s `rcx`/`r11`, one-operand `mul`'s `rdx`) and
+registers in an `asm(…)` template's literal text are not named operands; whether they are
+reserved too is spec#95.
 
 **Arch surface in scope.** The **selected target**'s instruction and register surface
 is in scope directly (you write `movq`, `rax`). Inside a `when(target.arch == …)`
@@ -467,14 +495,17 @@ A conforming implementation MUST:
    normative per-arch appendices (v1-required; "additive" = future growth only), and
    provide the **raw GAS escape `asm(template, operands…)`** that requires an
    `unchecked` grant, is validated only by `as`, emits exactly its template, and
-   rejects an operand not already of a §5 kind, never materializing it (§4, §intro; I4/FND-6/FND-3; CG-16);
+   rejects an operand not already of a §5 kind, never materializing it (§4, §intro; I4/FND-6/FND-3; CG-16)
+   — a `@reg(name)` binding is a register operand, a bare-`@reg` one is not (§6; CG-19);
 5. accept the fixed operand-kind schema (register / immediate / memory / label /
    reloc / per-arch SIMD) as ordinary expressions, checking operand-kind validity,
    with immediates comptime and checked against the slot type the arch table gives their
    slot or `at(…)` field (§5, §7; CG-18);
 6. treat registers as arch-data identifiers (not keywords) from the machine model,
    put the selected target's (or a `when`-gated arch's) surface in scope, and
-   otherwise require qualification or a binding — **no `use`** (§6; MOD-4);
+   otherwise require qualification or a binding — **no `use`** (§6; MOD-4); treat a
+   `@reg(name)` binding as the register operand `name`, and keep every register a
+   function's source names out of that function's placement (§6; CG-19);
 7. provide the arch-surface `at(…)` (named-argument memory operand) and **UFCS operand decorations**
    — SIMD lane/mask **and relocation/TLS** (a symbol under a per-arch reloc decorator
    lowering to the GAS reloc syntax) — with their valid forms as per-arch data,
