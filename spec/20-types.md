@@ -288,7 +288,7 @@ mutating method on the element itself, such as `a[i].push(x)` whose slot is `ptr
 with `R` the element type, is ill-formed by the receiver rule below: auto-ref to
 `ptr(mut R)` requires a mutable place, and `a[i]` is not one — and so is
 `vv[i][k] = x` on `vv : Vec(Vec(T))`, whose `index_set` takes the element `vv[i]` as its
-receiver. Reading through the index
+receiver (and, that element being owning, `vv[i]` is refused first by STD-10; MEM-12). Reading through the index
 (`a[i].f`) is unaffected. For a `Vec(T)` whose `T` is **owning** (Memory §5.9), `a[i]` (so
 the read `a[i].f` too, which reads the element by value first), `a[i] = v`, `a[i] ⊕= rhs` and
 the explicit form above are themselves ill-formed — none may copy or overwrite an owning
@@ -321,9 +321,9 @@ wants:
 - operand `R`, position (a method's first value parameter) wants the **scoped reference**
   `ptr([mut] R)` — **auto-ref**: pass the receiver **by its address**, `a.f(b)` ≡
   `f(ptr(a), b)` (a `ptr(mut R)` slot requires `a` to be a mutable place; a
-  read-only `ptr(R)` slot does not — a place passes its own address, and a value-expression
-  `a` is materialized in a caller-owned temporary living to the end of the full expression,
-  whose address is passed, Memory §1.6);
+  read-only `ptr(R)` slot does not — a place passes its own address, and a non-owning
+  value-expression `a` is materialized in a caller-owned temporary living to the end of the
+  full expression, whose address is passed, while an owning one there is ill-formed, Memory §1.6);
 - operand `ptr([mut] R)`, position wants `ptr([mut] R)` — **as-is** (the pointer
   passes through);
 - operand `ptr([mut] R)`, position wants the **pointee** `R` — **auto-deref**: reach the

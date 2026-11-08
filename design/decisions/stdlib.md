@@ -279,7 +279,9 @@ open as spec#55 and is decided by STD-8 (the arm lives in the compiler-provided 
 translation unit). Appendix §2.6 gains the containers' arm, §6 the rule with its cost and the
 identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
-was filed as spec#50 and is decided by STD-9.
+was filed as spec#50 and is decided by STD-9. MEM-12 later made `Vec(T)` and `String` `@owning`;
+since `eq` / `lt` / `hash` take their operands `in`, which moves an owning value, how a comparison
+takes an owning operand is spec#106.
 
 ---
 
@@ -427,9 +429,12 @@ element out. The names `at_ptr`/`at_mut` and the bounds-check behaviour follow t
 surface (`at`'s check; the `ptr`/`ptr(mut)` pair) and are not part of the owner's choice.
 
 **Not decided here** (each changes well-formedness or meaning, so each is filed for the owner):
-whether `Vec(T)` of an owning `T` is itself owning and how it is released, `push`'s failure path
+whether `Vec(T)` of an owning `T` is itself owning and how it is released (decided afterwards by
+MEM-12: `Vec(T)` is `@owning` for every `T`, released by `free`; what `free`, `clear` and
+`truncate` do with owning elements still held is spec#107), `push`'s failure path
 for a moved-in element, and the owning case of `get`/`iter`/`clear`/`truncate` and of
-`==`/`<`/`hash` (STD-6's arm calls `T`'s relation, whose operands are `in`) — spec#96; a
+`==`/`<`/`hash` (STD-6's arm calls `T`'s relation, whose operands are `in`) — spec#96, the
+comparison now spec#106; a
 whole-value move out of, or store over, an owning place reached through a pointer or a view
 (`deref(v.at_mut(i)) = x`, an element of the sub-slice `v[a..b]`) — spec#97.
 
@@ -460,6 +465,6 @@ lowering; Memory §5.9 the sentence beside the arena's
 accessors. `at_mut` is the place-returning access OP-7 and OP-8 deferred, in its `scoped` form:
 the reference cannot outlive the full expression, which answers their question of its validity
 across a reallocation without a new rule; OP-3's index operator is unchanged and still lowers to
-`at`/`index_set`. `String` is not declared `@owning` and has no owning field, so it is copyable
-under Memory §5.9 and `Vec(String)` was well-formed before this decision; whether that is meant
-is asked in spec#96.
+`at`/`index_set`. `String` was not declared `@owning` when this was decided, so `Vec(String)` had
+a copyable element; MEM-12 has since made `String` and `Vec(T)` `@owning`, so `Vec(String)` and
+`Vec(Vec(U))` are vectors of an owning element under this decision.

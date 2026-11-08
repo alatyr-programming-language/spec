@@ -382,14 +382,11 @@ array's or a library aggregate's. The base is classified after the access coerci
 pointer-typed base auto-derefs and `make_ptr().x` is a field of a dereference, a place. A
 `ptr(mut R)` slot still requires a mutable place; the rule creates no temporary for any other slot.
 
-**Not decided here.** An **owning** temporary (Memory §5.9): a temporary of an owning `R` that ends
-with its full expression is neither released, transferred nor `forget`-ed; §5.9 applies to it as
-written, and whether that end should discharge the obligation instead is spec#73. Whether `Vec(T)`
-and `String` are themselves owning in §5.9's sense — they are not `@owning`-declared, and STD-6's
-"owning containers" is descriptive — is spec#73 (with spec#96 for an owning element), so `make_vec().len()` is
-the open case only if they are. Whether a call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target
+**Not decided here.** The **owning** case was decided afterwards by MEM-12: an owning value-expression
+at a read-only receiver slot gets no temporary and the call is ill-formed, and `Vec(T)` and `String`
+are `@owning` — so this decision's `make_vec().len()` example is now ill-formed. Whether a call-rooted place (`make_slice()[0]`, `make_ptr().x`) can be a store target
 is spec#84 (Grammar §3.3 derives none). (An owning element of a `Vec` is not read by value at all, STD-10, so `vv[i]` with
-an owning element never reaches this case.)
+an owning element — over a `Vec(Vec(T))` too, MEM-12 — never reaches this case.)
 
 **Why.** A read-only receiver only needs *an* address to read through; the caller can always supply one
 for a value it already holds, at the cost of one stack slot it can see in the source (I1), and the
@@ -405,3 +402,65 @@ the program binding first (`e := vv[i]; e.len()`) for a read that needs no name.
 their value-base forms among the value-expressions, rejects `f().x = 1` and states the temporary rule;
 Type System §4.5's auto-ref bullet, Functions §1.4's and Modules §2's auto-ref equivalences and Memory
 §5.9's `a.len()` example point to it; the glossary entries follow.
+
+### MEM-12. An owning value-expression gets no temporary; `String` and `Vec(T)` are `@owning`, released by `free` — spec#73
+*provenance: completes MEM-11 (its owning case) on MEM-2's linearity; makes STD-6's "owning containers" owning
+  in Memory §5.9's sense and answers part of spec#96's first item (STD-10) · spec: Memory §1.6, §5.9, §8; Type
+  System §4.5; Functions §1.4; Modules §2; Comptime §5.4; Stdlib appendix §1, §2.4, §2.6, §6, §8 · owner decision 2026-11-08, spec#73*
+
+**Question.** MEM-11 gives a value-expression in a read-only `ptr(R)` receiver slot a temporary that lives to
+the end of the full expression. For an owning `R`, nothing at that end releases, transfers or `forget`s the
+temporary, so Memory §5.9 rejected the call as a leak without saying so, and whether the end should
+discharge the obligation was open. MEM-11's own example, `make_vec().len()`, depended on a second question:
+neither `Vec(T)` nor `String` was declared `@owning`, so under §5.9 both were copyable — a copy duplicates
+the buffer pointer — and neither had a release in its closed v1 surface.
+
+**Decision (owner, 2026-11-08).** **`String` and `Vec(T)` are `@owning` types with an explicit release,
+`free`, in their v1 surface** (Stdlib appendix §6). **A method call on an owning value-expression
+(`make_vec().len()`) is ill-formed** — no hidden release at the end of the full expression (I3), no hidden
+leak. The explicit form is `v := make_vec(); n := v.len(); v.free()`. MEM-11's temporary rule stands for
+non-owning values.
+
+**Derived (not the owner's wording).** "A method call" is read at the slot where MEM-11 makes a temporary,
+the read-only `ptr(R)` receiver: a `ptr(mut R)` slot already requires a mutable place, and a by-value `in`
+receiver (`make_vec().free()`) is a move, not a temporary — read literally, the sentence would refuse
+`make_vec().free()` while its UFCS equivalent `free(make_vec())` (TYP-5) stays well-formed. `Vec(T)` is `@owning` for every `T` — the owner's
+"`Vec(T)`" names no condition on `T`. `free` takes the container `in` (`free(in self : Vec(T))`,
+`free(in self : String)`; `in` is the consume, MEM-2) and returns the buffer to the container's allocator.
+The other operations that take a receiver borrow it, by `ptr(Self)` for a read and `in out` or `ptr(mut Self)` for a
+change, as Memory §5.9 requires of any owning type's accessors (Stdlib appendix §1 says so beside its
+`in self` convention); so does `iter`, the iterable shape's operation, as §5.1 already reconciles an
+owning allocator's `mechanism`. The diagnostic is located at the receiver and names the explicit form.
+
+**Why.** Each of the other answers hides something. Releasing the temporary at the end of the full
+expression is a destructor the source does not show, and the spec has no uniform release function to
+name. `forget`-ing it is a silent leak per call. Making the containers owning, rather than leaving them
+copyable, is what lets the linearity checker see a buffer released twice or never: a copyable `Vec`
+duplicated its buffer pointer, and with no release in its surface it could not be released at all.
+
+**Rejected.**
+- *Option 2 of spec#73: the temporary is released at the end of the full expression by its type's
+  release* — a compiler-inserted destructor (I3), with no uniform release function to name; MEM-5
+  likewise rejects an allocator default that nothing in the source would `close`.
+- *Option 3: the temporary is `forget`-ed* — a deliberate leak that nobody wrote.
+- *`Vec(T)` owning only when `T` is* (spec#96's option (a)) — derived, not the owner's stated
+  rejection: his "`Vec(T)`" names no condition on `T`, and a vector of copyable elements still owns its
+  buffer. The cost spec#96 listed for the unconditional form — `Vec(u8)` linear, every existing `Vec`
+  use changed — is reported to him with this record.
+
+**Consequences.** Memory §1.6 states the refusal beside the temporary rule; §5.9's auto-ref example and
+§8 item 1 follow; Type System §4.5, Functions §1.4 and Modules §2 qualify their restatements of the
+temporary as non-owning. Stdlib appendix §6 marks both containers `@owning`, adds `free` to both surfaces
+and states the receiver directions, §1 qualifies its `in self` convention, §2.4 states the owning
+iterable's `iter` receiver, §2.6 and Comptime §5.4 point to spec#106, and §8 item 5 gains the clause.
+A type with a `Vec` or `String` field is owning by contagion; neither may be the underlying type of a
+`@require` type (Type System §8.1) or a payload of a raw union (Memory §5.9). `Vec(String)` and
+`Vec(Vec(U))` now have an owning element, so STD-10's refusals apply to them: MEM-11's `vv[i].len()` over
+a `Vec(Vec(T))` is ill-formed by STD-10.
+
+**Left open.** Three questions block decisions already made and go to the owner: what `free`, `clear` and
+`truncate` do with owning elements still in the vector (spec#107); how `==` / `<` / `hash`, whose
+operands are `in`, take an owning operand — STD-6's comparison of two `String`s (spec#106); and how
+`for x in v` applies `iter` to its operand, so whether `for` over a `Vec` borrows it (spec#115). Latent:
+whether `HashMap(K, V)` is owning and how it is released (spec#108); views into a container's buffer
+across reallocation or `free` (spec#109).

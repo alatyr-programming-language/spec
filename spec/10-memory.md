@@ -128,19 +128,22 @@ slot is the read-only scoped reference `ptr(R)` and the operand is a value-expre
 an automatic of type `R`, placed by the §2.5 strategy as a memory-resident one (§2.6), initialized
 from the value, which lives to the end of the **full expression** containing it (§5.3.1); its address is
 passed. So `make_pair().sum()` and `vs[i].norm()` on `vs : Vec(Point)`, each with a `ptr(R)`
-receiver, are well-formed; an index on a nested library aggregate with a non-owning element
-type, `vv[i][j]` ≡ `at(vv[i], j)`, is the same case, `at` taking its receiver through a `ptr(R)` slot (Type System §4.5). The passed
+receiver, are well-formed. (An index on a nested `Vec`, `vv[i][j]` ≡ `at(vv[i], j)`, never reaches the
+rule: the element of a `Vec(Vec(T))` is owning, so `vv[i]` is itself ill-formed — Stdlib appendix §6,
+STD-10, MEM-12.) The passed
 address is an ordinary scoped reference (§5.3.1): in checked code a `scoped` result derived from
 it is transient within the full expression, as any is, while inside `unchecked { … }` a local
 bound to such a result can outlive the temporary, and its use is the programmer's responsibility
 — a stale access is hardware-defined (§5.3.1; I11). The rule gives a temporary only to a
 read-only receiver: a `ptr(mut R)` slot still requires a mutable place, so a value-expression there is ill-formed
 (`a[i].push(x)` on a library aggregate, Type System §4.5), and a store into a value-expression
-stays ill-formed (above). If `R` is **owning** (§5.9), the temporary is subject to §5.9 as any
-owning value is: nothing at the end of its extent releases, transfers or `forget`s it. Whether
-that end should discharge the obligation instead is spec#73, and so is whether `Vec(T)` and
-`String` are themselves owning (for an owning element, spec#96). An owning element of a `Vec` is
-never read by value at all (Stdlib appendix §6, STD-10).
+stays ill-formed (above). If `R` is **owning** (§5.9), the value-expression gets **no**
+temporary and the call is **ill-formed** — a Semantic diagnostic located at the receiver, naming
+the explicit form that binds the value, calls through the binding and consumes it
+(`v := make_vec(); n := v.len(); v.free()`) — so nothing is released at the end of the full
+expression that the source does not name, and nothing is leaked (I3; MEM-12). `Vec(T)` and
+`String` are owning (Stdlib appendix §6). An owning element of a `Vec` is never read by value at
+all (Stdlib appendix §6, STD-10).
 
 A **compound assignment** `place ⊕= rhs` (Grammar §3.2; OP-2), where `⊕` is one of the
 binary glyph operators `+ - * / % & | ^` (OP-2), is **sugar** lowered by this documented
@@ -950,9 +953,9 @@ A **read accessor** on an owning value is therefore written as a function taking
 **`ptr([mut] R)`** scoped reference (not `in R`, which would move it); the UFCS
 **auto-ref** form (Type System §4.5 / MOD-3) supplies the address, so `a.len()` ≡
 `len(ptr(a))` reads `a` without consuming it (for a non-owning value-expression `a`, through the
-address of a caller-owned temporary, §1.6; an owning one is rejected as a leak under this section
-as written, and whether the temporary's end discharges the obligation is spec#73). A container's `free`/`close` takes the
-value `in` (the consume); its inspectors and element accessors borrow by scoped reference — the
+address of a caller-owned temporary, §1.6; an owning value-expression there is ill-formed, §1.6,
+MEM-12). `Vec(T)` and `String` are `@owning`, each released by `free(in self)` (Stdlib appendix §6;
+MEM-12). A container's `free`/`close` takes the value `in` (the consume); its inspectors and element accessors borrow by scoped reference — the
 arena's `close(in self : Arena)` consumes it, its `get(in a : ptr(Arena), …)` borrows it, and its
 `allocate` takes it `in out` (Stdlib appendix §5.2.1). A `Vec(T)` of owning elements has no
 by-value element read or overwriting store: it exchanges an element (`replace`, `swap`) or
@@ -1069,8 +1072,9 @@ Normative notes:
 A conforming implementation MUST:
 
 1. classify expressions as place- or value-expressions and reject a store to a
-   value-expression (§1.6), and materialize a value-expression in a read-only `ptr(R)`
-   receiver slot in a caller-owned temporary living to the end of the full expression (§1.6);
+   value-expression (§1.6), materialize a non-owning value-expression in a read-only `ptr(R)`
+   receiver slot in a caller-owned temporary living to the end of the full expression, and
+   reject an owning one there (§1.6);
 2. place bindings by storage class per §2, derive static sections per §2.3, and
    document and obey a deterministic placement strategy per §2.5;
 3. forbid taking the address of a register-resident place under `no_abstractions`,

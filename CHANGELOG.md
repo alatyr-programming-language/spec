@@ -49,6 +49,20 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `String` and `Vec(T)` are `@owning`, released by `free`; a call on an owning
+value-expression at a read-only receiver slot is ill-formed (Memory §1.6, §5.9, §8; Type System
+§4.5; Functions §1.4; Modules §2; Comptime §5.4; Stdlib appendix §1, §2.4, §2.6, §6, §8; MEM-12).**  Both containers
+were copyable under Memory §5.9, which duplicated the buffer pointer, and neither could be
+released. Each is now `@owning` (`Vec(T)` for every `T`) and gains `free(in self)`; its other
+operations borrow the receiver. MEM-11's temporary is for non-owning values only:
+`make_vec().len()` is a located error, and the explicit form is
+`v := make_vec(); n := v.len(); v.free()`. `Vec(String)` and `Vec(Vec(U))` now have an owning
+element, so STD-10's refusals apply to them. Open: `free` / `clear` / `truncate` over owning
+elements still held (spec#107); how `==` / `<` / `hash` take an owning operand (spec#106); how `for` applies
+`iter` to an owning operand (spec#115).
+Rejected: releasing or `forget`-ing the temporary at the end of the full expression; (derived) `Vec(T)`
+owning only for an owning `T`. (spec#73.)
+
 **Normative — `==` over `HashMap(K, V)` compares entries; `<` and `hash` over it are ill-formed
 (Stdlib appendix §2.6, §6, §8; Comptime §5.4; STD-9).**  `HashMap`, the third owning container,
 took the plain field walk, so `==`, `<` and `hash` compared its table address. `a == b` now holds
