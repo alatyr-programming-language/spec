@@ -49,6 +49,23 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `format` returns `Result(usize, E)` and stops at the first failed write; the v1
+hole set is closed (Stdlib appendix §2.7; Functions §7.1; STD-7).**  `format(w, t, args…)` had
+no stated result or failure behaviour, and `print`, being `format` to stdout, inherited the
+gap. It now returns `Result(usize, E)` (`E` the writer's own error; `IoError` for `print`):
+each fragment is written completely, `write` called again on the unconsumed remainder after a
+short write (a writer that keeps returning `Ok(0)` keeps being called); the first failed write
+is returned unchanged and nothing is written after it; on success, the total byte count. A hole
+renders an integer (base-10), a `bool`, a `char` (UTF-8), a `str` (its bytes) or a float (the
+shortest decimal that reads back to the same value); any other type is a comptime error until
+`Display` is added. Because a procedure body may not end in a value-expression (Functions
+§3.3), `print(…)` as the last element of a function with no result is now ill-formed there;
+bind the result (`r := print(…)`) or handle it. Open: the exact text of a float (spec#75);
+`format`'s tier and the module paths (spec#74); an explicit discard form (spec#81); a writer
+over-reporting its count, and a total past `usize` (spec#82); a user brand or `@require` type
+in a hole (spec#99); which `write` calls carry the fragments (spec#100). Rejected: a count-less
+result; a `print` that traps or ignores a stdout failure; `Display` in v1; a fixed-fraction float. (spec#46.)
+
 **Normative — a value-expression gets a temporary in a read-only receiver slot; a store into a
 field or index of one is ill-formed (Memory §1.6; Type System §4.5; MEM-11).**  Memory §1.6 made
 any field access a place and Type System §4.5's auto-ref did not say what a read-only `ptr(R)`

@@ -558,14 +558,15 @@ among the fixed parameters, so `format(w, "…", args…)` with a leading writer
 — is the template parameter; when its argument is a **comptime string literal**, that literal
 is a `{}`-**template**: it is split on `{}` holes and **interleaved** with the remaining
 (pack) arguments — the pack the body walks becomes `[seg0, arg0, seg1, …, segN]`, each
-piece rendered by the `Display`/scalar layer (Stdlib §2.7). This is the **single, normative
+piece a value the body receives — `format` and `print` render each by the v1 hole set
+(Stdlib appendix §2.7; STD-7). This is the **single, normative
 trigger** that `format` and `print` use (Stdlib appendix §2.7) and that **any** user-defined
 comptime-variadic with a fixed `str` parameter inherits — a documented rule, **not** a hidden reinterpretation
 (I3). `{{`/`}}` escape a literal brace; a lone `{`/`}`, and a hole-count ≠ argument-count
 mismatch, are **comptime errors**; a **non-literal** argument in the template's place is **not** a template,
 and **the call is still valid** (FN-13): with no template there are no holes to
 interleave, so for a value `s` in the template's place the pack the body walks is `[s, arg0, …, argN]`:
-`s` is **one fragment**, rendered by the same `Display`/scalar layer (Stdlib §2.7), and
+`s` is **one fragment** — `format` / `print` render it as its bytes (Stdlib appendix §2.7) — and
 the remaining arguments follow it in their own order. `print(s, 1)` where `s` is a
 computed `str` therefore prints `s` and then `1`; it is not a comptime error, and the
 statement is never dropped — deleting a call because its template argument was not a literal

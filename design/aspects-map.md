@@ -94,7 +94,9 @@ and **deferred (additive) growth**.
   Concurrency families (atomics, `volatile`, the 20 overflow policy functions, `fma`, `saturating_convert`, the constants
   `NaN`/`Infinity`) enumerated by name and signature in the appendix (STD-1/CC-2/CG-8/CG-9); output: the
   `{}` template `format(w, "…", args…)` over any `Writer` and `print` as `format` to standard output, hosted only
-  (STD-5); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
+  (STD-5); `format` returns `Result(usize, E)`, writing every fragment and stopping at the first failure, and a
+  hole renders integers, `bool`, `char`, `str` and floats (shortest round-trip), any other type a comptime error
+  (STD-7); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
   (`scoped` `at_ptr`/`at_mut`), never read by value or overwritten (STD-10; the rest of the owning case is spec#96,
   a store through a pointer to an owning place spec#97).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
@@ -149,7 +151,7 @@ verification mode (`decisions/codegen.md`) — are articulated in `decisions/`.
   `Send`/`Sync` library predicates (CC-5), a **volatile-qualified pointer** `ptr(volatile T)` (CC-2),
   **non-GAS backends** (WASM/WAT, …; the abstraction is fixed by CG-4, the backend itself is additive),
   **prelude convenience catalogs** over the v1 protocol shapes (STD-1): iterator adapters
-  (`map`/`filter`/…), `Display`+derive (gated on `typeinfo`) / `format->String` (gated on alloc) / `write_all` over `Writer` — *the minimal alloc-free scalar rendering, the `{}` template `format(w, …)` and the hosted `print` are v1 (STD-5)*, broader structural derives
+  (`map`/`filter`/…), `Display`+derive (gated on `typeinfo`) / `format->String` (gated on alloc) / `write_all` over `Writer` — *the minimal alloc-free scalar rendering, the `{}` template `format(w, …)` and the hosted `print` are v1 (STD-5), with a closed v1 hole set that `Display` would widen (STD-7)*, broader structural derives
   (`clone`/three-way `compare`/streaming `Hasher`/serialization), field-level `typeinfo` annotations.
   Implementation details: the `gen` provider surface (its generational-ref representation) + the OS-backed region provider (contracts set by MEM-1; the
   region/handle v1 surface is now specified by **MEM-3** — `Handle(T)`, `@alloc`→handle/trap, access via `get`).

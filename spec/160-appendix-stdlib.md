@@ -262,16 +262,46 @@ distinct from a compile-time-known string, which is just a literal).
 - **`format(w, "…", args…)`** with a **comptime-checked** template — writes to any `Writer` `w`.
   Its template is the argument of its **first fixed parameter of type `str`** (the trigger of
   Functions §7.1; the writer `w` before it is not a `str`). The template is a **comptime string literal**:
-  `{}` is a **hole** (filled, in order, by the trailing arguments, each rendered by the scalar
-  layer above / the `Display` protocol below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
+  `{}` is a **hole** (filled, in order, by the trailing arguments, each rendered by the v1 hole
+  set below); `{{` and `}}` are **escapes** for a literal `{` and `}`; a lone `{` or
   `}` is a **comptime error**. The number of `{}` holes **MUST equal** the argument count — a
   mismatch is a comptime error (never a silently empty hole or a dropped argument). A non-literal
   template is never split: a non-literal in the template's place is rendered as one fragment
-  and the call stays valid (Functions §7.1, FN-13). A `float` hole renders in base-10 with a bounded fractional part (an
-  interim layer; a shortest-round-trip formatter is additive);
+  and the call stays valid (Functions §7.1, FN-13).
+
+  **The v1 hole set (STD-7).** An argument — and a non-literal `str` in the template's place —
+  renders by its type: an **integer** type (`uN` / `iN`, `usize` / `isize`, `uint(N)`; Type
+  System §3, §7 — `bitsN` is not one, §2) in base-10 by the scalar layer above; a **`bool`** as
+  `true` / `false`; a **`char`** as its UTF-8 bytes; a **`str`** as its bytes, unchanged; a
+  **float** type as the **shortest** decimal that reads back to the same value (its exact text —
+  notation, a tie among shortest candidates, an integral value, `NaN` / `Infinity` / `-0.0` — is
+  open, spec#75). An argument of **any other type** — a struct, an enum, a slice, a pointer,
+  `String` — is a **comptime error** at that argument; the additive `Display` protocol below is
+  what widens this set. Whether a user brand or `@require` type over one of the types above
+  (Type System §5.4, §8.1) is in the set is open, spec#99.
+
+  **Result and failure (STD-7).** `format(w, t, args…)` returns **`Result(usize, E)`**, `E`
+  being `w`'s own write error (above). The call renders the fragments in order — the template's
+  literal segments and the rendered arguments, or for a non-literal template the fragment and
+  then the arguments (Functions §7.1) — and writes **each fragment completely**: after a short
+  write it calls `w.write` again with the unconsumed remainder, until none remains (a writer
+  that keeps returning `Ok(0)` keeps being called). Which `write` calls carry the fragments —
+  whether an empty fragment makes a call, and whether fragments may be joined into one call —
+  is open, spec#100. It **stops at the first failed write** and returns that `Err` unchanged,
+  writing nothing after it; when every write succeeds it returns `Ok(n)`, `n` the total number
+  of bytes written. The failure is a value the caller sees: it handles it, propagates it with
+  `?` (§2.2), or, when `E` is not owning, lets it be discarded as a non-final statement of a block
+  (Grammar §3.1); a result over an owning `E` is consumed like any owning value (Memory §5.9). As the final
+  element of the body of a function with no result the call is a value-expression, so that
+  body is ill-formed (Functions §3.3): the result is bound there instead (`r := print("…")`;
+  an explicit discard form is open, spec#81). A writer returning `Ok(k)` beyond the slice it
+  was given, and a total past `usize`, are open (spec#82). The hole set is `format`'s: the
+  template trigger of Functions §7.1 itself restricts no argument type;
 - **`print("…", args…)`** is **`format` to standard output**: `print(t, args…)` ≡
   `format(stdout, t, args…)` (the std stream of §7), with the same template rules — its first
-  fixed parameter is the `str` template — and the same result. It is **hosted only**: it is a
+  fixed parameter is the `str` template — the same hole set, and the same result and failure
+  behaviour: `Result(usize, IoError)`, stopping at the first failed write to standard output
+  (STD-7). It is **hosted only**: it is a
   **std-tier** facility (§7), so it does not exist under `freestanding` (Stdlib §1).
 
 The other conveniences over this shape are **additive** (FND-6), each gated on a capability the
@@ -1093,7 +1123,10 @@ A conforming implementation MUST:
    `T` with its by-value read, overwriting store and OP-7/OP-8 forms then ill-formed and its
    element exchanges and scoped element references provided (§6; STD-10), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std
-   operations returning `Result` (no hidden failure);
+   operations returning `Result` (no hidden failure), and `format` / `print` per §2.7 — the
+   comptime-checked template, the v1 hole set (any other type a comptime error), and the
+   `Result(usize, E)` that writes each fragment completely and stops at the first failed
+   write (STD-5, STD-7);
 6. treat every definition here as **required v1 content** — additive (FND-6) only for
    future growth, not optional (Stdlib §6; Overview §6) — and charge **zero binary
    cost** for unused prelude items (monomorphization + the normative reachability rule of
