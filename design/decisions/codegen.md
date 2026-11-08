@@ -81,7 +81,7 @@ short. Typed instructions are a curated checked set; the raw escape is the fallb
 (generalizing `bytes(…)`/`snippet`). It is a **raw operation** and therefore lives behind
 the `unchecked` mode (CG-7). The per-arch appendix closes the schema with a fixed format
 — six tables per arch (registers, curated instructions, addressing modes, reloc/TLS
-decorators, SIMD decorators, and slot types, CG-18) — plus a **closed set of supported targets** (canonical
+decorators, SIMD decorators, and encodable sets, CG-18) — plus a **closed set of supported targets** (canonical
 `arch×os×env×container` triples; a target outside the set is a Config diagnostic), all
 growing additively. A keyword-collision rule keeps instruction names ordinary
 identifiers: where a bare mnemonic collides with a keyword (`and`/`or`/`not`), the
@@ -791,52 +791,54 @@ constant beside CT-13's.
 forbidden list to run-time operator sites; Assembly §5, CG-12, CG-15, CT-13 and the glossary's
 `no_abstractions` entry follow.
 
-### CG-18. An immediate slot and an `at(…)` field take a signed per-width slot type from the arch table — spec#63
+### CG-18. An immediate takes the native signed integer as context; the arch table alone decides its encodability — spec#63, spec#80
 *provenance: refines CG-2 (the operand schema, per-arch data) and the immediate of Assembly §5; reads CT-13
-  (a constant expression is comptime by its form and checked against its context type) and Declarations
-  §3.1, §3.4 · spec: Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch appendix §2(f), §3.6, §4.6, §5.6,
-  §6.6, §7.6, §8.6, §9*
+  (a constant expression is comptime by its form and checked against its context type), CT-14 (exact, then
+  checked) and Declarations §3.1, §3.4 · spec: Assembly §3, §5, §7, §10, §11, §12; Comptime §1.1; arch
+  appendix §2(f), §3.6, §4.6, §5.6, §6.6, §7.6, §8.6, §9*
 
 **Question.** Assembly §5 makes an immediate a comptime value "range/validity checked at compile time" and
 §7 writes `at(base = rbp, disp = -16)`, but neither the chapter nor the arch appendix named the type of
 an immediate slot or of `disp`. Since CT-13 a constant expression there is checked against its context
 type, so that type decides well-formedness: `movq(rbx, 0 - 1)` and `disp = -16` at an unsigned slot,
-`movb(al, 200 + 100)`, `disp = -0x80000001`.
+`movb(al, 200 + 100)`, `disp = -0x80000001`. The first answer (a signed per-width slot type) did not fit
+the fields no v1 type describes — sub-native (RISC-V `imm12`, aarch64 `imm9`), zero-extended (x86 `int`'s
+vector number, aarch64 `add`'s `imm12`) and pattern-encoded (aarch64 logical, aarch32 rotated) ones
+(spec#80).
 
-**Decision (owner, 2026-11-08).** **Each immediate slot and each integer `at(…)` field has a slot type:
-the signed integer type of the width the instruction form encodes there, given per architecture by the
-arch table** (`disp : i32` on x86_64; the immediate width per instruction form — `i8` for `movb`, `i32`
-for a 64-bit `add`, `i64` for `movq` into a register). An immediate there must be assignable to the slot type
-(Declarations §3.1); a constant expression takes it as its context type and is checked against it at
-compile time (CT-13), and every value of the slot type is encodable, so the type is the whole range
-check — no second per-arch range. A runtime operand materialized in a register (§2.2, CG-15) is not an
+**Decision (owner, 2026-11-08, spec#80 revising spec#63).** **Every immediate slot and every integer
+`at(…)` field takes the target's native signed integer as its context type** — a constant expression
+there is an exact comptime value checked against it (CT-14) — **and its encodability is checked by the
+arch table alone**: each slot has an **encodable set** there, a signed range, an unsigned range, a bitmask
+pattern or a rotated immediate. A runtime operand materialized in a register (§2.2, CG-15) is not an
 immediate and keeps its own type. `offset` (a symbol) and `base`/`index` (registers) are not integer slots.
 
-**Scope in this revision.** The decision is written for the slots whose encoding a v1 type describes: the
-full-width `imm8`/`imm16`/`imm32`/`imm64` immediates, the `imm32` sign-extended into a 64-bit form, and
-`disp32`, of `x86_64` and `i386` (arch appendix
-§3.6, §4.6). A field that no v1 type describes — a **sub-native** width (Type System §7 / TYP-10 make
-`i12`, `i9`, `i20` additive, not v1), a **zero-extended** field (x86 `int`'s vector number, the
-`shufps`/`pshufd`/`cmpps` selectors and shift counts, aarch64 `movz`/`add` immediates), or a
-**pattern-encoded** one (aarch64 logical immediates, aarch32 modified immediates, `scale` ∈ {1, 2, 4, 8})
-— is listed in the appendix as **open**: every slot of aarch64, aarch32, riscv64 and riscv32 and the
-listed x86 ones. Their typing and encodable range are **spec#80**, not decided here.
+**Derived (writing the data; not the owner's wording).** A range MAY be restricted to multiples of a step
+(aarch64 scaled `disp`, `add`'s shifted `imm12`) and `scale` is a short list of values. A pattern (a
+bitmask, a rotated immediate, aarch64 `movz`'s shifted field) is matched against the value's
+two's-complement bits at the form's operand width `w`, the value lying in −2^(w−1) … 2^(w−1)−1, so one
+bit pattern has one spelling per width. A field the hardware sign-extends, and a full-width one, keeps
+the signed range of its width that the spec#63 answer gave it (`movb` −128 … 127, a 64-bit `add`
+−2³¹ … 2³¹−1) — kept, not chosen anew; a zero-extended field carries the unsigned range (`int` 0 … 255). A set is of the field as the assembler
+writes it, so `lui`/`auipc` take 0 … 2²⁰−1 though RV64 sign-extends their result.
 
-**Why.** One check, stated in data: the slot's type is what the hardware encodes, so a programmer reads
-the accepted values off the table, and the same rule that checks `x : i8 = 200` checks `movb(al, 200)`
-(I1/I3). A signed type matches how x86 sign-extends its immediates and displacements, so `-16`,
-`0 - 1` and `-1` read naturally.
+**Why.** Every slot gets a v1 context type, and what the hardware accepts is stated once, as data per
+slot, whatever its shape — so `int(0x80)`, `add(x0, x1, 4095)` and an aarch64 logical immediate read
+naturally, and a programmer reads the accepted values off the table (I1/I3).
 
-**Rejected.** *The native signed integer as the context of every slot, encodability a separate per-arch
-operand-kind check* — two checks, and the range lives outside the type. *No context type, the literal
-default and the operand-kind check deciding* — `movb(al, 0 - 1)` would be typed `i64` and rejected or
-accepted by a rule the reader cannot see in the type.
+**Superseded.** *Each slot has a signed per-width slot type, assignable-to and the whole range check*
+(the 2026-11-08 decision on spec#63, this entry's first revision) — no v1 type describes a sub-native
+width, an unsigned field reads `int 0x80` as `int -128`, and a pattern is not a range (spec#80).
+**Rejected.** *The signed type of the form's operand width plus an encodable-set column* — a per-form type
+adds a check the encodable set already decides; one context type for every slot is simpler. *x86 per-width types, the native integer elsewhere* — two mechanisms by
+architecture. *Sub-native signed types (`i12`, `i9`, `i20`) for immediate slots* — makes part of TYP-10's
+deferred set v1, and still leaves zero-extended and patterned fields.
 
-**Consequences.** Assembly §5 states the rule and §3, §7, §11, §12 point to it; the arch appendix §2 gains
-table (f) and every architecture a slot-type section, §9 requires it. A positive immediate above the
-slot type's maximum is written as its two's-complement negative (`movb(al, -56)` for the byte `0xC8`; on
-`i386` an absolute `disp` at or above `0x80000000`). Comptime §1.1 and CT-13 no longer leave the context
-type open.
+**Consequences.** Assembly §5 states the rule and §3, §7, §11, §12 point to it; the arch appendix §2 has
+table (f) and every architecture an encodable-set section, §9 requires it. A value above the native signed
+maximum, and a pattern with its top bit set, is written as its two's-complement negative (`movq(rax, -1)`;
+on `i386` an absolute `disp` at or above `0x80000000`; `andw(w0, w1, -65536)` for the mask `0xFFFF0000`). Comptime §1.1 and CT-13 no
+longer leave the context type open.
 
 ### CG-19. A `@reg(name)` binding is a register operand; a register the source names is reserved from placement — spec#52
 *provenance: refines CG-16 (the `asm(…)` operand test), CG-15 (operand materialization) and MEM-7 (storage

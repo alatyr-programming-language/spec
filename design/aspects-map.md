@@ -84,8 +84,8 @@ and **deferred (additive) growth**.
   operand an immediate, a constant expression being comptime, CT-13) and an implementation's refusal to lower it is a known deviation, not a
   specified rejection (CG-15); that register materialization is the instruction intrinsics' only — `asm(…)` emits exactly
   its template, and an operand of it not already of a §5 kind is a specified compile error (CG-16); an immediate slot and an
-  integer `at(…)` field take a signed per-width slot type from the arch table, the constant checked against it (`disp : i32`
-  on x86_64; the slots no v1 type describes are open, spec#80) (CG-18); a `@reg(name)` binding is a register operand
+  integer `at(…)` field take the native signed integer as context, the exact value then checked against the slot's
+  encodable set in the arch table alone (signed or unsigned range, bitmask pattern, rotated immediate) (CG-18); a `@reg(name)` binding is a register operand
   (naked body, intrinsic, `asm`), a bare-`@reg` one is not and `asm(…)` rejects it, and a register the source names is
   reserved from that function's placement (CG-19; across a call, in removed branches and from `@inline` bodies open, spec#93);
   under `no_abstractions` a constant expression (`disp = -16`) is admitted, the value-operators being forbidden only at a

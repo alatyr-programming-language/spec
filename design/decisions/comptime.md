@@ -349,8 +349,8 @@ compiler already knows.
 and checking the mathematical result differ — `-1` at an unsigned type, `-128 : i8`,
 `1 - 2 + 3 : u64`, `unchecked` — and how a floating-point constant expression is evaluated are
 CT-14 (spec#62). The context type an immediate slot or an
-`at(…)` field gives was spec#63, since settled by CG-18 (its slot type; spec#80 for the fields
-no v1 type describes). Admission under `no_abstractions`, whose list forbids the
+`at(…)` field gives was spec#63, since settled by CG-18 (the native signed integer, encodability
+checked by the arch table; spec#80). Admission under `no_abstractions`, whose list forbids the
 value-operators as surface syntax (Assembly §1.1, CG-12), is CG-17 (spec#59): admitted.
 
 **Rejected.** *Only literals and unary `-` on a literal are comptime* — a second, narrower notion

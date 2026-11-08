@@ -240,11 +240,11 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   `-128 : i8` accepted), `unchecked` changing nothing (`unchecked (0 - 1)` is the constant expression `0 - 1`); a floating-point one is evaluated per operation in
   its context's IEEE format (Comptime §1.1; CT-14). Where an immediate is accepted it is an immediate.
 
-- **Slot type** (CG-18) — the signed integer type of the width an instruction form encodes in an
-  immediate slot or an integer `at(…)` field, given per architecture by the arch table (`disp : i32` and
-  `movb`'s immediate `i8` on x86_64). An immediate there must be assignable to it, a constant expression
-  takes it as its context type, and every value of it is encodable (Assembly §5). A field no v1 type
-  describes (sub-native, zero-extended, pattern-encoded) has none yet — spec#80.
+- **Encodable set** (CG-18) — the values an instruction form encodes in an immediate slot or an
+  integer `at(…)` field, given per architecture by the arch table: a signed or unsigned range, a bitmask
+  pattern or a rotated immediate (`disp` −2³¹ … 2³¹−1 and `movb`'s immediate −128 … 127 on x86_64). An
+  immediate there takes the native signed integer as its context type, and the set alone decides whether
+  its value is encodable (Assembly §5).
 
 - **Pinned binding / reserved register** (CG-19) — a binding with `@reg(name)` is *pinned*: it **is** the
   register `name` as an operand (naked body, instruction intrinsic, `asm(…)`); a bare-`@reg` binding is not
