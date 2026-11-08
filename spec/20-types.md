@@ -285,7 +285,11 @@ with `R` the element type, is ill-formed by the receiver rule below: auto-ref to
 `ptr(mut R)` requires a mutable place, and `a[i]` is not one — and so is
 `vv[i][k] = x` on `vv : Vec(Vec(T))`, whose `index_set` takes the element `vv[i]` as its
 receiver. Reading through the index
-(`a[i].f`) is unaffected.
+(`a[i].f`) is unaffected. For a `Vec(T)` whose `T` is **owning** (Memory §5.9), `a[i]` (so
+the read `a[i].f` too, which reads the element by value first), `a[i] = v`, `a[i] ⊕= rhs` and
+the explicit form above are themselves ill-formed — none may copy or overwrite an owning
+element unseen — and the diagnostic names the form that fits the use: `deref(a.at_ptr(i)).f`
+for a read, `deref(a.at_mut(i)).f = x` for a write (Stdlib appendix §6; STD-10).
 
 A **checked** operator or conversion (one that traps by default and whose check is
 dropped inside `unchecked`, §4.2 / CG-8) of a **built-in** numeric interpretation, and

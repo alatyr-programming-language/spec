@@ -49,6 +49,19 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `Vec(T)` admits an owning `T`; its element is exchanged or lent by a scoped
+reference, never copied out or overwritten unseen (Stdlib appendix §6, §8; Types §4.5; Memory §1.6,
+§5.9; STD-10).**  Nothing said whether `Vec(T)`'s `T` may be `@owning`, nor what the by-value `at`/`v[i]` or
+the overwriting `index_set`/`v[i] = x` do with a linear element. `Vec(Fd)` for `Fd := @owning struct { fd : i32 }` is now well-formed;
+for an owning `T`, `at`/`v[i]` (and a read through it), `index_set`/`v[i] = x`/`set`, `v[i] ⊕= x`
+(OP-7) and OP-8's explicit form are ill-formed, with a diagnostic naming the explicit operations.
+`Vec(T)` gains, for every `T`, `replace(i, x)` → `T`, `swap(i, j)`, and the `scoped` element
+references `at_ptr(i)` → `ptr(T)` / `at_mut(i)` → `ptr(mut T)` (transient, the vector frozen, as
+the arena's `get`), each bounds-checked like `at`; for a copyable `T` they are added and nothing else changes. `pop`
+stays. Open: whether such a `Vec` is itself owning and how it is released, `push`'s failure path,
+`get`/`iter`/`clear`/`truncate` and `==`/`<`/`hash` (spec#96); a whole-value move out of or store
+over an owning place through a pointer or a sub-slice (spec#97).
+
 **Normative — a `@reg(name)` binding is a register operand; a register the source names is
 reserved from the function's placement (Assembly §4, §5, §6, §12; Memory §2.5, §2.6; Functions
 §6.4; Codegen §3.3, §3.4; CG-19).**  A naked body may only use `@reg(name)`-pinned locals, but

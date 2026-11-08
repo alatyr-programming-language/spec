@@ -176,6 +176,12 @@ hand-written form copies, so OP-8's I2 argument does not apply here.
   rule applies unchanged. It enlarges OP-3's function set and needs its own rule for the
   pointer's lifetime across reallocation; it is deferred as additive growth (OP-8).
 
+**Refined (STD-10, owner decision 2026-11-08).** For a `Vec(T)` whose `T` is owning, the sugar is
+ill-formed: it reads the element by value and overwrites it. The element is changed in place
+through `v.at_mut(i)`, a `scoped ptr(mut T)` (a field store or a call taking `ptr(mut T)`) — the
+place-returning access deferred above, in a form whose lifetime the existing `scoped` rule
+bounds; a whole-element store through it is open as spec#97.
+
 ---
 
 ### OP-8. A write into a library aggregate's element through its index is refused — spec#23
@@ -215,6 +221,15 @@ later be relaxed additively (I10); a defined sugar could never be withdrawn.
 - *A place-returning index operation* (`index_ptr` → `ptr(mut T)`, a third function, distinct
   from OP-3's rejected single read-write function) — deferred as additive growth: it enlarges OP-3's function set and needs its own decision on how long the pointer
   stays valid across a reallocation.
+
+**Refined (STD-10, owner decision 2026-11-08).** For a `Vec(T)` whose `T` is owning, the explicit
+form above is itself ill-formed (it copies the element out and overwrites it), and so is the read
+`a[i].f`; the diagnostic names `deref(a.at_mut(i)).f = x` for a write and `deref(a.at_ptr(i)).f`
+for a read instead. `at_mut` is the deferred
+place-returning access in its `scoped` form: the reference lives within one full expression and
+the vector is frozen there (Memory §5.3.1), so it needs no rule for reallocation. For a copyable
+`T` this decision's refusal and explicit form are unchanged; `deref(a.at_mut(i)).f = x` is an
+additional explicit form there too.
 
 ### OP-9. A `str` index is the built-in slice read plus the code-point-boundary check — a read-only place — spec#53
 *provenance: refines OP-3 (indexing) and OP-8 (the place/value split for an index); reads Stdlib appendix

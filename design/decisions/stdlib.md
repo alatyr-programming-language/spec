@@ -279,3 +279,76 @@ open as spec#55. Appendix §2.6 gains the containers' arm, §6 the rule with its
 identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
 is filed as spec#50.
+
+---
+
+### STD-10. `Vec(T)` admits an owning `T`; its element is exchanged or lent, never copied out or overwritten unseen — spec#54
+*provenance: applies Memory §5.9's linearity (MEM-2) to the `Vec(T)` surface of STD-1's appendix;
+  restricts OP-3's index operator, OP-7's compound and OP-8's explicit form for an owning `T`; the
+  scoped accessors take the arena `get`'s `scoped` pattern (Memory §5.3.1, §5.4) · spec: Stdlib
+  appendix §6, §8; Types §4.5; Memory §1.6, §5.9*
+
+**Question.** An `@owning` value is linear: non-copyable, consumed exactly once (Memory §5.9).
+Appendix §6 gave `Vec(T)` a by-value read (`self[i]` ≡ `at`), an overwriting store
+(`self[i] = v` ≡ `index_set`, and `set`) and `pop` → `Option(T)`, and never said whether `T` may
+be owning. For `v : Vec(Fd)` with `Fd := @owning struct { fd : i32 }` the spec had no answer to whether the type is well-formed, whether
+`v[i]` copies, moves or is refused, and whether `index_set` drops the element it replaces; OP-7's
+`index_set(a, j, at(a, j) ⊕ rhs)` and OP-8's `mut e := a[i]; e.f = x; a[i] = e` inherit it.
+
+**Decision (owner, 2026-11-08; option (b) of spec#54).** **`Vec(T)` admits an owning `T`.** For
+such a `T`, the by-value read `at`/`v[i]` (and so a read through it, `v[i].f`), the overwriting
+store `index_set`/`v[i] = x`/`set`, and the OP-7/OP-8 forms over the element are **ill-formed**,
+with a diagnostic located at the use and naming the explicit operation that fits it: no hidden
+copy, no hidden drop. The refusal is keyed on the prelude's own `Vec`, as STD-6's arm is. Access
+goes through four operations, defined for every `T`, whose signatures use only the existing
+reference and linearity rules:
+
+- `replace(in self : ptr(mut Vec(T)), in i : usize, in x : T) -> T` — moves `x` in, the old
+  element out;
+- `swap(in self : ptr(mut Vec(T)), in i : usize, in j : usize)`;
+- `at_ptr(in self : ptr(Vec(T)), in i : usize) -> scoped ptr(T)` and
+  `at_mut(in self : ptr(mut Vec(T)), in i : usize) -> scoped ptr(mut T)` — `scoped` results, so
+  in checked code the reference is transient within the call's full expression and the vector is
+  a frozen borrowed place there (Memory §5.3.1, the arena `get`'s pattern, Memory §5.4).
+
+All four are bounds-checked like `at` (trap, CG-13). `pop` stays well-formed: it moves the last
+element out. The names `at_ptr`/`at_mut` and the bounds-check behaviour follow the existing
+surface (`at`'s check; the `ptr`/`ptr(mut)` pair) and are not part of the owner's choice.
+
+**Not decided here** (each changes well-formedness or meaning, so each is filed for the owner):
+whether `Vec(T)` of an owning `T` is itself owning and how it is released, `push`'s failure path
+for a moved-in element, and the owning case of `get`/`iter`/`clear`/`truncate` and of
+`==`/`<`/`hash` (STD-6's arm calls `T`'s relation, whose operands are `in`) — spec#96; a
+whole-value move out of, or store over, an owning place reached through a pointer or a view
+(`deref(v.at_mut(i)) = x`, an element of the sub-slice `v[a..b]`) — spec#97.
+
+**Why.** An owning-element container is the ordinary way to hold several resources (`Vec(Fd)`),
+so refusing it (option (a)) would push every such program to a fixed array or a hand-rolled
+container. Refusing only the operations that would copy or drop unseen keeps linearity
+syntactic and local (FND-3): every element leaves through a named operation that hands it to the
+caller (`replace`, `pop`), and every change in place goes through a reference whose lifetime the
+existing `scoped` rule already bounds (I3, I11). Nothing new is added to the language: the four
+operations are ordinary prelude functions over `ptr`/`ptr(mut)` slots, `in` moves and a
+`scoped` result. Like `pop`, their bodies move elements within the vector's own storage, which
+is the prelude's implementation, not a user-level move through a pointer (that is spec#97). For a copyable `T` every existing form keeps its meaning and the four operations
+are added: confining them to an owning `T` would need a comptime ownership predicate, which v1
+does not have (Comptime §5.1) and which would be new surface (PRIN-1). So OP-8's deferred
+place-returning access now exists for every `T`, as the `scoped` `at_mut`.
+
+**Rejected.**
+- *(a) `Vec(T)` requires a copyable `T` in v1* (a refusal of an owning `T`; an owning-element
+  container as additive growth) — safe, but it leaves the commonest owning collection inexpressible.
+- *(c) `at` is a move-out that leaves a hole to be refilled* — needs a rule for the hole (a
+  per-slot initialisation state the checker cannot see through indices), the flow analysis
+  MEM-1 and Memory §5.3.1 exclude.
+
+**Consequences.** Appendix §6 gains the four operations in `Vec`'s list, the paragraph defining
+them and the owning-element rule with its explicit forms; §8 item 5 the conformance clause; Types
+§4.5 the owning case of the index forms beside OP-8; Memory §1.6 the owning case beside OP-7's
+lowering; Memory §5.9 the sentence beside the arena's
+accessors. `at_mut` is the place-returning access OP-7 and OP-8 deferred, in its `scoped` form:
+the reference cannot outlive the full expression, which answers their question of its validity
+across a reallocation without a new rule; OP-3's index operator is unchanged and still lowers to
+`at`/`index_set`. `String` is not declared `@owning` and has no owning field, so it is copyable
+under Memory §5.9 and `Vec(String)` was well-formed before this decision; whether that is meant
+is asked in spec#96.

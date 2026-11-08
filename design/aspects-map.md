@@ -89,7 +89,9 @@ and **deferred (additive) growth**.
   Concurrency families (atomics, `volatile`, the 20 overflow policy functions, `fma`, `saturating_convert`, the constants
   `NaN`/`Infinity`) enumerated by name and signature in the appendix (STD-1/CC-2/CG-8/CG-9); output: the
   `{}` template `format(w, "…", args…)` over any `Writer` and `print` as `format` to standard output, hosted only
-  (STD-5).
+  (STD-5); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
+  (`scoped` `at_ptr`/`at_mut`), never read by value or overwritten (STD-10; the rest of the owning case is spec#96,
+  a store through a pointer to an owning place spec#97).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),
   per-module compilation + the output-neutral content-addressable cache / incremental build (TOOL-6).
