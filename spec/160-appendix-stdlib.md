@@ -898,7 +898,9 @@ visible (I2).
   Reallocation cost is visible (I2). The indexing surface is the **index operator** (OP-3 /
   Type System §4.5): `self[i]` is `self.at(i)` (the bounds-checked trapping read — `Vec`'s
   established named read `at`, distinct from `get`'s `Option`; no separate `index` shim, OP-1),
-  `self[i] = v` is `self.index_set(i, v)`, and `self[a..b]` is `self.index_range(a, b)`. So
+  `self[i] = v` is `self.index_set(i, v)`, `self[i] ⊕= x` is `self.index_set(j, self.at(j) ⊕ x)`
+  with `self` and `i` each evaluated once (`j` holds `i`; Memory §1.6, OP-7), and `self[a..b]` is
+  `self.index_range(a, b)`. So
   the `[]` notation is uniform with a built-in array's, dispatched to `Vec`'s own functions.
   The bounds check of `at`, `index_set`, `index_range` and `set` is made under `comptime if
   verify.checked` (dropped under `unchecked`, §3) and fails through **`trap()`** (§4.1),

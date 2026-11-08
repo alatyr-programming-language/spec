@@ -263,8 +263,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   makes `eq`/`lt`/`hash` library code over `typeinfo` for **every** type (CT-9; Comptime §5.5).
 
 - **Compound assignment** (*compound assignment*) — `place ⊕= expr`: sugar for `place = place ⊕ expr` with the
-  place evaluated **once** (OP-2; Memory §1). `⊕` ranges over the binary glyph operators `+ - * / % & | ^`; it
-  is a statement, not an expression, and inherits its overload from the operator-function `⊕` (no separate hook).
+  place evaluated **once** (OP-2; Memory §1.6); on a library aggregate's index `a[i] ⊕= expr` is
+  `index_set(a, j, at(a, j) ⊕ expr)`, with `a` and `i` each evaluated once (`j` holds `i`; OP-7). `⊕` ranges
+  over the binary glyph operators `+ - * / % & | ^`; it is a statement, not an expression, and inherits its
+  overload from the operator-function `⊕` (no separate hook).
 
 - **Binding** (*binding*) — the association of a name with a place; the carrier of scope.
 
@@ -277,8 +279,14 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 
 - **Scope** (*scope*) — where in the source a binding name is accessible.
 
-- **place-expression / value-expression** — classification: a place yields a place (variable, field, index,
-  dereference), a value yields a value (literal, arithmetic, by-value call, taking an address).
+- **place-expression / value-expression** — classification: a place yields a place (variable, field, index on
+  an array or slice, dereference), a value yields a value (literal, arithmetic, by-value call — including an
+  index on a library aggregate, `at(a, i)` — taking an address) (Memory §1.6).
+
+- **Library aggregate** — an indexable type whose index operator is not the compiler-known one of an array or
+  slice but resolves to its own source-level `at`/`index_set`/`index_range` (`Vec(T)`; Types §4.5, OP-3). An index on it
+  is a value-expression (the by-value call `at(a, i)`); `a[i] = v` and `a[i] ⊕= rhs` are its writes (OP-7), and
+  a store into the element's own storage through the index is refused (OP-8).
 
 - **Mutability** — permission to write into a place, bound to the path to it (binding/field/pointer),
   not to the value. Immutable by default; `mut` — opt-in. Effective permission = AND over the whole path.

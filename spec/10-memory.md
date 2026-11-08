@@ -88,10 +88,12 @@ Every expression is classified as either a **place-expression** or a
 **value-expression**.
 
 - **Place-expressions** denote a place: a variable reference, a field access
-  `s.f`, an index `a[i]`, and a dereference (§4.3).
+  `s.f`, an index `a[i]` on an array or slice (Type System §6.4), and a dereference
+  (§4.3).
 - **Value-expressions** denote a value: literals, arithmetic, comparisons, a call
-  whose result is taken by value, and an address-of (which yields an address
-  *value*).
+  whose result is taken by value — including an index `a[i]` on a library aggregate,
+  which is the by-value call `at(a, i)` (Type System §4.5) — and an address-of (which
+  yields an address *value*).
 
 The fundamental operations relating values and places are:
 
@@ -117,6 +119,17 @@ System §5.3; TYP-5), `⊕=` applies to any type that defines `⊕`; it introduc
 overload point. The place MUST be mutable (§3) and definitely assigned (it is read), as
 the desugared form requires. Compound assignment is a **statement**, not an expression
 (Grammar §3.1), like ordinary `=`.
+
+An index `a[i]` on a **library aggregate** (Type System §4.5) is a value-expression with
+no address to take, so the address-temporary rule cannot apply to it; `a[i] ⊕= rhs` there
+lowers instead to `index_set(a, j, at(a, j) ⊕ rhs)` (OP-7). The base `a` and the index `i`
+are each evaluated once, in that order, into temporaries — `a`, when it is a place, by taking
+its address once (as above), and `i` into a fresh `j`; then `at(a, j)` reads, `rhs` is
+evaluated, `⊕` applies, and `index_set` stores (left to right, Functions §5.4). This is the
+cost of the hand-written `a[i] = a[i] ⊕ rhs` — the same two calls — except that `i` is
+evaluated once, not twice. The two calls take their receiver as any call does (Type System
+§4.5's receiver rule), so `a` must meet what `index_set`'s receiver slot requires, exactly as
+it must for `a[i] = v`.
 
 > Copy versus move semantics of a value as it is read, assigned, or passed is
 > defined in §5.9.

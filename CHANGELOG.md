@@ -49,6 +49,18 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a compound assignment on a library aggregate's index is `index_set(a, j,
+at(a, j) ⊕ rhs)` (Memory §1.6; Types §4.5; Grammar §3.2; Stdlib appendix §6; OP-7).**  Memory
+§1.6 lowered `place ⊕= rhs` by taking the place's address once, but on a library aggregate such
+as `Vec(T)` an index is the by-value call `at(a, i)` and has no address, so `v[i] += 1` had no
+specified meaning; §1.6 also listed every index `a[i]` as a place-expression, against Types
+§4.5. On a library aggregate `a[i] ⊕= rhs` now lowers to `index_set(a, j, at(a, j) ⊕ rhs)`,
+with `a` and `i` each evaluated once (`j` holds `i`), in the order `a`, `i`, the read, `rhs`;
+`a` meets `index_set`'s receiver slot as for `a[i] = v`. §1.6's place list now says an index
+on an array or slice, and an index on a library aggregate is a value-expression. Arrays and
+slices are unchanged. Rejected: refusing the form; a place-returning index operation
+(deferred). (spec#34.)
+
 **Normative — the `{}` template is v1, its trigger is the first fixed `str` parameter, and
 `print` is `format` to standard output (Functions §7.1; Stdlib appendix §2.7, §7; STD-5).**
 The template was called the normative trigger in Functions §7.1 but an additive convenience in

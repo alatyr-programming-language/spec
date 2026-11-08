@@ -250,6 +250,10 @@ forms desugar to ordinary prelude functions resolved by UFCS over the base's typ
   below; a library aggregate's `at` makes its own check, failing through `trap()` exactly
   as the built-in guard does — Stdlib §4.1);
 - a write `a[i] = v` ≡ `index_set(a, i, v)` (in an assignment **target** position);
+- a compound assignment `a[i] ⊕= rhs` on a library aggregate ≡
+  `index_set(a, j, at(a, j) ⊕ rhs)`, with `a` and `i` each evaluated once (`j` is the
+  temporary for `i`; Memory §1.6, OP-7) — on an array or slice the element is a place and
+  Memory §1.6's address-temporary rule applies;
 - a range index `a[lo..hi]` ≡ `index_range(a, lo, hi)` — the **sub-slice** view.
 
 Arrays and slices supply these as the **compiler-known** built-ins (the bounds

@@ -48,7 +48,8 @@ evaluation. Comparisons (`==` `!=` `<` `>` `<=` `>=`) are eager functions yieldi
 **Compound assignment** `place ⊕= rhs` rides this same glyph surface as **pure sugar**,
 not a new mechanism: it lowers to `place = place ⊕ rhs` with the **place evaluated once**
 (its address taken once into a fresh temporary, so a side-effecting `a[f()] ⊕= e` runs
-`f()` exactly once). `⊕` ranges over **exactly the binary glyph operators**
+`f()` exactly once; a library aggregate's index has no address, and its compound form is
+OP-7's `index_set`/`at` lowering). `⊕` ranges over **exactly the binary glyph operators**
 `+ - * / % & | ^` — the compound set **mirrors** the operator glyphs, it does not extend
 them. Hence by construction: **no** `and=`/`or=` (those are short-circuit control, not
 functions); **no** `<<=`/`>>=` (shifts have no glyph — call/UFCS form only); **no** clash
@@ -133,6 +134,46 @@ first-class return-a-place form for a library type (second-class references), so
 (`at` → value) and write (`index_set`) stay distinct, matching `get`/`set`. **A separate
 `index` read name** distinct from `at` — pure duplication (identical trapping-read body),
 so the operator resolves directly to `at` and the per-element `index → at` call vanishes.
+
+---
+
+### OP-7. Compound assignment on a library aggregate's index is `index_set(a, j, at(a, j) ⊕ rhs)` — spec#34
+*provenance: refines OP-2 (compound assignment, place evaluated once) on OP-3 (the index
+  operator over `at`/`index_set`) · spec: Memory §1.6; Types §4.5; Grammar §3.2; Stdlib
+  appendix §6*
+
+**Question.** Memory §1.6 and OP-2 lower `place ⊕= rhs` by taking the place's address once
+into a temporary. On a library aggregate (`Vec(T)`), `a[i]` is the by-value call `at(a, i)`
+(OP-3): the element has no address, so that lowering cannot apply, and `v[i] += 1` on a
+`Vec(i64)` had no specified meaning. Memory §1.6 also listed "an index `a[i]`" among the
+place-expressions without qualification, contradicting Types §4.5's by-value read.
+
+**Decision (owner, 2026-11-08).** **Defined sugar.** On a library aggregate,
+`a[i] ⊕= rhs` ≡ `index_set(a, j, at(a, j) ⊕ rhs)`, with `a` and `i` each evaluated exactly
+once into temporaries (`j` for `i`; `a`, when it is a place, by its address as in Memory
+§1.6), in the order `a`, `i`, the `at` read, `rhs` (Functions §5.4). The calls take their
+receiver as any call does, so `a` must meet what `index_set`'s receiver slot requires, exactly
+as for `a[i] = v` (this follows from Types §4.5; it is not part of the owner's choice).
+Memory §1.6's "an index `a[i]`" is qualified to arrays and slices; an index on a library
+aggregate is listed among the value-expressions, as the by-value call it is. On an array or slice nothing changes: the element is a place and the
+address-temporary rule applies.
+
+**Why.** It costs exactly what the hand-written `a[i] = a[i] ⊕ rhs` costs — the same `at`
+and `index_set` calls (I2) — and it evaluates `i` once where the hand-written form evaluates
+it twice, which is what "the place evaluated once" promises for arrays (OP-2). The lowering
+is written in the specification, so it is not hidden (I3; an implicit convenience with its
+explicit form still expressible, CG-11). And it keeps one indexing surface across built-in
+and library sequences (OP-3): `xs[i] += 1` means the same for an array and a `Vec`. Unlike
+a field write through the index (refused, spec#23), it copies nothing beyond what the
+hand-written form copies, so that refusal's I2 argument does not apply here.
+
+**Rejected.**
+- *Refuse `a[i] ⊕= rhs` on a library aggregate*, leaving `a[i] = a[i] ⊕ rhs`. It splits the
+  indexing surface between arrays and library sequences for no saving, and the explicit form
+  evaluates `i` twice.
+- *A place-returning index operation* (`index_ptr`) to make the element addressable so OP-2's
+  rule applies unchanged. It enlarges OP-3's function set and needs its own rule for the
+  pointer's lifetime across reallocation; it is deferred as additive growth.
 
 ---
 
