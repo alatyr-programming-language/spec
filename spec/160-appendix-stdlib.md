@@ -914,7 +914,9 @@ visible (I2).
 - **`Vec(T)`** — a growable contiguous sequence. v1 operations: `new` / `with_capacity(n)`;
   `len` / `capacity` / `is_empty`; `push(v)` → `Result(usize, AllocError)` / `pop` → `Option(T)`;
   `get(i)` → `Option(...)` / indexing `self[i]` (bounds-checked, traps) / `set(i, v)`;
-  sub-slice `self[a..b]` → `[T]`; `iter` (Iterator); `clear` / `truncate(n)` / `reserve(n)`.
+  sub-slice `self[a..b]` → `[T]`; `iter` (Iterator); `clear` / `truncate(n)` / `reserve(n)`;
+  the element exchanges `replace(i, x)` → `T` / `swap(i, j)` and the scoped element
+  references `at_ptr(i)` → `scoped ptr(T)` / `at_mut(i)` → `scoped ptr(mut T)` (below).
   Reallocation cost is visible (I2). The indexing surface is the **index operator** (OP-3 /
   Type System §4.5): `self[i]` is `self.at(i)` (the bounds-checked trapping read — `Vec`'s
   established named read `at`, distinct from `get`'s `Option`; no separate `index` shim, OP-1),
@@ -922,9 +924,59 @@ visible (I2).
   with `self` and `i` each evaluated once (`j` holds `i`; Memory §1.6, OP-7), and `self[a..b]` is
   `self.index_range(a, b)`. So
   the `[]` notation is uniform with a built-in array's, dispatched to `Vec`'s own functions.
-  The bounds check of `at`, `index_set`, `index_range` and `set` is made under `comptime if
+  The bounds check of `at`, `index_set`, `index_range` and `set` (and of the four operations
+  below) is made under `comptime if
   verify.checked` (dropped under `unchecked`, §3) and fails through **`trap()`** (§4.1),
   never `panic` — so `v[10]` fails exactly as a built-in array's `xs[10]` does (CG-13).
+
+  **Element exchange and scoped element references (STD-10).** Four operations reach an
+  element without copying it out or overwriting it unseen, for every `T`:
+
+  ```alatyr
+  replace(in self : ptr(mut Vec(T)), in i : usize, in x : T) -> T      # stores x at i, returns the old element
+  swap(in self : ptr(mut Vec(T)), in i : usize, in j : usize)          # exchanges the elements at i and j
+  at_ptr(in self : ptr(Vec(T)), in i : usize) -> scoped ptr(T)         # a read-only reference to element i
+  at_mut(in self : ptr(mut Vec(T)), in i : usize) -> scoped ptr(mut T) # a writable reference to element i
+  ```
+
+  Each is bounds-checked like `at` (every index it takes, under `comptime if verify.checked`,
+  failing through `trap()`); `swap(i, i)` leaves the vector unchanged. `replace` takes `x` `in`
+  (for an owning `T`, a move) and hands the old element to the caller as its result (a move
+  too, Memory §5.9). `at_ptr` / `at_mut` are **`scoped` results** (Memory §5.3.1), the
+  pattern of the arena's `get` (Memory §5.4): in checked code the reference is transient — used
+  within the full expression of the call (dereferenced, field-accessed, or passed to a
+  callee) and never named — and the vector is a borrowed place frozen there, so no `push`,
+  `pop` or reallocation in the same full expression can leave it dangling. UFCS auto-ref
+  supplies the address: `v.at_mut(i)` ≡ `at_mut(ptr(mut v), i)` and `v.swap(i, j)` ≡
+  `swap(ptr(mut v), i, j)`, which need `v` a mutable place. For a copyable `T` the four add
+  to the forms above and change none of them.
+
+  **An owning element (STD-10).** `T` MAY be an **owning** type (`@owning`, or an aggregate
+  containing one; Memory §5.9): with `Fd := @owning struct { fd : i32 }`, `Vec(Fd)` is
+  well-formed, and so is `Vec(Arena)` (§5.2.1). Since an owning value is
+  non-copyable and consumed exactly once, the operations that would copy an element out by
+  value or overwrite one without consuming it are **ill-formed** for an owning `T` — a
+  Semantic diagnostic located at the use (the index expression or the call) and naming the
+  operation that fits it, `at_ptr` for a read, `at_mut`, `replace` or `swap` for a write. The
+  refusal is a rule keyed on the prelude's own `Vec`, as STD-6's comparison arm is, so no copy and no release happens that
+  the source does not name (I3):
+
+  - the by-value read `at(i)` / `self[i]`, and so a read through it (`self[i].f`);
+  - the overwriting `index_set(i, v)` / `self[i] = v`, and `set(i, v)`, the same store;
+  - the compound `self[i] ⊕= x` (OP-7: it reads the element by value and overwrites it) and
+    OP-8's explicit form `mut e := self[i]; e.f = x; self[i] = e`.
+
+  The explicit forms are the operations above: `old := v.replace(i, x)` (then consume `old`),
+  `v.swap(i, j)`, `deref(v.at_ptr(i)).fd` (for `v : Vec(Fd)`) to read part of an element, and
+  `deref(v.at_mut(i)).fd = 3` or a call taking the element by `ptr(mut T)` (`vv.at_mut(i).push(x)`
+  for `vv : Vec(Vec(U))`) to change it in place. `pop` → `Option(T)` moves the last element
+  out and stays well-formed. A whole-element move out of, or store over, the referent of
+  `at_ptr` / `at_mut` is the general question of an owning place reached through a pointer,
+  open as spec#97, and so is a whole-element move or store through the sub-slice
+  `self[a..b]` → `[T]`, whose elements are places reached through a view. What else an owning `T` needs — whether `Vec(T)` is then itself owning and
+  how it is released, `push`'s failure path (the moved-in element on `Err`), and `get` /
+  `iter` / `clear` / `truncate`, and `==` / `<` / `hash` over it (STD-6's arm calls `T`'s
+  relation, whose operands are `in`) — is open as spec#96.
 - **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`). v1
   operations: `new` / `with_capacity(n)` / `from_str(s)`; `push(c: char)` / `push_str(s)`
   (each → `Result(usize, AllocError)`); `byte_len` / `is_empty`; `as_str` → `str` / `chars`
@@ -1037,7 +1089,9 @@ A conforming implementation MUST:
    require an `unchecked` grant for `manual`-mechanism allocation/reference use and for a call
    to `arena_over` (§5.2.1) (each rejected under `no_unchecked`), keep `scoped` non-allocating, and forbid `@alloc` under `no_alloc`;
 5. provide the **alloc-tier** types of §6 only given an allocator (forbidden under
-   `no_alloc`), their bounds checks failing through `trap()` (§6), and the **std** surface
+   `no_alloc`), their bounds checks failing through `trap()` (§6), `Vec(T)` admitting an owning
+   `T` with its by-value read, overwriting store and OP-7/OP-8 forms then ill-formed and its
+   element exchanges and scoped element references provided (§6; STD-10), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std
    operations returning `Result` (no hidden failure);
 6. treat every definition here as **required v1 content** — additive (FND-6) only for

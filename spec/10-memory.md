@@ -135,7 +135,8 @@ evaluated, `⊕` applies, and `index_set` stores (left to right, Functions §5.4
 cost of the hand-written `a[i] = a[i] ⊕ rhs` — the same two calls — except that `i` is
 evaluated once, not twice. The two calls take their receiver as any call does (Type System
 §4.5's receiver rule), so `a` must meet what `index_set`'s receiver slot requires, exactly as
-it must for `a[i] = v`.
+it must for `a[i] = v`. For a `Vec(T)` whose `T` is owning (§5.9), `a[i] ⊕= rhs`, `a[i]` and
+`a[i] = v` are ill-formed (Stdlib appendix §6; STD-10).
 
 > Copy versus move semantics of a value as it is read, assigned, or passed is
 > defined in §5.9.
@@ -921,7 +922,9 @@ A **read accessor** on an owning value is therefore written as a function taking
 `len(ptr(a))` reads `a` without consuming it. A container's `free`/`close` takes the
 value `in` (the consume); its inspectors and element accessors borrow by scoped reference — the
 arena's `close(in self : Arena)` consumes it, its `get(in a : ptr(Arena), …)` borrows it, and its
-`allocate` takes it `in out` (Stdlib appendix §5.2.1).
+`allocate` takes it `in out` (Stdlib appendix §5.2.1). A `Vec(T)` of owning elements has no
+by-value element read or overwriting store: it exchanges an element (`replace`, `swap`) or
+lends a scoped reference to it (`at_ptr` / `at_mut`) (Stdlib appendix §6; STD-10).
 
 The **dual** coercion, **auto-deref** (Type System §4.5 / OP-5), reads *through* a pointer: when
 the receiver/base is already a scoped reference `ptr([mut] R)` and the position wants the

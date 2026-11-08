@@ -307,7 +307,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Library aggregate** — an indexable type whose index operator is not the compiler-known one of an array or
   slice but resolves to its own source-level `at`/`index_set`/`index_range` (`Vec(T)`; Types §4.5, OP-3). An index on it
   is a value-expression (the by-value call `at(a, i)`); `a[i] = v` and `a[i] ⊕= rhs` are the writes to its element (OP-7), and
-  a store into the element's own storage through the index is refused (OP-8).
+  a store into the element's own storage through the index is refused (OP-8); for a `Vec(T)` of an owning `T`, the read and both writes
+  are ill-formed too, and its element is exchanged (`replace`/`swap`) or lent (`scoped` `at_ptr`/`at_mut`) (STD-10).
 
 - **Mutability** — permission to write into a place, bound to the path to it (binding/field/pointer),
   not to the value. Immutable by default; `mut` — opt-in. Effective permission = AND over the whole path.
