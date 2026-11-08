@@ -46,16 +46,17 @@ that owns assembly/linking itself — rejected in favour of shelling out to `as`
 ### TOOL-2. `fmt` is a single non-configurable canonical form
 *spec: Tooling §4.3*
 
-*(Extended: §4.3.3's wrapping rule now also covers a `match` arm list, a `comptime for` arm template and an
-inline value-`if` — the three overflowing forms it originally omitted. A single canonical form means the
-wrapped spelling of **every** construct that can overflow is the specification's to fix, not the
-formatter's: with the rule absent, an implementation had to invent one, which is a formatter deciding
-language surface. The arm rule is arm-per-line with **no** comma after any arm, expression or block —
-the newline is the arm separator (Grammar §2.6), and a comma there is a Parse diagnostic (SYN-8;
-superseded: the trailing comma on expression arms this extension first gave contradicted the
-grammar); an OR-pattern breaks before each `|`; the template stays a block even when it
-would fit, because a template and a plain arm mean different things; and an expression `if` reuses the
-statement `if` layout so no construct has two shapes.)*
+*(Extended: §4.3.3's wrapping rule now also covers a `match` arm list, a `comptime for` arm template
+and an inline value-`if` — the three forms whose wrapped layout it originally omitted. A single
+canonical form means the wrapped spelling of **every** construct that can overflow is the
+specification's to fix, not the formatter's: with the rule absent, an implementation had to invent
+one, which is a formatter deciding language surface. The arm rule is arm-per-line with **no** comma
+after any arm, expression or block — the newline is the arm separator (Grammar §2.6), and a comma
+there is a Parse diagnostic (SYN-8; superseded: the trailing comma on expression arms this extension
+first gave contradicted the grammar); a `match` is always wrapped, with no one-line form (TOOL-23);
+an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
+template and a plain arm mean different things; and an expression `if` reuses the statement `if`
+layout so no construct has two shapes.)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -904,3 +905,34 @@ part of the build-input tuple (§5, §6.2). What is reported at each level is qu
 Putting it on the footing of the debug-only overrides, which a package's *success* merely must not depend on
 — that still lets the artifact differ, and a flag whose purpose is to *describe* the build has no reason to
 alter it at all.
+
+### TOOL-23. `fmt` lays out a `match` wrapped, one arm per line, always — spec#35
+*provenance: refines TOOL-2 (the single canonical form) and its §4.3.3 arm-wrapping extension,
+  after SYN-8 (arms separated by newline or `;`) · spec: Tooling §4.3.3, §4.3.4*
+
+**Question.** Tooling §4.3.3 writes on one line any construct that fits in 100 columns, and
+gave a wrapping rule for a `match` arm list that does not fit — which implies a one-line
+`match` exists. §4.3.2 puts a block's `}` on its own line and lists `match` among the block
+headers, which implies it does not. Nothing said which applies to a short `match`, nor how a
+one-line form would be spelled (after SYN-8 only `;` can separate arms on one line). `fmt`
+output must be byte-identical across implementations (TOOL-2), so this was an FND-3 gap.
+
+**Decision (owner, 2026-11-08).** **Always wrapped.** A `match` arm list is laid out with each
+arm on its own line, one level beyond the `match` line, the closing `}` at the `match`'s
+indent, whether or not it would fit on one line — like the `comptime for` arm template. There
+is no one-line canonical `match`: a source `match` written on one line with `;` between its
+arms is reformatted wrapped, and no `;` survives between arms or before the `}` (blank lines
+between arms follow §4.3.1). A trailing comment does not keep two arms of a `match`, or of a
+`comptime for` arm template, on one line — whether it trails the whole list or only some arms;
+§4.3.4's suppression of re-wrapping still applies to every other construct on the line it
+trails (which output line the comment trails is spec#57). The source form stays well-formed
+(Grammar §2.6 is unchanged); only `fmt`'s output is fixed.
+
+**Why.** One layout for every `match` means the formatter never decides between two shapes by
+width, so a diff that lengthens one arm never reflows the whole `match`; it matches the
+block-header rule of §4.3.2 and the template rule beside it; and it needs no spelling for a
+one-line arm list, so `;` stays a statement separator in canonical text.
+
+**Rejected.** *A fitting `match` on one line, arms joined by `; `* — a second shape decided by
+width, a whole-`match` reflow when one arm grows past the limit, and `;` as visible arm syntax
+in canonical output.
