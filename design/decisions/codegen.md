@@ -727,7 +727,8 @@ frame.** `asm(…)` emits exactly its template with the operands substituted, an
 (I1), so each operand must already be of a §5 kind — the same test as for an instruction
 intrinsic in a naked body, which has no materialization either; a local or a non-comptime
 expression that is not itself of a §5 kind fails it. Whether a binding pinned by `@reg` /
-`@reg(name)` is itself a register operand is not decided here (spec#52). The register
+`@reg(name)` is itself a register operand was left to spec#52, since settled by CG-19 (a
+`@reg(name)` binding is, a bare-`@reg` one is not). The register
 materialization of §2.2 / CG-15 applies to instruction intrinsics only. The
 explicit form stays expressible: place the value in a register with an instruction intrinsic
 (`movq(rcx, x)`) and pass that register to the template — the placing instruction is then one
@@ -740,7 +741,8 @@ instructions the template does not name, choose a register the template cannot s
 leave `as` validating less than was emitted. The cost is one explicit instruction in the source, which the curated surface already provides — so nothing becomes inexpressible
 (I4), and the escape stays transparent (I1/I3). (That the register written by the placing
 instruction is not reused by the strategy's placement before the template runs is the
-general question of spec#52 §2, not specific to `asm`.)
+general question of spec#52 §2, not specific to `asm`, since settled by CG-19: a register the
+source names is reserved from the function's placement.)
 
 **Rejected.** *Materializing a runtime operand in a register as for an instruction intrinsic*
 (uniform operand surfaces) — rejected because the escape would then emit code its template does
@@ -799,3 +801,60 @@ table (f) and every architecture a slot-type section, §9 requires it. A positiv
 slot type's maximum is written as its two's-complement negative (`movb(al, -56)` for the byte `0xC8`; on
 `i386` an absolute `disp` at or above `0x80000000`). Comptime §1.1 and CT-13 no longer leave the context
 type open.
+
+### CG-19. A `@reg(name)` binding is a register operand; a register the source names is reserved from placement — spec#52
+*provenance: refines CG-16 (the `asm(…)` operand test), CG-15 (operand materialization) and MEM-7 (storage
+  specifiers, S2 placement); reads Functions §6.4 (naked locals are `@reg(name)`-pinned) and Memory §2.4–§2.6 ·
+  spec: Assembly §4, §5, §6, §12; Memory §2.5, §2.6; Functions §6.4; Codegen §3.3, §3.4*
+
+**Question.** Assembly §5's operand kinds are register / immediate / memory / label / reloc / SIMD, and a
+naked body and `asm(…)` have no materialization step, so an operand there must already be of one of those
+kinds. Functions §6.4 requires every non-comptime local of a naked body to be `@reg(name)`-pinned, but no
+sentence said a pinned binding *is* a register operand — so a naked body could not pass its locals to an
+instruction, and `asm("… {0} …", x)` with `x` pinned had no answer. Separately, nothing said whether, in an
+ABI-framed function, the placement may give a register the programmer wrote (`movq(rcx, x)`, then
+`asm("… {0} …", rcx)`) to another value between the two statements.
+
+**Decision (owner, 2026-11-08; option 1 with (a)/(c)).** **A `@reg(name)` binding is a register operand**
+— in a naked body, in an instruction intrinsic in any frame, and in `asm(…)`, where its placeholder is
+replaced by the register's name. **A bare `@reg` binding is not**: its register is the strategy's choice
+and is not visible in the source, so an instruction intrinsic in an ABI-framed function takes it as an
+operand local (materialized, §2.2) and **`asm(…)` rejects it**. **A register named in a function's source
+— by an instruction intrinsic, an `asm(…)` operand or `@reg(name)` — is reserved from the strategy's
+placement for that function**: the placement gives it to no binding or temporary whose register it
+chooses; under `no_abstractions` the fixed placement rule skips it the same way.
+The explicit form of CG-16 may therefore pin a binding (`@reg(rcx) t := x; asm("… {0} …", t)`) as well
+as place the value with an instruction (`movq(rcx, x); asm("… {0} …", rcx)`).
+
+Naming a register reserves every register that shares storage with it — the register a sub-register is
+part of (`eax`, `al` → `rax`; `w0` → `x0`) and every register part of it or overlapping it (`ymm3` →
+`xmm3`; aarch32 `d0` → `s0`, `s1`, `q0`) — since a value placed in any of them would overwrite the named
+bits; an operand inside `at(…)` (`at(base = rcx)`) is an operand of the
+instruction too. Reservation binds the placement only: the ABI framing of the function and of each call
+it makes uses the registers its convention names (Functions §4; ABI appendix §4).
+
+**Not decided here (spec#93).** Whether a value left in a reserved register survives a call the
+function makes (the call's convention may use or clobber it), whether a register named only in a
+branch that `when` / `comptime if` removes is reserved, and whether a register named in an `@inline`
+body (Codegen §3.5) reserves it in the function the body is substituted into. Whether registers an
+instruction uses implicitly (`syscall`'s `rcx`/`r11`, `mul`'s `rdx`) or an `asm(…)` template names only in
+its text are reserved is spec#95.
+
+**Why.** Functions §6.4 already assumes a naked body works on its pinned locals; this makes the text say
+it. Restricting it to `@reg(name)` keeps `asm(…)` verbatim (I1/I3): every register its output names is
+one written in the source, which is why CG-16 rejected materialization. Reserving named registers makes
+a register the programmer wrote mean what it says for the whole function, a rule read off the source,
+so a reader need not trace the placement (I1), at the cost of that register for placement, which the
+source shows.
+
+**Rejected.** *Both `@reg` and `@reg(name)` bindings as register operands* — a bare-`@reg` binding in an
+`asm(…)` template would print a register the compiler chose, against I1/I3. *Neither* — a naked body
+could not use its pinned locals as operands, against Functions §6.4's purpose. *Reservation left to the
+programmer* (the placement is documented, so the hazard is visible) — the placement is impl-documented
+outside `no_abstractions` (Codegen §3.3), so the hazard would differ between conforming implementations.
+*Reservation per statement span* — the span between a write and a later read is not marked in the
+source.
+
+**Consequences.** Assembly §4, §5, §6 and §12 carry the rule; Memory §2.5 (both the strategy and the
+`no_abstractions` rule), §2.6, Functions §6.4 and Codegen §3.3, §3.4 point to it. CG-16's spec#52
+pointers are settled.

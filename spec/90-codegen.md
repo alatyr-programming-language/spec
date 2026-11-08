@@ -138,14 +138,15 @@ fixed by this specification. The specification fixes the **cost contract**: spil
 emitted by the documented rule, so their cost is predictable (I1); and the **exact
 register number is unobservable** — it changes neither behavior nor cost — and is
 therefore **not** subject to hand tracing. So two implementations may assign different
-registers yet both conform.
+registers yet both conform. No implementation's strategy places anything in a register the
+function's source names, which is reserved for it (Assembly §6; CG-19).
 
 #### 3.4 Under `no_abstractions` — byte-exact
 
 Under the `no_abstractions` limit there is no placement freedom: placement is **fully
 determined by the source plus the fixed, spec-defined rule of Memory §2.5** (explicit
 storage specifiers, else scratch registers in the ABI-appendix `caller_saved` order by
-source order, spilling by the documented rule) — **not** the impl-documented S2. So
+source order, skipping the registers the source names, spilling by the documented rule) — **not** the impl-documented S2. So
 **what is written is what is emitted**, including registers (I1), and conforming
 implementations agree on the **exact instructions, registers included**, for a
 `no_abstractions` unit.

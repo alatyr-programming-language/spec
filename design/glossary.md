@@ -243,6 +243,13 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   takes it as its context type, and every value of it is encodable (Assembly §5). A field no v1 type
   describes (sub-native, zero-extended, pattern-encoded) has none yet — spec#80.
 
+- **Pinned binding / reserved register** (CG-19) — a binding with `@reg(name)` is *pinned*: it **is** the
+  register `name` as an operand (naked body, instruction intrinsic, `asm(…)`); a bare-`@reg` binding is not
+  a register operand. A register a function's source names (an intrinsic or `asm(…)` operand, `@reg(name)`)
+  is *reserved*, with every register sharing storage with it (`al` → `rax`, `ymm3` → `xmm3`): that
+  function's placement puts nothing else in it (Assembly §6). Across a call, in a comptime-removed branch,
+  and from an `@inline` body, open — spec#93.
+
 - **Value introducer** (*introducer*) — surface syntax for writing a value-literal on the
   RHS of a declaration: `struct/enum/union{}` (type-literals), `fn(){}` (a function), `mod{}`
   (a module) (FN-1/SYN-6). An **ABI** value is **not** an introducer — it is an ordinary `Abi`

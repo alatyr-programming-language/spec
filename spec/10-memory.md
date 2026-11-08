@@ -211,7 +211,10 @@ is made by a **documented, deterministic placement strategy** (call it *S2*):
 - spills are emitted by a documented rule, so their **cost** is predictable
   (I1);
 - the exact register *number* is an unobservable detail (it changes neither
-  behavior nor cost) and is therefore not subject to hand tracing.
+  behavior nor cost) and is therefore not subject to hand tracing;
+- a register the function's source names (an instruction-intrinsic or `asm(…)` operand, a
+  `@reg(name)` binding) is **reserved**: the strategy places nothing else there in that
+  function (Assembly §6; CG-19).
 
 A conforming implementation MUST document its placement strategy and MUST be
 deterministic. It MUST NOT perform placement that introduces hidden cost beyond
@@ -226,7 +229,8 @@ implementations** (I1) — there is no allocator choice left:
   `@static`) is placed exactly there;
 - an un-pinned automatic binding or an anonymous expression temporary occupies the
   target's **caller-saved (scratch) registers in the order listed by `caller_saved`
-  in the ABI appendix §1 (the `Abi` schema)**, assigned in **source evaluation order** and released
+  in the ABI appendix §1 (the `Abi` schema)**, skipping every register the function's source
+  names (reserved, Assembly §6), assigned in **source evaluation order** and released
   at **last use** (a deterministic liveness over the source); when the scratch
   registers are exhausted it **spills to stack** by the same documented rule (the
   next free slot in evaluation order).
@@ -246,7 +250,10 @@ A register-resident place has **no address**. Therefore:
   predictable (I1), not hidden.
 
 Pinning a binding to a specific register is `@reg(name)`; taking its address is
-then ill-formed.
+then ill-formed. Such a binding **is** the register `name` as an operand of the assembly
+surface — an instruction intrinsic's or an `asm(…)` operand — and that register is reserved
+from the function's placement (§2.5); a bare `@reg` binding is not a register operand
+(Assembly §6; CG-19).
 
 ---
 
