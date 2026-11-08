@@ -49,6 +49,16 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `==` over `HashMap(K, V)` compares entries; `<` and `hash` over it are ill-formed
+(Stdlib appendix §2.6, §6, §8; Comptime §5.4; STD-9).**  `HashMap`, the third owning container,
+took the plain field walk, so `==`, `<` and `hash` compared its table address. `a == b` now holds
+when the lengths are equal and every key of `a` maps in `b` to a value equal by `V`'s `eq`
+(O(n) expected lookups); `<` / `<=` / `>` / `>=` and `hash` over a `HashMap`, directly or through
+an aggregate's walk, are a Semantic diagnostic at the site, so a map cannot be a `HashMap` key.
+Open: a concrete user `lt` / `hash` over a `HashMap` type itself (spec#102); the order and early
+exit of `V`'s `eq` calls (spec#103). Rejected: an order-independent `hash`; refusing `==` too.
+(spec#50.)
+
 **Normative — the owning-container comparison arm lives in the compiler-provided prelude, built
 per translation unit (Stdlib appendix §2.6; Comptime §5.5; STD-8).**  STD-6's content arm for
 `Vec(T)` / `String` sits in the base-tier generic `eq` / `lt` / `hash`, whose body must name
@@ -239,7 +249,7 @@ compare content, but the owning containers took the plain field walk, which reac
 pointer and compared buffer addresses. `==`/`<`/`hash` over a `Vec(T)` are now §3.5's rule over
 its `len` elements (requiring `T`'s `eq`/`lt`/`hash`), and over a `String` §3.6's rule over its
 bytes; capacity, allocator and address take no part, the cost is O(n), and identity is an
-explicit comparison of the data pointers. `HashMap` is open as spec#50.
+explicit comparison of the data pointers. `HashMap` is decided by STD-9 (spec#50).
 
 **Normative — a floating-point literal with no context takes `f64` in Declarations §3.4 too
 (Declarations §3.4; TYP-13).**  §3.4 gave "an integer/float literal" with no context "the

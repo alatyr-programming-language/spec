@@ -279,7 +279,7 @@ open as spec#55 and is decided by STD-8 (the arm lives in the compiler-provided 
 translation unit). Appendix §2.6 gains the containers' arm, §6 the rule with its cost and the
 identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and the glossary follow.
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
-is filed as spec#50.
+was filed as spec#50 and is decided by STD-9.
 
 ---
 
@@ -357,6 +357,39 @@ mechanism that FN-7's one-generic-definition rule does not obviously admit, and 
 **Left open.** Whether a unit without the alloc tier may use, and so compare, a type from
 another unit whose layout reaches an alloc-tier type (STD-6's "no `Vec` for it to meet" has no
 rule behind it yet): spec#101.
+
+---
+
+### STD-9. `==` over `HashMap(K, V)` compares entries; `<` and `hash` over it are ill-formed — spec#50
+*provenance: extends STD-6 (content comparison over the owning containers) to the third
+  container of appendix §6, with STD-8's arm · spec: Stdlib appendix §2.6, §6, §8; Comptime §5.4*
+
+**Question.** STD-6 covers `String` and `Vec(T)` only. Over a `HashMap(K, V)`, `==` / `<` /
+`hash` took the plain field walk, which reaches the `Pointer` leaf of its table and compares
+**addresses** — the trap STD-4 and STD-6 rejected — also when the map is a field of a struct
+being compared. A map has no element order, so "content" means its set of entries, and `<` has
+no natural meaning.
+
+**Decision (owner, 2026-11-08).** Option 1. **`==` / `!=` over `HashMap(K, V)` compare
+content**: equal `len`, and every key of one maps in the other to an `eq` value — which needs
+`V`'s `eq`. **`<` and `hash` over a `HashMap` are ill-formed at the site.** Consequences, not
+separate decisions: "over a `HashMap`" covers a map reached by the structural walk of an
+aggregate, as STD-6's arm does, so a struct holding a map compares by `==` and refuses `<` and
+`hash` unless it overrides them; the derived `<=` / `>` / `>=` go with `lt`; and a map cannot be
+a `HashMap` key (it fails §6's `Hash` requirement, since the default `hash` does not resolve
+for it). The cost (O(n) expected lookups) is stated, as STD-6 does.
+
+**Why.** It mirrors STD-6 where an order exists neither in the map nor in its meaning: the
+useful relation is defined by content, and the meaningless ones are refused rather than
+answered by address. One direction suffices once the lengths match, because keys are unique.
+
+**Rejected.** *Content `==` plus an order-independent `hash`* (a commutative fold of entry
+hashes) — weaker against collisions, and its exact definition would have to be fixed for FND-3.
+*All comparison over a `HashMap` ill-formed* — smallest, but equality of two maps is a
+reasonable question to ask.
+
+**Left open.** Whether a concrete user `lt` / `hash` declared over a `HashMap` type itself lifts
+the refusal: spec#102. The order of `V`'s `eq` calls over the entries and early exit: spec#103.
 
 ---
 
