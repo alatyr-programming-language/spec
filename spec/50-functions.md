@@ -69,8 +69,9 @@ types do not participate (a call site is resolved without knowing its result typ
 method dispatch `recv.m(args)` (MOD-3) is the same resolution keyed on the receiver — the
 first value parameter — and composes with it. When that first parameter is a **scoped
 reference** `ptr([mut] R)` and the receiver has type `R`, the receiver is passed **by
-its address** (**auto-ref**, MOD-3): `recv.m(args)` ≡ `m(ptr(recv), args)` (a value-expression
-receiver at a read-only `ptr(R)` slot passes the address of a caller-owned temporary, Memory §1.6) — the way a
+its address** (**auto-ref**, MOD-3): `recv.m(args)` ≡ `m(ptr(recv), args)` (a non-owning value-expression
+receiver at a read-only `ptr(R)` slot passes the address of a caller-owned temporary, and an owning one
+there is ill-formed, Memory §1.6) — the way a
 method **borrows** its receiver (reads it without consuming, for an owning receiver; Memory
 §5.9). A by-value first parameter is matched and passed unchanged. The **dual** (**auto-deref**,
 OP-5) applies when the receiver is already a pointer `ptr([mut] R)` and the resolved method's

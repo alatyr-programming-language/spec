@@ -129,8 +129,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   and a pointer to it, applied to the operand of a **value-access position**: a UFCS method receiver, a field
   `a.field`, an index `a[i]`. **Auto-ref** lifts a value to a scoped reference when the position wants
   `ptr([mut] R)` and the operand is `R` (`a` → `ptr(a)` — how a method borrows its receiver without
-  consuming it; a value-expression at a read-only `ptr(R)` slot passes the address of a caller-owned
-  temporary, MEM-11). **Auto-deref**, its dual, lowers a pointer to its pointee when the position wants `R` and the
+  consuming it; a non-owning value-expression at a read-only `ptr(R)` slot passes the address of a
+  caller-owned temporary, MEM-11, and an owning one there is ill-formed, MEM-12). **Auto-deref**, its dual, lowers a pointer to its pointee when the position wants `R` and the
   operand is `ptr([mut] R)` (`p` → `deref(p)` — `p.field` ≡ `deref(p).field`, likewise for `[i]` and a
   method receiver). Resolved **exact match → auto-ref → auto-deref**, applied **exactly one level** (a
   pointer-to-pointer derefs once; further needs explicit `deref`, so deref depth is never hidden, I3). Both are
@@ -306,9 +306,9 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   component or array index of a place, a pointer base auto-dereffed first; index on a slice or `str` (read-only); dereference — except a path into a library aggregate's
   element through its index, OP-8), a value yields a value (literal; arithmetic; by-value call — including an
   index on a library aggregate, `at(a, i)`; a field, tuple component or array index of a value; taking an
-  address) (Memory §1.6). A store into a value-expression is ill-formed (`f().x = 1`); a value-expression in a
-  read-only `ptr(R)` receiver slot is materialized in a caller-owned temporary to the end of the full
-  expression (MEM-11).
+  address) (Memory §1.6). A store into a value-expression is ill-formed (`f().x = 1`); a non-owning
+  value-expression in a read-only `ptr(R)` receiver slot is materialized in a caller-owned temporary to the
+  end of the full expression (MEM-11), and an owning one there is ill-formed (MEM-12).
 
 - **Library aggregate** — an indexable type whose index operator is not the compiler-known one of an array or
   slice but resolves to its own source-level `at`/`index_set`/`index_range` (`Vec(T)`; Types §4.5, OP-3). An index on it
@@ -400,8 +400,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap) — an OS
   object or an exclusive right over storage (an arena's right to allocate and reclaim, MEM-2).
   A type is owning iff it carries the **`@owning`** marker or is an aggregate transitively
-  containing an owning field (contagion); a bare pointer/handle is **not** owning (MEM-2).
-  Non-copyable; passed (move, the source is invalidated); a borrow via `ptr` does not consume.
+  containing an owning field (contagion); a bare pointer/handle is **not** owning (MEM-2). The
+  prelude's `Arena`, `Vec(T)` and `String` are owning (MEM-3, MEM-12). Non-copyable; passed (move, the source is invalidated); a borrow via `ptr` does not consume.
 
 - **Move / consume** (*move*) — transfer of ownership; the source becomes invalid. Only for
   owning values (for copyable ones — a copy). An owning value is consumed by being passed to
@@ -440,6 +440,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   out-of-range or mid-code-point index fails through `trap()` like an array index, CG-13);
   `==`/`<` compare its bytes, not the view (STD-4). `String` is the
   **alloc-tier growable owned** UTF-8 buffer (Stdlib §6) — the counterpart that *grows*; `str` is a borrowed view.
+  `String`, like `Vec(T)`, is **`@owning`** (non-copyable, released by `free`; MEM-12).
   `==`/`<` over `String` compare its text too, never its buffer address (STD-6).
 
 - **Range** — the value `a..b` (**half-open**, `a ≤ x < b`) or `a..=b` (**inclusive**); used in

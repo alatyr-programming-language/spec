@@ -29,7 +29,8 @@ not whether v1 is specified (Overview §6).
   generic type `Name := fn(T : type) -> type { … }` (SYN-5), results via anonymous projected `-> T` or named `out`
   (Functions §3), and protocols as comptime predicates `fn(type) bool` (Comptime §6.2).
 - Operations are shown in **UFCS** form (`x.len()` ≡ `len(x)`; TYP-5). Receiver direction
-  is explicit: `in self` (read), `in out self` (mutate).
+  is explicit: `in self` (read), `in out self` (mutate); a read of an **owning** type takes
+  `ptr(Self)` instead, since `in` would move it (Memory §5.9).
 - A **tier** tag — base / alloc / std (Stdlib §1) — is given per group. Base-tier items
   are freestanding and need no allocator.
 - `ptr(mut bits8)` is the raw byte-pointer type (Memory §4.1); `usize` is the
@@ -104,7 +105,11 @@ loop. A type is **iterable** if it provides `iter(in self) -> I` where `I` is an
 itself iterable** — in particular a container whose `iter` returns a **slice `[T]`** (e.g. `Vec`)
 is iterable: `for` iterates the returned slice directly (the built-in counted loop), so no `next`
 iterator is required. Ranges (`a..b`, `a..=b`), slices `[T]`, and arrays satisfy iterable from the
-prelude. (`Option(Item)` satisfies
+prelude. An **owning** iterable (`Vec(T)`, §6; MEM-12) takes `self` of `iter` by scoped reference
+(`in self : ptr(Self)`), since passing an owning value `in` consumes it (Memory §5.9), as an owning
+allocator takes `mechanism`'s (§5.1). How `for x in v` applies `iter` to its operand — as a receiver
+with auto-ref, or as a by-value argument — is open, spec#115; what `iter` yields over an owning
+element is open, spec#96. (`Option(Item)` satisfies
 optional, but `for` depends on the **shape**, not the name.) Iterator **adapters**
 (`map` / `filter` / `fold` / `zip` / `enumerate` / …) compose on this protocol and are
 **additive** (FND-6) — v1 fixes the `next` / `iter` shape and `for`.
@@ -173,7 +178,8 @@ pointer and a length is not a view and keeps the field walk.
 `Pointer` leaf and compare **buffer addresses** — the trap the view arm exists to avoid. Their default
 `eq` / `lt` / `hash` are therefore the **content** rules too: a `Vec(T)` compares as the `[T]` of its
 `len` elements (§3.5), a `String` as the `str` of its bytes (§3.6) — capacity, allocator and buffer
-address take no part. Like the view arm, this one is keyed on the prelude's own `Vec` and `String`
+address take no part. (Both are `@owning`, §6; how a relation's `in` operands take an owning value
+is open as spec#106.) Like the view arm, this one is keyed on the prelude's own `Vec` and `String`
 types, wherever the walk meets them (as an operand, or as a field, element or component); it is an
 arm of the structural default rather than a per-type override, because FN-7 admits one generic
 definition per name and `Vec(T)` is generic. The arm exists exactly when the alloc tier does:
@@ -971,7 +977,8 @@ Available **only given an allocator** (Stdlib §1); forbidden under `no_alloc`. 
 parameterized by an allocator (via `@alloc` on its storage), and its growth cost is
 visible (I2).
 
-- **`Vec(T)`** — a growable contiguous sequence. v1 operations: `new` / `with_capacity(n)`;
+- **`Vec(T)`** — a growable contiguous sequence, **`@owning`** for every `T` (below; MEM-12).
+  v1 operations: `new` / `with_capacity(n)` / the release `free`;
   `len` / `capacity` / `is_empty`; `push(v)` → `Result(usize, AllocError)` / `pop` → `Option(T)`;
   `get(i)` → `Option(...)` / indexing `self[i]` (bounds-checked, traps) / `set(i, v)`;
   sub-slice `self[a..b]` → `[T]`; `iter` (Iterator); `clear` / `truncate(n)` / `reserve(n)`;
@@ -1033,13 +1040,15 @@ visible (I2).
   out and stays well-formed. A whole-element move out of, or store over, the referent of
   `at_ptr` / `at_mut` is the general question of an owning place reached through a pointer,
   open as spec#97, and so is a whole-element move or store through the sub-slice
-  `self[a..b]` → `[T]`, whose elements are places reached through a view. What else an owning `T` needs — whether `Vec(T)` is then itself owning and
-  how it is released, `push`'s failure path (the moved-in element on `Err`), and `get` /
-  `iter` / `clear` / `truncate`, and `==` / `<` / `hash` over it (STD-6's arm calls `T`'s
-  relation, whose operands are `in`) — is open as spec#96.
-- **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`). v1
-  operations: `new` / `with_capacity(n)` / `from_str(s)`; `push(c: char)` / `push_str(s)`
-  (each → `Result(usize, AllocError)`); `byte_len` / `is_empty`; `as_str` → `str` / `chars`
+  `self[a..b]` → `[T]`, whose elements are places reached through a view. `Vec(T)` is itself
+  owning for every `T` and released by `free` (below; MEM-12). What else an owning `T` needs
+  is open: what `free`, `clear` and `truncate` do with owning elements still held, spec#107;
+  `==` / `<` / `hash` over an owning operand (STD-6's arm calls `T`'s relation, whose operands
+  are `in`), spec#106; `push`'s failure path (the moved-in element on `Err`) and `get` /
+  `iter`, spec#96.
+- **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`), **`@owning`**
+  (below; MEM-12). v1 operations: `new` / `with_capacity(n)` / `from_str(s)` / the release
+  `free`; `push(c: char)` / `push_str(s)` (each → `Result(usize, AllocError)`); `byte_len` / `is_empty`; `as_str` → `str` / `chars`
   (Iterator) / `clear`. Maintains the UTF-8 invariant.
 - **`HashMap(K, V)`** — a hash map. v1 operations: `new` / `with_capacity(n)`;
   `insert(k, v)` → `Result(Option(V), AllocError)` / `get(k)` → `Option(...)` /
@@ -1055,6 +1064,19 @@ carries a **`usize` count** in its `Ok` arm — the new length for `push`/`push_
 the count convention of `Writer.write` → `Result(usize, …)`, §2.7); this fixes
 the success type unambiguously for an independent implementation (FND-3).
 
+**`Vec(T)` and `String` are owning (MEM-12).** Each is declared **`@owning`** (Memory §5.9),
+`Vec(T)` for every `T`: a value of either is non-copyable (`b := a` moves it) and is consumed
+exactly once on every normal exit path — by **`free`**, `free(in self : Vec(T))` /
+`free(in self : String)`, which returns the buffer to the container's allocator, by another
+transfer, or by `forget` (a deliberate leak). A missing release and a use after `free` are
+compile-time errors of the linearity checker, as for an `Arena` (§5.2.1). Every other operation
+that takes a receiver borrows it — by `ptr(Self)` for a read, `in out` or `ptr(mut Self)` for a change
+(Memory §5.9; §1) — so `v.len()` reads `v` without consuming it. A type with a `Vec` or `String`
+field is owning by contagion (Memory §5.9). A call on an owning **value-expression** at a
+read-only receiver slot gets no temporary and is **ill-formed** (Memory §1.6): `make_vec().len()`
+is written `v := make_vec(); n := v.len(); v.free()`. For a `Vec(T)` whose `T` is owning — now
+including `Vec(String)` and `Vec(Vec(U))` — the owning-element rules above (STD-10) apply.
+
 **Comparison over `Vec(T)` and `String` is by content** (STD-6; §2.6's arm for the owning
 containers). `a == b` over two `Vec(T)`s holds when their lengths are equal and their elements
 are pairwise equal by `T`'s `eq`; `<` is the lexicographic order by `T`'s `lt`; `hash` folds the
@@ -1065,7 +1087,9 @@ each element pair goes through `T`'s own relation, never a bytewise compare, as 
 buffers, capacities or allocators. The cost is **O(n)** (in the shorter length for `==` and
 `<`, in its own length for `hash`), stated here because the operator hides it. A caller who wants identity compares the **data pointers**
 explicitly — `v[0..v.len()].ptr` for a `Vec`, `bytes(s.as_str()).ptr` for a `String` (and the
-lengths) — an ordinary pointer comparison, legal in checked code (Memory §4.5).
+lengths) — an ordinary pointer comparison, legal in checked code (Memory §4.5). Both containers
+are owning (above), and an owning operand passed to a relation's `in` parameter would be moved;
+how `==` / `<` / `hash` take an owning operand is open as spec#106.
 
 **Equality over `HashMap(K, V)` is by content; ordering and hashing are refused** (STD-9; §2.6).
 `a == b` holds when the lengths are equal and every key of `a` maps in `b` to a value equal to
@@ -1160,7 +1184,8 @@ A conforming implementation MUST:
 5. provide the **alloc-tier** types of §6 only given an allocator (forbidden under
    `no_alloc`), their bounds checks failing through `trap()` (§6), `Vec(T)` admitting an owning
    `T` with its by-value read, overwriting store and OP-7/OP-8 forms then ill-formed and its
-   element exchanges and scoped element references provided (§6; STD-10), and the **std** surface
+   element exchanges and scoped element references provided (§6; STD-10), `Vec(T)` and `String`
+   `@owning` and released by `free` (§6; MEM-12), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std
    operations returning `Result` (no hidden failure), and `format` / `print` per §2.7 — the
    comptime-checked template, the v1 hole set (any other type a comptime error), and the
