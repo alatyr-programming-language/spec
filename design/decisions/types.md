@@ -130,7 +130,7 @@ in-scope name resolution — never a global registry or an orphan rule. The mark
 foreign/deeply-nested targets are expressible. A `@convert` is always explicit and cannot
 override a builtin lattice class **other than brand**, where a matching in-scope
 `@convert` precedes the crossing (TYP-14); multiple matches at a site are an ambiguity
-error (FND-3, no guessing). This is what lets the language **privilege no `bool`↔integer convention**:
+error, whatever their sources (FND-3, no guessing; TYP-19). This is what lets the language **privilege no `bool`↔integer convention**:
 that conversion becomes a library `@convert` (the author fixing checked-narrow vs
 truthiness-fold by choice), while the base tier still ships the idioms (`n != 0`, `if b
 {1} else {0}`), not the conversions.
@@ -637,3 +637,34 @@ coupling the named form exists to avoid. *`E.N()` accepted as a pattern only* �
 (a bare variant pattern for a variant with components, the sub-pattern count): spec#68. Whether
 `typeinfo`'s `Field` reflects a default: spec#69. Whether field names and defaults take part in
 an anonymous struct's identity (Types §4.1): spec#79.
+
+---
+
+### TYP-19. More than one `@convert` accepting the operand is an ambiguity error, whatever the sources — spec#122
+*provenance: refines TYP-6 (§4.6 conversion-constructors) and TYP-14 (dispatch before the brand
+  crossing), on Declarations §3.4 (a literal takes its type from the target parameter) · spec:
+  Types §4.6*
+
+**Question.** §4.6's dispatch step (2) selects "the **one** in-scope `@convert`" to `T` whose
+parameter accepts `typeof(v)`, and the ambiguity rule covered only two conversions matching the
+same (source, target). Two conversions to `T` from **different** sources can both accept one
+operand — most simply an untyped literal, which takes its type from the parameter (Declarations
+§3.4): with `@convert`s to `B := brand(u64)` from `u32` and from `u64`, both accept `42`. Is
+`B(42)` ill-formed, or does the missing "one" fall through to step (3), the brand crossing, so
+that neither conversion runs?
+
+**Decision (owner, 2026-11-09).** A site where **more than one** in-scope `@convert` to `T`
+accepts `typeof(v)` is an **ambiguity error**, whatever the conversions' sources; it never falls
+through to step (3). An untyped literal is accepted by **every** candidate whose parameter can
+represent it (Declarations §3.4). The explicit form stays expressible: `B(u64(42))`, or an
+annotated local (I1, CG-11).
+
+**Why.** One rule for struct and brand targets and no guessing (FND-3). A conversion to a brand is
+where a guard lives (TYP-14); a site that names two guards must not silently run neither.
+
+**Rejected.** *No unique accepting conversion falls through to step (3)* — a brand with two
+guarded conversions would be built with neither guard and no diagnostic, against TYP-14's purpose
+and close to an I11 silent value; the struct case would still fail, with a less helpful
+diagnostic. *An untyped literal takes its default type before the parameters are asked* —
+contradicts Declarations §3.4 ("the target place/parameter"), makes `P(20)` with a single `u64`
+conversion ill-formed, and sends brand literals to the crossing as the previous option does.

@@ -49,6 +49,15 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — more than one `@convert` accepting the operand is an ambiguity error, whatever the
+sources (Type System §4.6; TYP-19).**  A `T(v)` site where more than one in-scope `@convert` to `T`
+accepts `typeof(v)` is ill-formed, and never falls through to the builtin lattice step; before, only
+two conversions with the same (source, target) were named. An untyped literal is accepted by every
+candidate whose parameter can represent it (Declarations §3.4), so with conversions to `B` from `u32`
+and from `u64`, `B(42)` is ambiguous; write `B(u64(42))` or an annotated local. Rejected: falling
+through to the brand crossing, which runs neither guard; giving the literal its default type first.
+(spec#122.)
+
 **Normative — `_ := expr` is the explicit discard; the lone `_` is not a name (Grammar §2.2, §3.1;
 Functions §3.3; Control Flow §3; Stdlib appendix §2.7; SYN-9).**  Since STD-7 made `print(…)` return a
 `Result`, a function with no result ending in `print(…)` was ill-formed with no way to drop the value

@@ -31,15 +31,16 @@ and **deferred (additive) growth**.
   caller-owned temporary to the end of the full expression, and a field, tuple component or array index of a
   value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11); an owning value-expression there gets no temporary and the call is
   ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; open: spec#106, #107, #115). Joint detailing is complete.
-- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18
+- `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18, TYP-19
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
   integers at multiples of 64 — `u128 ≡ uint(128)`, TYP-10; raw-union members have one
   zero/single/anonymous-tuple payload with fixed construction, layout, copy, comptime/static,
   and definitely-active access rules, TYP-11; a float-spelled literal is never an integer
   initializer, TYP-13; an in-scope `@convert` precedes the brand crossing it guards,
-  TYP-14; an enum variant constructor takes no argument beyond its declared components (exactly their count when
-  positional), TYP-15; a variant's
+  TYP-14; more than one in-scope `@convert` accepting the operand is an ambiguity error,
+  TYP-19; an enum variant constructor takes no argument beyond its declared components (exactly
+  their count when positional), TYP-15; a variant's
   components may take the struct field form, constructed by name with defaults omittable, and a nullary
   variant is spelled `N` only, never `N()`, TYP-17; a named-component variant's payload is the anonymous
   struct of its fields, and a pattern binds named components and struct fields by name, any subset, TYP-18).
