@@ -71,7 +71,7 @@ and **deferred (additive) growth**.
   combined by the built-in scalar operators, `-16`, `0 - 1` — is comptime by its form, CT-13; an integer one is
   computed exactly and its result checked like a literal, `-1 : u8` rejected and `-128 : i8` accepted, `unchecked`
   changing nothing, a floating-point one per operation in its IEEE format, CT-14; open: spec#86, #87, #88, #91), generics (CT-3), constraint-predicates (CT-4),
-  comptime execution (CT-8), introspection (CT-6) + comptime field projection `a.(f)` (TYP-9) + comptime
+  comptime execution (CT-8), introspection (CT-6; every `TypeInfo` case carries `owning`, whether `T` is owning, STD-12) + comptime field projection `a.(f)` (TYP-9) + comptime
   variant matching `T.(v)` (CT-9 — together making the v1 structural derives ordinary library code over
   `typeinfo` for **every** type, struct/array/enum, with no comparison built into the compiler's checker or
   code generator — the derives are prelude code, and the owning-container arm that names alloc-tier types lives
@@ -108,7 +108,7 @@ and **deferred (additive) growth**.
   (STD-7); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
   (`scoped` `at_ptr`/`at_mut`), never read by value or overwritten (STD-10; `Vec(T)` and `String` themselves are `@owning`, released by `free`, MEM-12; the rest of the owning
   case is spec#96, #126, #128; `free`/`clear`/`truncate` over an owning element trap unless the
-  vector is drained, STD-11;
+  vector is drained, STD-11, a check guarded at comptime by `typeinfo(T).owning`, so absent for a non-owning `T`, STD-12;
   a store through a pointer to an owning place spec#97).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),

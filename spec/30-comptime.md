@@ -361,6 +361,13 @@ byte view, §3.6) — the marker is the brand's *name*, matched against a string
 prelude scalar-interpretation brand reifies as `Scalar{kind}` instead (appendix §4.1) —
 where `Field = {name, type, offset, mutable}`.
 
+Every case also carries **`owning : bool`**: whether `T` is **owning** (Memory §5.9) — `true` for a
+type declared `@owning` and for a type owning by contagion, `false` otherwise (so `typeinfo(u8).owning`
+is `false` and `typeinfo(Vec(u8)).owning` is `true`, `Vec(T)` being `@owning`, Stdlib appendix §6). It
+is the same structural classification the linearity checker makes, decided per instantiation, so
+`comptime if typeinfo(T).owning` selects code with no run-time test (I2); the prelude's `Vec` release
+check is guarded by it (Stdlib appendix §6; STD-12).
+
 `Union{variants}` uses the same `Variant` schema as `Enum{variants}`. Raw-union member
 entries appear in source declaration order; `Variant.payload` is `None` for zero
 components, `Some(T)` for one component, and `Some((T0, T1, ...))` for two or more
@@ -797,7 +804,7 @@ A conforming implementation MUST:
    machinery, localize an explicit-constraint violation to the use site, and fail a
    structural mismatch at instantiation with a diagnostic (§4);
 7. provide `typeinfo(T)` as a comptime-erased reification with no runtime RTTI and
-   no hidden type table, and **comptime field projection** `a.(f)` resolving to the
+   no hidden type table, whose every case carries `owning` (whether `T` is owning, §5.1), and **comptime field projection** `a.(f)` resolving to the
    named field access `a.<f.name>` (same classification/type/permission, identical emitted
    code; an `f` that is not a field of `a` is a compile error), and the **comptime
    variant pattern** `T.(v)` resolving to the variant pattern `T.<v.name>` (with

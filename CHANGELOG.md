@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `typeinfo(T)` reports whether `T` is owning, and the `Vec` release check is guarded by
+it at comptime (Comptime §5.1, §11; Stdlib appendix §3.1, §3.2, §4.1, §6, §8; STD-12).**  Nothing said
+how `Vec(T)`'s body tells an owning `T` from a non-owning one for STD-11's check. Every `TypeInfo` case
+now carries `owning : bool`, `true` for an `@owning` type and for a type owning by contagion (Memory
+§5.9); `free` / `clear` / `truncate` guard their check with `comptime if typeinfo(T).owning`, so
+`Vec(u8).free()` carries no run-time check. Rejected: a compiler-private decision inside the prelude,
+which would make `Vec` a special case an author's own collection cannot express. (spec#133.)
+
 ## 1.9.0 — 2026-11-09
 
 **Normative — a deferred action with a value is ill-formed (Memory §5.8; Grammar §3.7; Control Flow

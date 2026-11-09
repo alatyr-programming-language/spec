@@ -132,6 +132,9 @@ resolvable", which `typeinfo` cannot show. Its cost is context-dependence (it se
 what is visible at the check point); the nominal/brand style is available when strictness
 is wanted.
 
+**Refined (STD-12, owner decision 2026-11-09).** Every `TypeInfo` case carries `owning : bool`,
+whether `T` is owning (Memory §5.9), read as `typeinfo(T).owning` (Comptime §5.1).
+
 ### CT-7. The comptime/runtime boundary is an explicit `comptime` marker
 *spec: Comptime §1, §8*
 
