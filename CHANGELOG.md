@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `for x in e` applies `iter` to `e` as a receiver, with auto-ref (Control Flow §6;
+Type System §4.5; Stdlib appendix §2.4; CF-11).**  No passage said how `for` applies `iter` to its
+operand, and once `Vec(T)` became owning that decided whether a loop over a `Vec` compiles. The
+operand is now `iter`'s UFCS receiver (`e.iter()`): `for x in v` borrows `v` and does not consume
+it, and `for x in make_vec()` is ill-formed by Memory §1.6 (bind it first). Rejected: passing the
+operand by value (a move, or `for x in ptr(v)`); refusing `for` over an owning operand and
+iterating its view. (spec#115.)
+
 **Normative — the comparison relations borrow an owning operand (Stdlib appendix §2.6, §6, §8;
 Memory §4.5, §5.9; Functions §1.4; Comptime §5.4; MEM-13).**  `eq` / `lt` / `hash` take their operands
 `in`, which moves an owning value, so `s == t` over two `String`s consumed both. For an owning `T`,
@@ -91,8 +99,7 @@ operations borrow the receiver. MEM-11's temporary is for non-owning values only
 `make_vec().len()` is a located error, and the explicit form is
 `v := make_vec(); n := v.len(); v.free()`. `Vec(String)` and `Vec(Vec(U))` now have an owning
 element, so STD-10's refusals apply to them. Open: `free` / `clear` / `truncate` over owning
-elements still held (spec#107); how `for` applies
-`iter` to an owning operand (spec#115).
+elements still held (spec#107).
 Rejected: releasing or `forget`-ing the temporary at the end of the full expression; (derived) `Vec(T)`
 owning only for an owning `T`. (spec#73.)
 

@@ -313,7 +313,8 @@ fails identically for an array and a `Vec` (CG-13). `unchecked` itself stays non
 any function that does **not** read the mode (CG-7).
 
 **Receiver/access coercion — auto-ref and auto-deref (MOD-3 / OP-5).** A value-access
-position (a UFCS method receiver, a field `a.x`, an index `a[i]`) coerces the operand by one
+position (a UFCS method receiver — the operand of `for x in e` included, `iter`'s receiver
+(Control Flow §6) — a field `a.x`, an index `a[i]`) coerces the operand by one
 step between a value and a pointer to it, by the operand's type versus the type the position
 wants:
 

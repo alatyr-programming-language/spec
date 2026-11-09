@@ -252,10 +252,15 @@ For a `match` over a **scalar**:
 - **`loop { … }`** — an unconditional loop; **`break value`** turns it into a
   **loop-expression** yielding `value` (§7.2).
 - **`while cond { … }`** — `cond` truthy (§4), no parentheses, braced body.
-- **`for x in iter { … }`** — iterates a **structural iterator protocol** (a comptime
+- **`for x in e { … }`** — iterates a **structural iterator protocol** (a comptime
   shape — the general protocol mechanism is Comptime §6; the `Iterator` shape itself is
   defined in the Stdlib appendix §2.4); ranges and arrays satisfy it from the
-  prelude (Type System §7). A **range** is written `a..b` (**half-open**, `a ≤ x < b`) or `a..=b`
+  prelude (Type System §7). **The operand is `iter`'s receiver** (CF-11): `for x in e` applies
+  `iter` to `e` as a UFCS receiver, `e.iter()`, with the receiver coercion of Type System §4.5, so
+  an `iter` taking `ptr(Self)` **borrows** `e` by auto-ref — `for x in v` over a `Vec` reads `v`
+  and does not consume it. An owning value-expression operand is therefore **ill-formed** (Memory
+  §1.6; an owning iterable's `iter` takes `ptr(Self)`, Stdlib appendix §2.4): `for x in make_vec()` is written `v := make_vec()`, then `for x in v { … }`, then
+  `v.free()`. A **range** is written `a..b` (**half-open**, `a ≤ x < b`) or `a..=b`
   (**inclusive**, `a ≤ x ≤ b`) — a prelude `Range` value; the same two forms are the
   range **patterns** of §5.4, so `..` does not change meaning between iteration and
   matching.
