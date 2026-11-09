@@ -517,7 +517,10 @@ governed by §4.1 and §4.6, not here). A seam keyed on the operand **types** �
 pointer, in either order (MEM-9) — must not reach it, and a site that is refused after the load has been
 inserted is refused for the wrong reason. Two pointers compared with each other (`p == q`, `p < q`) are not this capability: they
 compare by their address bits, which is what the structural derive gives a `Pointer` leaf
-(Stdlib appendix §2.6), and they stay legal in checked code. `Option(ptr(T)) == None` is
+(Stdlib appendix §2.6), and they stay legal in checked code. A comparison over two **owning**
+operands passes each by its address (Stdlib appendix §2.6, MEM-13), and the `ptr(T) × ptr(T)` pair
+so produced is **not** two pointers compared: the site's pair is its operands as written, `T × T`,
+and it compares their content. `Option(ptr(T)) == None` is
 not a raw pointer meeting an integer either: its `None` is the niche §4.2 defines, and
 comparing an `Option` is that same structural derive over the variant. The concurrency
 surface admits an `Option(ptr(U))` atomically for exactly this reason (Concurrency §2:
@@ -962,7 +965,9 @@ MEM-12). A container's `free`/`close` takes the value `in` (the consume); its in
 arena's `close(in self : Arena)` consumes it, its `get(in a : ptr(Arena), …)` borrows it, and its
 `allocate` takes it `in out` (Stdlib appendix §5.2.1). A `Vec(T)` of owning elements has no
 by-value element read or overwriting store: it exchanges an element (`replace`, `swap`) or
-lends a scoped reference to it (`at_ptr` / `at_mut`) (Stdlib appendix §6; STD-10).
+lends a scoped reference to it (`at_ptr` / `at_mut`) (Stdlib appendix §6; STD-10). The comparison
+relations borrow an owning operand the same way: `a == b`, `a < b` and `hash(a)` pass each operand
+by its address and consume neither (Stdlib appendix §2.6; MEM-13).
 
 The **dual** coercion, **auto-deref** (Type System §4.5 / OP-5), reads *through* a pointer: when
 the receiver/base is already a scoped reference `ptr([mut] R)` and the position wants the

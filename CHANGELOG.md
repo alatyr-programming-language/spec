@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the comparison relations borrow an owning operand (Stdlib appendix §2.6, §6, §8;
+Memory §4.5, §5.9; Functions §1.4; Comptime §5.4; MEM-13).**  `eq` / `lt` / `hash` take their operands
+`in`, which moves an owning value, so `s == t` over two `String`s consumed both. For an owning `T`,
+`==` `!=` `<` `<=` `>` `>=` and `hash` now pass each operand by its address, as a receiver's auto-ref,
+and consume neither; an owning value-expression operand is ill-formed (bind it first). The one generic
+structural default is instantiated at `T` and reads through the addresses, and the `ptr(T) × ptr(T)`
+pair this produces is not a pointer comparison. Open: how a concrete relation is declared over an
+owning type (spec#126); the enum arm over a borrowed operand, `Option(String) == Option(String)`
+(spec#128). Rejected: refusing the comparison and comparing views; consuming the operands and
+`forget`-ing them. (spec#106.)
+
 **Normative — more than one `@convert` accepting the operand is an ambiguity error, whatever the
 sources (Type System §4.6; TYP-19).**  A `T(v)` site where more than one in-scope `@convert` to `T`
 accepts `typeof(v)` is ill-formed, and never falls through to the builtin lattice step; before, only
@@ -80,7 +91,7 @@ operations borrow the receiver. MEM-11's temporary is for non-owning values only
 `make_vec().len()` is a located error, and the explicit form is
 `v := make_vec(); n := v.len(); v.free()`. `Vec(String)` and `Vec(Vec(U))` now have an owning
 element, so STD-10's refusals apply to them. Open: `free` / `clear` / `truncate` over owning
-elements still held (spec#107); how `==` / `<` / `hash` take an owning operand (spec#106); how `for` applies
+elements still held (spec#107); how `for` applies
 `iter` to an owning operand (spec#115).
 Rejected: releasing or `forget`-ing the temporary at the end of the full expression; (derived) `Vec(T)`
 owning only for an owning `T`. (spec#73.)

@@ -30,7 +30,8 @@ and **deferred (additive) growth**.
   closures (FN-6), copy/move+linearity (MEM-2); a value-expression in a read-only `ptr(R)` receiver slot gets a
   caller-owned temporary to the end of the full expression, and a field, tuple component or array index of a
   value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11); an owning value-expression there gets no temporary and the call is
-  ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; open: spec#106, #107, #115). Joint detailing is complete.
+  ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; open: spec#107, #115); the comparison relations borrow an
+  owning operand (MEM-13; open: spec#126, #128). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18, TYP-19
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
@@ -104,7 +105,7 @@ and **deferred (additive) growth**.
   hole renders integers, `bool`, `char`, `str` and floats (shortest round-trip), any other type a comptime error
   (STD-7); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
   (`scoped` `at_ptr`/`at_mut`), never read by value or overwritten (STD-10; `Vec(T)` and `String` themselves are `@owning`, released by `free`, MEM-12; the rest of the owning
-  case is spec#96, #106, #107, #115,
+  case is spec#96, #107, #115, #126, #128,
   a store through a pointer to an owning place spec#97).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),

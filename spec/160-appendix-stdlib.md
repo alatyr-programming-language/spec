@@ -164,6 +164,28 @@ shape** — what satisfies `Eq` / `Ord` / `Hash` **for a given type `T`**:
 - **`Hash`** — `hash(in self : T) -> u64`, **consistent with `Eq`** (equal values hash
   equally); default folds the field hashes. A `HashMap` key satisfies `Eq` **and** `Hash`.
 
+**An owning operand is borrowed (MEM-13).** For an **owning** `T` (Memory §5.9) the comparison
+relations **borrow** their operands. At a comparison site over `T` — `==` `!=` `<` `<=` `>` `>=`
+over two `T` operands or `hash` over one, as an operator or as the call `eq(a, b)` / `lt(a, b)` /
+`hash(a)` — each operand is passed **by its address**, as a method receiver's auto-ref is (Type
+System §4.5). The operands are read, not consumed, and the caller still owns both afterwards.
+Each operand is therefore a place: an owning value-expression there is **ill-formed**, as at a
+read-only receiver slot (Memory §1.6), and is bound first (`t := make_string()`, then `t == s`).
+This adds no second generic definition (FN-7): the structural default stays the one generic
+`eq` / `lt` / `hash`, and at a site over an owning `T` it is instantiated at `T`, the operands'
+type. That instance takes each operand as a `ptr(T)` and reads through it: the struct arm
+projects each field through the address (auto-deref, Type System §4.5), the array arm indexes
+through it (auto-deref, Type System §6.4), and the owning-container arm reads the container
+through it as a receiver; an owning field or element it compares is a comparison site in turn, so
+it is borrowed too. The enum arm over a borrowed operand (an enum owning through a payload, such
+as `Option(String)`) is open, spec#128. The `ptr(T) × ptr(T)`
+pair the borrow produces is **not a pointer comparison** under the pair rule (Memory §4.5,
+MEM-10): the site's pair is its operands as written, `T × T`, and the addresses are only how they
+reach the relation, so the `Pointer` arm is not reached. A pair of pointers the author writes
+(`ptr(s) == ptr(t)`) is a pointer comparison and compares addresses. How a concrete `eq` / `lt` /
+`hash` is declared over an owning type, as an override or a heterogeneous pair, is open,
+spec#126.
+
 **The view arm (STD-4).** A slice `[T]` (§3.5, the library pair `{ ptr, len }`) and `str`
 (§3.6; `typeinfo` kind `Str{}`, Comptime §5.1) are not walked by the `typeinfo` shape (nor
 are the owning containers below, STD-6): their default `eq` / `lt` / `hash` are the **content** rules of §3.5 and
@@ -178,9 +200,8 @@ pointer and a length is not a view and keeps the field walk.
 `Pointer` leaf and compare **buffer addresses** — the trap the view arm exists to avoid. Their default
 `eq` / `lt` / `hash` are therefore the **content** rules too: a `Vec(T)` compares as the `[T]` of its
 `len` elements (§3.5), a `String` as the `str` of its bytes (§3.6) — capacity, allocator and buffer
-address take no part. (Both are `@owning`, §6; how a relation's `in` operands take an owning value
-is open as spec#106.) Like the view arm, this one is keyed on the prelude's own `Vec` and `String`
-types, wherever the walk meets them (as an operand, or as a field, element or component); it is an
+address take no part. (Both are `@owning`, §6, so their operands are borrowed, above.) Like the
+view arm, this one is keyed on the prelude's own `Vec` and `String` types, wherever the walk meets them (as an operand, or as a field, element or component); it is an
 arm of the structural default rather than a per-type override, because FN-7 admits one generic
 definition per name and `Vec(T)` is generic. The arm exists exactly when the alloc tier does:
 under `no_alloc` there is no `Vec`, `String` or `HashMap` for it to meet, and the base-tier signature of
@@ -1053,8 +1074,7 @@ visible (I2).
   `self[a..b]` → `[T]`, whose elements are places reached through a view. `Vec(T)` is itself
   owning for every `T` and released by `free` (below; MEM-12). What else an owning `T` needs
   is open: what `free`, `clear` and `truncate` do with owning elements still held, spec#107;
-  `==` / `<` / `hash` over an owning operand (STD-6's arm calls `T`'s relation, whose operands
-  are `in`), spec#106; `push`'s failure path (the moved-in element on `Err`) and `get` /
+  `push`'s failure path (the moved-in element on `Err`) and `get` /
   `iter`, spec#96.
 - **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`), **`@owning`**
   (below; MEM-12). v1 operations: `new` / `with_capacity(n)` / `from_str(s)` / the release
@@ -1098,8 +1118,8 @@ buffers, capacities or allocators. The cost is **O(n)** (in the shorter length f
 `<`, in its own length for `hash`), stated here because the operator hides it. A caller who wants identity compares the **data pointers**
 explicitly — `v[0..v.len()].ptr` for a `Vec`, `bytes(s.as_str()).ptr` for a `String` (and the
 lengths) — an ordinary pointer comparison, legal in checked code (Memory §4.5). Both containers
-are owning (above), and an owning operand passed to a relation's `in` parameter would be moved;
-how `==` / `<` / `hash` take an owning operand is open as spec#106.
+are owning (above), so `==` / `<` / `hash` borrow them and the element relations borrow an owning
+element (§2.6, MEM-13): `s == t` reads both strings and consumes neither.
 
 **Equality over `HashMap(K, V)` is by content; ordering and hashing are refused** (STD-9; §2.6).
 `a == b` holds when the lengths are equal and every key of `a` maps in `b` to a value equal to
@@ -1167,7 +1187,8 @@ A conforming implementation MUST:
    the std byte streams writers (§2.7), **derive `eq`/`lt`/`hash` structurally** over
    `typeinfo`, overridable per type, with a slice or `str` compared by content (§2.6's
    view arm, §3.5/§3.6) and a `Vec(T)` or `String` likewise (§2.6, §6;
-   STD-6), a `HashMap` by its entries for `==` / `!=` with `<` and `hash` over it rejected at
+   STD-6), an owning operand borrowed by its address and never consumed, and an owning
+   value-expression operand rejected (§2.6; MEM-13), a `HashMap` by its entries for `==` / `!=` with `<` and `hash` over it rejected at
    the site (STD-9), and provide the v1 `Ord` consumers `min` / `max` /
    `clamp` and in-place slice `sort` (§2.6/§3.5);
 2. provide the **base-tier types** of §3 — `bool`, `char`, `Option(T)`, `Result(T, E)`,

@@ -97,7 +97,10 @@ overload the **per-type override** — `eq(K, …)` / `a == b` on a `K` with a c
 the override, on any other type the structural default. (Among the **concrete** overloads the
 exactly-one-match rule still holds; the generic never causes ambiguity — it is consulted only
 on concrete-miss. This is the sole mixing allowed: a name still may not bind two functions of
-the *same* concrete signature, nor two generic definitions.)
+the *same* concrete signature, nor two generic definitions.) For an **owning** `T` the comparison
+relations borrow their operands (Stdlib appendix §2.6, MEM-13): the one generic default is
+instantiated at `T`, the operands' type, and the instance takes each operand by its address —
+no second generic definition.
 
 **The one site this permission does not license.** A heterogeneous binding is admissible for **every**
 pair of types, pointer↔integer included: the declaration `eq(in a : ptr(T), in b : usize)` is legal, and
