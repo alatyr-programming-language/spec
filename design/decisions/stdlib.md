@@ -451,8 +451,9 @@ existing `scoped` rule already bounds (I3, I11). Nothing new is added to the lan
 operations are ordinary prelude functions over `ptr`/`ptr(mut)` slots, `in` moves and a
 `scoped` result. Like `pop`, their bodies move elements within the vector's own storage, which
 is the prelude's implementation, not a user-level move through a pointer (that is spec#97). For a copyable `T` every existing form keeps its meaning and the four operations
-are added: confining them to an owning `T` would need a comptime ownership predicate, which v1
-does not have (Comptime §5.1) and which would be new surface (PRIN-1). So OP-8's deferred
+are added: confining them to an owning `T` would have needed a comptime ownership predicate,
+which v1 did not have when this was decided. STD-12 has since added one (`typeinfo(T).owning`,
+Comptime §5.1); it does not change this entry, and the four stay defined for every `T`. So OP-8's deferred
 place-returning access now exists for every `T`, as the `scoped` `at_mut`.
 
 **Rejected.**
@@ -503,3 +504,40 @@ appendix §5.2.1).
 operation in the closed v1 surface, which the `pop` loop already expresses. *`free` / `clear` /
 `truncate` over an owning `T` are ill-formed; drain and `forget` the empty vector* — `forget` as the
 normal release leaks the buffer itself, so it would need a second, buffer-only release.
+
+**Refined (STD-12, owner decision 2026-11-09).** Whether `T` is owning is decided at comptime by
+`typeinfo(T).owning`, which guards the check, so `Vec(u8).free()` carries none (I2).
+
+---
+
+### STD-12. `typeinfo(T)` reports whether `T` is owning; STD-11's check is guarded by it at comptime — spec#133
+*provenance: extends CT-6 (`typeinfo(T)`'s member surface) with Memory §5.9's classification (MEM-2);
+  refines STD-11 (its check made per instantiation) · spec: Comptime §5.1, §11; Stdlib appendix §3.1,
+  §3.2, §4.1, §6, §8 · owner decision 2026-11-09, spec#133*
+
+**Question.** STD-11 makes `free` / `clear` / `truncate` over a `Vec` of an owning `T` trap while an
+element is held, and lets them work unconditionally for a non-owning `T`. Nothing said how the prelude's
+`Vec(T)` body tells the two apart: `typeinfo(T)` carried no ownership fact, and v1 had no other comptime
+predicate for it (STD-10 noted its absence), so `Vec(u8).free()` could carry a run-time length check
+that serves no purpose (I2).
+
+**Decision (owner, 2026-11-09; option 1 of spec#133).** **`typeinfo(T)` exposes whether `T` is owning,
+as a comptime `bool` member, `true` for an `@owning` type and for a type owning by contagion (Memory
+§5.9). STD-11's emptiness check is guarded by it at comptime, so a `Vec` of a non-owning `T` carries
+no run-time check.**
+
+**Derived (not the owner's wording).** The member is named **`owning`**, the adjective Memory §5.9 uses,
+as `Field` and `Pointer` name theirs `mutable`. `TypeInfo` is an enum whose member surface is its cases'
+fields (Comptime §5.1), so `owning : bool` is a field of **every** case — `typeinfo(T).owning` then
+reads for any `T`, a scalar, pointer, `str` or (well-formed) raw union always giving `false`. Its value is
+the classification the linearity checker already makes, by reference to Memory §5.9; this entry adds
+no rule for which types are owning. The guard is `comptime if typeinfo(T).owning` in the three bodies.
+
+**Why.** The ownership fact is a comptime fact of the type, already computed structurally (FND-3);
+exposing it through the one reify (CT-6) adds no query builtin, and selecting the check at comptime keeps
+the non-owning instance free of it (I2). Any collection an author writes can make the same choice the
+prelude's `Vec` makes, so the prelude's `Vec` is not a special case.
+
+**Rejected.** *A compiler-private decision inside the prelude* (as for spec#55, STD-8, where the
+compiler-provided prelude supplies the owning-container arm) — it would make `Vec` a special case an author's own collection
+cannot express.

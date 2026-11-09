@@ -410,7 +410,7 @@ The two-valued type (`false` = 0, `true` = 1; Type System §7) — a prelude **b
 over `bits8` (`bool := brand(bits8)`, TYP-2/TYP-4; the kernel carries no built-in two-valued
 type). Result of comparisons; operand of `and`/`or`/`not` (Control Flow §8). Satisfies
 `Truthy`. Does **not** arithmetically interconvert with integers implicitly. As a brand that
-marks a scalar interpretation, its `typeinfo` reifies as `Scalar{bits = 8, kind = Bool}` (§4.1,
+marks a scalar interpretation, its `typeinfo` reifies as `Scalar{bits = 8, kind = Bool, owning = false}` (§4.1,
 not a `Brand`), on which a structural derive dispatches by `kind` (e.g. `fmt` renders `true`/`false`).
 
 `bool` is **outside the numeric conversion lattice** (Type System §4.2), so no
@@ -438,7 +438,7 @@ the kernel carries no built-in code-point type). Conversions to/from `u32` are e
 constructor** (`@convert`, §4.6) whose code-point validity check (≤ 0x10FFFF, not a
 surrogate; I11) is library code, dropped under `unchecked` per the verification mode
 (CT-11), that fails through `trap()` like the built-in narrowing guard (§4.1)). `char` is **not** a byte. As a brand that marks a scalar interpretation, its `typeinfo`
-reifies as `Scalar{bits = 32, kind = Char}` (§4.1, not a `Brand`), on which a structural derive
+reifies as `Scalar{bits = 32, kind = Char, owning = false}` (§4.1, not a `Brand`), on which a structural derive
 dispatches by `kind` (e.g. `fmt` renders it UTF-8).
 
 Classification predicates (curated v1 — the **ASCII** tests a lexer/parser needs; each
@@ -612,15 +612,15 @@ enum (no RTTI is emitted; Comptime §5.1/§5.2):
 
 ```alatyr
 TypeInfo := enum {
-  Scalar  ( struct { bits : usize, kind : ScalarKind } )     # width + numeric interpretation
-  Struct  ( struct { fields : [Field] } )
-  Enum    ( struct { variants : [Variant] } )
-  Union   ( struct { variants : [Variant] } )                # raw members use Variant.payload; no active-member RTTI/tag (TYP-11)
-  Array   ( struct { elem : type, n : usize } )
-  Pointer ( struct { pointee : type, mutable : bool } )      # ptr(T) / ptr(mut T)
-  Function( struct { params : [Param], results : [Param] } ) # by direction (Functions §3)
-  Brand   ( struct { underlying : type, marker : str } )     # nominal brand (Type System §5.4); marker = the brand's name
-  Str     ( struct { } )                                     # the `str` validated-UTF-8 byte view (§3.6) — an opaque base type, no introspectable structure
+  Scalar  ( struct { bits : usize, kind : ScalarKind, owning : bool } )     # width + numeric interpretation
+  Struct  ( struct { fields : [Field], owning : bool } )
+  Enum    ( struct { variants : [Variant], owning : bool } )
+  Union   ( struct { variants : [Variant], owning : bool } )                # raw members use Variant.payload; no active-member RTTI/tag (TYP-11)
+  Array   ( struct { elem : type, n : usize, owning : bool } )
+  Pointer ( struct { pointee : type, mutable : bool, owning : bool } )      # ptr(T) / ptr(mut T)
+  Function( struct { params : [Param], results : [Param], owning : bool } ) # by direction (Functions §3)
+  Brand   ( struct { underlying : type, marker : str, owning : bool } )     # nominal brand (Type System §5.4); marker = the brand's name
+  Str     ( struct { owning : bool } )                                      # the `str` validated-UTF-8 byte view (§3.6) — an opaque base type, no introspectable structure
 }
 Field   := struct { name : str, type : type, offset : usize, mutable : bool }
 ScalarKind := enum { Bits, Uint, Int, Float, Bool, Char }   # a scalar leaf's numeric interpretation
@@ -639,9 +639,19 @@ the prelude `uN`/`iN`/`fN`/`usize`/`isize`/`bool`/`char` — reifies as `Scalar{
 per-brand knowledge beyond that kind. A **user** nominal brand (`Meters := brand(u64)`, TYP-4)
 reifies as `Brand{underlying, marker}`, `marker` the brand's name as a **`str`** — on which a
 library consumer dispatches (`m == "Meters"`) or recurses on `underlying`. (So `typeinfo(bool)`
-is `Scalar{bits = 8, kind = Bool}`, not a `Brand`; `typeinfo(Meters)` is `Brand{underlying = u64,
-marker = "Meters"}`.) `marker` is a `str`, never a `type` — a derive matches it against a string
+is `Scalar{bits = 8, kind = Bool, owning = false}`, not a `Brand`; `typeinfo(Meters)` is
+`Brand{underlying = u64, marker = "Meters", owning = false}`.) `marker` is a `str`, never a `type` — a derive matches it against a string
 literal.
+
+**Whether a type is owning (STD-12).** Every case carries `owning : bool`, `true` exactly when `T` is
+owning by Memory §5.9 — declared `@owning`, or owning by contagion — and `false` otherwise. The
+compiler fills it from the classification its linearity checker makes, per instantiation, so
+`typeinfo(T).owning` is a comptime `bool` and `comptime if typeinfo(T).owning { … }` emits nothing
+for the arm not taken (I2). It is the predicate a collection's own code reads to treat an owning
+element differently: the prelude's `Vec(T)` guards its release check with it (§6), and an author's
+collection can do the same. (With §6's `Fd := @owning struct { fd : i32 }`, `typeinfo(Fd).owning`
+and `typeinfo(Vec(u8)).owning` are `true`; `typeinfo(u8).owning` and `typeinfo(ptr(Fd)).owning` are
+`false`, a pointer never being owning.)
 
 A `TypeInfo` value is inspected by ordinary comptime code (`match`, iteration); size and
 alignment are derivable from it (and also via `T.size()`/`T.align()`). It is fully erased
@@ -1084,8 +1094,11 @@ visible (I2).
   **every** verification mode: `unchecked` does not drop this check, as it does not drop
   `@alloc` exhaustion (§5.2.1). With none held, `free` returns the buffer
   and `clear` / `truncate(n)` leave the vector as it is. For a non-owning `T` the three work
-  unconditionally. So a `Vec(Fd)` is released by popping each element and consuming it, then
-  calling `v.free()` on the empty vector. What else an owning `T` needs is open:
+  unconditionally. Whether `T` is owning is decided at comptime, per instantiation, by
+  `typeinfo(T).owning` (§4.1; STD-12): the three guard the check with `comptime if
+  typeinfo(T).owning`, so for a non-owning `T` — `Vec(u8).free()` — no check is emitted (I2). So a
+  `Vec(Fd)` is released by popping each element and consuming it, then calling `v.free()` on the
+  empty vector. What else an owning `T` needs is open:
   `push`'s failure path (the moved-in element on `Err`) and `get` /
   `iter`, spec#96.
 - **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`), **`@owning`**
@@ -1231,7 +1244,8 @@ A conforming implementation MUST:
    element exchanges and scoped element references provided (§6; STD-10), `Vec(T)` and `String`
    `@owning` and released by `free` (§6; MEM-12), `free` / `clear` / `truncate` over a `Vec` of an
    owning `T` trapping in every verification mode while an element they would discard is held
-   (§6; STD-11), and the **std** surface
+   (§6; STD-11) and that check guarded by `typeinfo(T).owning`, absent for a non-owning `T` (§4.1, §6;
+   STD-12), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std
    operations returning `Result` (no hidden failure), and `format` / `print` per §2.7 — the
    comptime-checked template, the v1 hole set (any other type a comptime error), and the
