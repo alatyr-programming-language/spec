@@ -196,9 +196,29 @@ declares none still fails to compile.
 no way to say the drop is intended. *Discard the final expression of a body with no result* — brings
 back the silent result §3.3 forbids.
 
-**Left open.** The value of a deferred expression (`defer print(…)`): spec#113. The lone `_` in other
-binding positions — `for _ in`, a projection target, a parameter, `_ : T = e`, module scope — is refused
-for now: spec#114. A final `if`/`match` whose arms are partly value-less: spec#119.
+**Left open.** The lone `_` in other binding positions — `for _ in`, a projection target, a parameter, `_ : T = e`, module scope — is refused
+for now: spec#114. A final `if`/`match` whose arms are partly value-less: spec#119. The value of a
+deferred expression (`defer print(…)`, spec#113) is settled by SYN-10.
+
+### SYN-10. A deferred action with a value is ill-formed — spec#113
+*provenance: follows SYN-9 (the explicit discard) and SYN-6 / Functions §3.3 (no silent result) · spec:
+  Memory §5.8; Grammar §3.7; Control Flow §9.3 · owner decision 2026-11-09, spec#113*
+
+**Question.** `defer-stmt ::= "defer" ( expr | block )`, and Memory §5.8 said nothing of the value of
+`defer expr` or `defer { … expr }` when `expr` has one — `defer print("bye\n")`, with `print` returning a
+`Result` since STD-7.
+
+**Decision (owner, 2026-11-09).** **A deferred expression that has a value is ill-formed; write
+`defer { _ := print(…) }` (SYN-9).** Same rule as a procedure body ending in a value (Functions §3.3).
+
+**Derived (not the owner's wording).** A block is an expression whose value is its final element
+(Grammar §3.1), so `defer { …; print(…) }` is the same case; a block ending in a discard has no value.
+
+**Why.** Nothing receives the value, so dropping it is written (I3); a forgotten `Result` in cleanup does
+not go unseen, and the rule is the one procedure bodies already follow.
+
+**Rejected.** *A deferred expression is evaluated for effect and its value discarded* — a silent discard,
+the one place besides a non-final statement where a value disappears unseen.
 
 ---
 

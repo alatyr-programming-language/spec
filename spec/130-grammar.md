@@ -573,7 +573,7 @@ break-stmt    ::= "break" [ struct-label ] [ expr ]     (* struct-label resolved
 continue-stmt ::= "continue" [ struct-label ]           (* struct-label must be a loop (CF §7.1) *)
 struct-label  ::= ident                                 (* must resolve to an in-scope structured label *)
 
-defer-stmt    ::= "defer" ( expr | block )              (* LIFO; runs on all normal exits (Memory §5.8) *)
+defer-stmt    ::= "defer" ( expr | block )              (* LIFO; runs on all normal exits; an action with a value is ill-formed (Memory §5.8; SYN-10) *)
 unchecked-region ::= "unchecked" ( expr | block )       (* verification mode; sibling of comptime{} (CG-6/CG-7) *)
 alloc-with-region ::= "alloc" "::" "with" "(" expr ")" block  (* ambient-allocator scope: the place arg is the ambient allocator within `block` (MEM-5; Memory §5.2.1) *)
 ```

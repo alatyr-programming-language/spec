@@ -866,7 +866,11 @@ cleanup action (an expression or block):
   paths;
 - they do **not** run on abort, trap, or panic — the process terminates and there
   is no stack unwinding (unwinding would be hidden control flow, I3);
-- they MUST NOT change the computed result of the function.
+- they MUST NOT change the computed result of the function;
+- a deferred action **that has a value** is **ill-formed** — an expression with a value, or a
+  block whose final element is one (Grammar §3.1): nothing receives the value, so dropping it is
+  written, `defer { _ := print("bye\n") }` (SYN-9), the rule of a procedure body that ends in a
+  value (Functions §3.3; SYN-10).
 
 #### 5.9 Copy, move, and linearity
 
@@ -1048,7 +1052,7 @@ pointer-type  ::= "ptr" "(" [ "mut" ] type-expr ")"   (* ptr(T) | ptr(mut T) *)
 (* absence is the ordinary type Option(ptr(T)) — no null literal (§4.2) *)
 
 (* cleanup and linearity (§5.8) — a bare keyword statement *)
-defer-stmt    ::= "defer" ( expr | block )            (* LIFO; runs on normal exits *)
+defer-stmt    ::= "defer" ( expr | block )            (* LIFO; runs on normal exits; an action with a value is ill-formed (§5.8; SYN-10) *)
 ```
 
 The **address operations** (§4.3) and `forget` (§5.9) add **no grammar productions**:

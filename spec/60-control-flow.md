@@ -401,7 +401,8 @@ native.
 `defer` actions run **LIFO** on every **normal** exit of their scope — fall-through,
 `break`, `continue`, `return`, `?`-early-exit — and so discharge linear obligations
 on all of them (Memory §5.8). They do **not** run on abort / trap / panic (the
-process terminates; no unwinding).
+process terminates; no unwinding). A deferred action that has a value is ill-formed; discard the value
+explicitly: `defer { _ := print("bye\n") }` (Memory §5.8; SYN-10).
 
 ---
 
