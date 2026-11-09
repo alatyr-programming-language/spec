@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `free` / `clear` / `truncate` over a `Vec` of an owning `T` require the elements gone,
+else trap (Stdlib appendix §6, §8; STD-11).**  `free` returned the buffer and said nothing of owning
+elements still held. For an owning `T`, `free` and `clear` now require `len() == 0` and `truncate(n)`
+requires `len() <= n`; otherwise each fails through `trap()` in every verification mode. The caller
+drains the vector with `pop`, consuming each element. For a non-owning `T` the three are unchanged.
+Rejected: a `free_with` taking a per-element release; refusing the three and `forget`-ing the drained
+vector, which leaks the buffer. (spec#107.)
+
 **Normative — `for x in e` applies `iter` to `e` as a receiver, with auto-ref (Control Flow §6;
 Type System §4.5; Stdlib appendix §2.4; CF-11).**  No passage said how `for` applies `iter` to its
 operand, and once `Vec(T)` became owning that decided whether a loop over a `Vec` compiles. The
@@ -98,8 +106,7 @@ released. Each is now `@owning` (`Vec(T)` for every `T`) and gains `free(in self
 operations borrow the receiver. MEM-11's temporary is for non-owning values only:
 `make_vec().len()` is a located error, and the explicit form is
 `v := make_vec(); n := v.len(); v.free()`. `Vec(String)` and `Vec(Vec(U))` now have an owning
-element, so STD-10's refusals apply to them. Open: `free` / `clear` / `truncate` over owning
-elements still held (spec#107).
+element, so STD-10's refusals apply to them.
 Rejected: releasing or `forget`-ing the temporary at the end of the full expression; (derived) `Vec(T)`
 owning only for an owning `T`. (spec#73.)
 

@@ -434,8 +434,9 @@ surface (`at`'s check; the `ptr`/`ptr(mut)` pair) and are not part of the owner'
 **Not decided here** (each changes well-formedness or meaning, so each is filed for the owner):
 whether `Vec(T)` of an owning `T` is itself owning and how it is released (decided afterwards by
 MEM-12: `Vec(T)` is `@owning` for every `T`, released by `free`; what `free`, `clear` and
-`truncate` do with owning elements still held is spec#107), `push`'s failure path
-for a moved-in element, and the owning case of `get`/`iter`/`clear`/`truncate` and of
+`truncate` do with owning elements still held was spec#107, decided by STD-11: they trap unless the
+elements are drained), `push`'s failure path
+for a moved-in element, and the owning case of `get`/`iter` (`clear`/`truncate` decided by STD-11) and of
 `==`/`<`/`hash` (STD-6's arm calls `T`'s relation, whose operands are `in`) — spec#96, the
 comparison decided by MEM-13 (spec#106: the relations borrow an owning operand); a
 whole-value move out of, or store over, an owning place reached through a pointer or a view
@@ -471,3 +472,34 @@ across a reallocation without a new rule; OP-3's index operator is unchanged and
 `at`/`index_set`. `String` was not declared `@owning` when this was decided, so `Vec(String)` had
 a copyable element; MEM-12 has since made `String` and `Vec(T)` `@owning`, so `Vec(String)` and
 `Vec(Vec(U))` are vectors of an owning element under this decision.
+
+---
+
+### STD-11. `free` / `clear` / `truncate` over a `Vec` of an owning `T` require the elements gone, else trap — spec#107
+*provenance: completes MEM-12 (`Vec(T)` owning for every `T`, released by `free`) and STD-10 (an owning
+  element) on Memory §5.9's linearity; refines CG-13 (a third every-mode `trap()`) · spec: Stdlib
+  appendix §3, §6, §8; Stdlib §4.1 · owner decision 2026-11-09,
+  spec#107*
+
+**Question.** `free(in self : Vec(T))` returns the buffer. For an owning `T` (`Vec(String)`,
+`Vec(Fd)`), nothing said what happens to elements still in the vector: releasing them needs a release
+function per element type, which the spec does not have (a hidden destructor, I3); dropping them is a
+leak the linearity checker cannot see, since the length is a run-time fact. `clear` and `truncate(n)`
+raise the same question.
+
+**Decision (owner, 2026-11-09).** **For an owning `T`, `free`, `clear` and `truncate` on a `Vec(T)`
+require the affected elements to be gone (drained with `pop`, each consumed explicitly); otherwise they
+fail through `trap()` in every verification mode. For a non-owning `T` they work unconditionally.**
+
+**Derived (not the owner's wording).** The affected elements are all of them for `free` and `clear`
+and those past `n` for `truncate(n)`, so the conditions are `len() != 0` and `len() > n`. "Every
+verification mode" means `unchecked` does not drop the check, as for `@alloc` exhaustion (Stdlib
+appendix §5.2.1).
+
+**Why.** Every element's release is written in the source (I3), nothing new is added to the surface
+(PRIN-1), and the trap fails at the operation rather than leaking silently (I11).
+
+**Rejected.** *`free` takes the per-element release* (`free_with(in self, release : fn(in T))`) — a new
+operation in the closed v1 surface, which the `pop` loop already expresses. *`free` / `clear` /
+`truncate` over an owning `T` are ill-formed; drain and `forget` the empty vector* — `forget` as the
+normal release leaks the buffer itself, so it would need a second, buffer-only release.
