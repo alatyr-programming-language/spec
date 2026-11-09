@@ -49,6 +49,12 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a deferred action with a value is ill-formed (Memory §5.8; Grammar §3.7; Control Flow
+§9.3; SYN-10).**  Nothing said what happened to the value of `defer expr`, or of a deferred block ending
+in an expression. Such a `defer` is now ill-formed, as a procedure body ending in a value is: write
+`defer { _ := print("bye\n") }` (SYN-9). Rejected: evaluating the action for effect and dropping its
+value silently. (spec#113.)
+
 **Normative — `free` / `clear` / `truncate` over a `Vec` of an owning `T` require the elements gone,
 else trap (Stdlib appendix §6, §8; STD-11).**  `free` returned the buffer and said nothing of owning
 elements still held. For an owning `T`, `free` and `clear` now require `len() == 0` and `truncate(n)`
@@ -93,7 +99,7 @@ last element it leaves no value, so `main := fn() { _ := print("hello\n") }` is 
 `_` is no longer an identifier: it cannot be bound or read and may repeat in one scope; it remains the
 wildcard pattern. A final `if`/`else` or `match` whose non-diverging arms all yield a value takes
 the discard on it or in each arm. An owning value cannot be discarded. `for _ in`, `(q, _) :=`, a `_` parameter and a
-module-scope discard are refused (spec#114); the value of `defer print(…)` is open (spec#113), and
+module-scope discard are refused (spec#114); `defer print(…)` is ill-formed (SYN-10); open:
 a final `if`/`match` with partly value-less arms (spec#119).
 Rejected: an unused named binding as the only form; discarding a body's final expression implicitly.
 (spec#81.)
