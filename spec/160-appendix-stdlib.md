@@ -390,7 +390,9 @@ System §7), `char(n)`'s code-point check (§3.2), a container's own bounds chec
 **mode-polymorphic** library functions (Type System §4.5 / CT-11): the check sits in
 `comptime if verify.checked { … }`, comptime-present in a checked context and
 comptime-absent inside `unchecked`. This is a **convention of the prelude**, relied on by
-users: a checked operation from the prelude responds to `unchecked`. A library check that
+users: a checked operation from the prelude responds to `unchecked` (the every-mode traps — `@alloc`
+exhaustion, §5.2.1, and the release of a `Vec` of an owning `T`, §6 — are not checked operations in
+this sense). A library check that
 mirrors a member of the built-in family fails through **`trap()`** (§4.1), never `panic`:
 a library-defined numeric type's overflow or division/remainder by zero, `char(n)`'s
 conversion check, and a container's bounds check — `Vec` indexing (§6), the arena's `get`
@@ -1073,8 +1075,17 @@ visible (I2).
   `at_ptr` / `at_mut` is the general question of an owning place reached through a pointer,
   open as spec#97, and so is a whole-element move or store through the sub-slice
   `self[a..b]` → `[T]`, whose elements are places reached through a view. `Vec(T)` is itself
-  owning for every `T` and released by `free` (below; MEM-12). What else an owning `T` needs
-  is open: what `free`, `clear` and `truncate` do with owning elements still held, spec#107;
+  owning for every `T` and released by `free` (below; MEM-12).
+
+  **Releasing a `Vec` of an owning `T` (STD-11).** For an owning `T`, `free`, `clear` and
+  `truncate(n)` require the elements they would discard to be **gone** already: the caller drains
+  them with `pop`, consuming each one explicitly. If any is still held — `len() != 0` for `free`
+  and `clear`, `len() > n` for `truncate(n)` — the operation fails through **`trap()`** (§4.1) in
+  **every** verification mode: `unchecked` does not drop this check, as it does not drop
+  `@alloc` exhaustion (§5.2.1). With none held, `free` returns the buffer
+  and `clear` / `truncate(n)` leave the vector as it is. For a non-owning `T` the three work
+  unconditionally. So a `Vec(Fd)` is released by popping each element and consuming it, then
+  calling `v.free()` on the empty vector. What else an owning `T` needs is open:
   `push`'s failure path (the moved-in element on `Err`) and `get` /
   `iter`, spec#96.
 - **`String`** — a growable UTF-8 buffer (the alloc-tier counterpart of `str`), **`@owning`**
@@ -1106,7 +1117,8 @@ that takes a receiver borrows it — by `ptr(Self)` for a read, `in out` or `ptr
 field is owning by contagion (Memory §5.9). A call on an owning **value-expression** at a
 read-only receiver slot gets no temporary and is **ill-formed** (Memory §1.6): `make_vec().len()`
 is written `v := make_vec(); n := v.len(); v.free()`. For a `Vec(T)` whose `T` is owning — now
-including `Vec(String)` and `Vec(Vec(U))` — the owning-element rules above (STD-10) apply.
+including `Vec(String)` and `Vec(Vec(U))` — the owning-element rules above (STD-10) apply, and
+`free` requires the vector drained first (STD-11).
 
 **Comparison over `Vec(T)` and `String` is by content** (STD-6; §2.6's arm for the owning
 containers). `a == b` over two `Vec(T)`s holds when their lengths are equal and their elements
@@ -1217,7 +1229,9 @@ A conforming implementation MUST:
    `no_alloc`), their bounds checks failing through `trap()` (§6), `Vec(T)` admitting an owning
    `T` with its by-value read, overwriting store and OP-7/OP-8 forms then ill-formed and its
    element exchanges and scoped element references provided (§6; STD-10), `Vec(T)` and `String`
-   `@owning` and released by `free` (§6; MEM-12), and the **std** surface
+   `@owning` and released by `free` (§6; MEM-12), `free` / `clear` / `truncate` over a `Vec` of an
+   owning `T` trapping in every verification mode while an element they would discard is held
+   (§6; STD-11), and the **std** surface
    of §7 only when imported (forbidden under `freestanding`), with all fallible std
    operations returning `Result` (no hidden failure), and `format` / `print` per §2.7 — the
    comptime-checked template, the v1 hole set (any other type a comptime error), and the

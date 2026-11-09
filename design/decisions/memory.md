@@ -460,7 +460,8 @@ A type with a `Vec` or `String` field is owning by contagion; neither may be the
 a `Vec(Vec(T))` is ill-formed by STD-10.
 
 **Left open.** Three questions block decisions already made and go to the owner: what `free`, `clear` and
-`truncate` do with owning elements still in the vector (spec#107); how `==` / `<` / `hash`, whose
+`truncate` do with owning elements still in the vector (spec#107, decided by STD-11: the elements must
+be drained first, else a trap); how `==` / `<` / `hash`, whose
 operands are `in`, take an owning operand — STD-6's comparison of two `String`s (spec#106, decided by
 MEM-13: they borrow it); and how
 `for x in v` applies `iter` to its operand, so whether `for` over a `Vec` borrows it (spec#115, decided

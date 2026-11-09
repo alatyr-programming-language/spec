@@ -60,7 +60,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   instruction (`ud2` / `brk #0` / `udf #0` / `ebreak`) is written directly (CG-12). A library check that mirrors the built-in family fails through
   it, never through `panic` — a library-defined numeric type's overflow or division by zero, and a library container's
   bounds check (`Vec` indexing, the arena's `get`), so `xs[10]` fails alike for an array and a
-  `Vec`; `clamp` with `lo > hi`; and, in every mode, an `@alloc` that cannot allocate. `panic` is the failure of
+  `Vec`; `clamp` with `lo > hi`; and, in every mode, an `@alloc` that cannot allocate, and `free` / `clear` /
+  `truncate` on a `Vec` of an owning `T` still holding an element they would discard (STD-11). `panic` is the failure of
   ordinary library logic (an explicit assertion, `unwrap` on `None`).
 
 - **Raw union / member payload / definitely active** (TYP-11) — a **raw union** is an

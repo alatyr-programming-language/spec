@@ -591,7 +591,10 @@ obtain storage (its `allocate` returning `OutOfMemory`, or any `AllocError`) is 
 **every** verification mode — `unchecked` cannot drop it, because there is no value to bind and
 no hardware behaviour to fall back to (I11). The recoverable path stays `allocate(…)?`
 (MEM-4). *Rejected:* `panic` for either — the failure would then depend on the target's
-`panic` behaviour (a hook, stderr + exit), two mechanisms for one class of failure.
+`panic` behaviour (a hook, stderr + exit), two mechanisms for one class of failure. STD-11 adds a
+second every-mode `trap()`, beside `@alloc`'s: `free` / `clear` / `truncate` on a `Vec` of an owning `T` while an element
+they would discard is still held (owner decision, spec#107) — a precondition that mirrors no family
+member, which therefore does not stay a `panic`.
 
 **Routed operators.** Operators are library functions (TYP-5), so an implementation may
 lower `a / b` into a prelude operator body. The guard attaches to the **operation**, not to

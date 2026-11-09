@@ -140,9 +140,11 @@ and fail through `trap()`, never through `panic`, so the failure is indistinguis
 the built-in guard's: `xs[10]` fails identically for an array and a `Vec`, in every
 context, and the check drops under `unchecked` as the built-in one does (CG-13). `panic`
 (§4.2) stays the failure of ordinary library logic — an explicit assertion, an `Option`
-`unwrap`, a precondition that mirrors no guard-family member. The failure of the language
+`unwrap`, a precondition that mirrors no guard-family member, except the `Vec` release check below. The failure of the language
 construct **`@alloc`** to obtain storage (`OutOfMemory`) also fails through `trap()` — in every
-verification mode, since there is no value to bind (Memory §2.4; Stdlib appendix §5.2.1).
+verification mode, since there is no value to bind (Memory §2.4; Stdlib appendix §5.2.1). So do
+`free`, `clear` and `truncate` on a `Vec` of an owning `T` while an element they would discard is
+still held, also in every verification mode (Stdlib appendix §6; STD-11).
 
 #### 4.2 Hosted versus freestanding
 
