@@ -416,8 +416,9 @@ that makes the v1 structural derives (`eq` / `lt` / `hash`, Stdlib appendix §2.
 **library code over `typeinfo`** (TYP-9). The body below is the struct arm; a slice or `str`
 is compared by content instead (Stdlib appendix §2.6's view arm, STD-4), and so is a `Vec(T)` or
 `String` (Stdlib appendix §2.6's arm for the owning containers, STD-6), and a `HashMap` for `==`,
-with `<` and `hash` over it refused (STD-9). Both `Vec(T)` and `String` are `@owning` (MEM-12), and
-how the body's `in` operands take an owning value is open, spec#106.
+with `<` and `hash` over it refused (STD-9). Both `Vec(T)` and `String` are `@owning` (MEM-12); for an
+owning `T` the instance takes each operand by its address and reads through it, so the projections
+below read the fields of a borrowed operand (Stdlib appendix §2.6, MEM-13).
 
 ```alatyr
 eq := fn(T : type, in a : T, in b : T) -> bool {

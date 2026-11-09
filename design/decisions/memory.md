@@ -326,7 +326,8 @@ adopted; an ordering rule leaves the hole open for every other type pair.
 **The rule.** A comparison site is well-formed when a **comparison relation is established for the
 operand pair** — the pair, not the name:
 - **Same-type pairs** are established by the structural derive, exactly as today (`eq(in a : T, in b :
-  T)`, `lt(in a : T, in b : T)`; Stdlib appendix §2.6).
+  T)`, `lt(in a : T, in b : T)`; Stdlib appendix §2.6). For an owning `T` the operands are borrowed, and
+  the `ptr(T) × ptr(T)` pair that produces is still the pair `T × T` (MEM-13).
 - **Heterogeneous pairs of the author's own types** are established when the author provides a concrete
   `eq(in a : A, in b : B) -> bool` (likewise `lt`). This is **structural**, in the same sense as every
   other protocol: satisfied by *providing the operation*, not by naming an interface (Stdlib appendix §2,
@@ -452,7 +453,7 @@ duplicated its buffer pointer, and with no release in its surface it could not b
 §8 item 1 follow; Type System §4.5, Functions §1.4 and Modules §2 qualify their restatements of the
 temporary as non-owning. Stdlib appendix §6 marks both containers `@owning`, adds `free` to both surfaces
 and states the receiver directions, §1 qualifies its `in self` convention, §2.4 states the owning
-iterable's `iter` receiver, §2.6 and Comptime §5.4 point to spec#106, and §8 item 5 gains the clause.
+iterable's `iter` receiver, §2.6 and Comptime §5.4 pointed to spec#106 (decided by MEM-13), and §8 item 5 gains the clause.
 A type with a `Vec` or `String` field is owning by contagion; neither may be the underlying type of a
 `@require` type (Type System §8.1) or a payload of a raw union (Memory §5.9). `Vec(String)` and
 `Vec(Vec(U))` now have an owning element, so STD-10's refusals apply to them: MEM-11's `vv[i].len()` over
@@ -460,7 +461,54 @@ a `Vec(Vec(T))` is ill-formed by STD-10.
 
 **Left open.** Three questions block decisions already made and go to the owner: what `free`, `clear` and
 `truncate` do with owning elements still in the vector (spec#107); how `==` / `<` / `hash`, whose
-operands are `in`, take an owning operand — STD-6's comparison of two `String`s (spec#106); and how
+operands are `in`, take an owning operand — STD-6's comparison of two `String`s (spec#106, decided by
+MEM-13: they borrow it); and how
 `for x in v` applies `iter` to its operand, so whether `for` over a `Vec` borrows it (spec#115). Latent:
 whether `HashMap(K, V)` is owning and how it is released (spec#108); views into a container's buffer
 across reallocation or `free` (spec#109).
+
+### MEM-13. The comparison relations borrow an owning operand — spec#106
+*provenance: completes MEM-12 (its comparison case) and STD-6 (content comparison over `Vec(T)` and
+  `String`) on MEM-2's `in` move; reads MEM-10's pair rule and FN-7's one generic definition · spec:
+  Stdlib appendix §2.6, §6, §8; Memory §4.5, §5.9; Functions §1.4; Comptime §5.4 · owner decision
+  2026-11-09, spec#106*
+
+**Question.** `==` / `<` / `hash` are backed by `eq(in a : T, in b : T)`, `lt(in a : T, in b : T)` and
+`hash(in self : T)` (Stdlib appendix §2.6), and an owning value passed `in` is moved (MEM-2). Once MEM-12
+made `String` and `Vec(T)` owning, `s == t` moved both strings into `eq`, whose body then had to release
+or `forget` them: a hidden release or a hidden leak (I3), and STD-6's content comparison could not be
+used as decided.
+
+**Decision (owner, 2026-11-09).** **For an owning `T`, the comparison relations `==` / `<` / `hash`
+borrow their operands: each is passed by its address, as a method receiver's auto-ref (Type System
+§4.5); the operands are read, not consumed.** The owner asked that the text state how this sits with
+FN-7's one generic definition, and that a `ptr(T) × ptr(T)` pair produced this way is not a pointer
+comparison under the pair rule (MEM-10).
+
+**Derived (not the owner's wording).** The relations cover every operator they back (`!=`, `<=`, `>`,
+`>=` too) and the spelled-out calls `eq(a, b)` / `lt(a, b)` / `hash(a)`, which MEM-10 already treats as
+the same comparison site. As at a read-only receiver slot, an owning value-expression operand is
+ill-formed (Memory §1.6; MEM-12): `make_string() == s` binds first. **FN-7:** no second generic
+definition is added; the one structural default is instantiated at `T`, the operands' type, and the
+instance takes each operand as `ptr(T)` and reads through it — the struct arm by projecting fields
+and the array arm by indexing (auto-deref), the owning-container arm as a receiver; an owning field or element it compares is a
+comparison site in turn and is borrowed too.
+**Pair rule:** the site's pair is its operands as written, `T × T`; the addresses are how they reach the
+relation, so the `Pointer` arm is not reached. A pointer pair the author writes is a pointer comparison.
+
+**Why.** An operation that only reads takes its operand by reference — the same rule a method receiver
+already follows (Memory §5.9). STD-6 then works as decided: `s == t` reads both strings, and nothing is
+released or leaked.
+
+**Rejected.**
+- *Comparison over an owning operand is ill-formed; compare the views* (`s.as_str() == t.as_str()`) —
+  partly reverses STD-6, which rejected that ceremony, and over a `Vec` of owning elements the slice
+  comparison meets the same question per element.
+- *The comparison consumes its operands and the derived relation `forget`s them* — a silent leak per
+  comparison, and the operands become unusable; nobody writes `s == t` meaning that.
+
+**Left open.** How a concrete `eq` / `lt` / `hash` is declared over an owning type — an override, or a
+heterogeneous pair — and which sites select it, since a `ptr(K)` slot would also match a written pointer
+pair under FN-7: spec#126, blocking for that case only. The structural derive's enum arm over a borrowed
+operand — an enum owning through a payload (`Option(String) == Option(String)`), whose `T.(v)(p)` pattern would move
+the payload out of a place behind a pointer (spec#97): spec#128, blocking for that case only.

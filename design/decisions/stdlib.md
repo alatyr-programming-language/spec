@@ -283,7 +283,7 @@ identity spelling, §8 item 1 the conformance clause; Comptime §5.4's note and 
 `HashMap(K, V)`, the third owning container of §6, is not covered by this decision; its comparison
 was filed as spec#50 and is decided by STD-9. MEM-12 later made `Vec(T)` and `String` `@owning`;
 since `eq` / `lt` / `hash` take their operands `in`, which moves an owning value, how a comparison
-takes an owning operand is spec#106.
+takes an owning operand was spec#106, decided by MEM-13: the relations borrow an owning operand.
 
 ---
 
@@ -437,7 +437,7 @@ MEM-12: `Vec(T)` is `@owning` for every `T`, released by `free`; what `free`, `c
 `truncate` do with owning elements still held is spec#107), `push`'s failure path
 for a moved-in element, and the owning case of `get`/`iter`/`clear`/`truncate` and of
 `==`/`<`/`hash` (STD-6's arm calls `T`'s relation, whose operands are `in`) — spec#96, the
-comparison now spec#106; a
+comparison decided by MEM-13 (spec#106: the relations borrow an owning operand); a
 whole-value move out of, or store over, an owning place reached through a pointer or a view
 (`deref(v.at_mut(i)) = x`, an element of the sub-slice `v[a..b]`) — spec#97.
 
