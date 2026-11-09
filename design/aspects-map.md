@@ -30,7 +30,7 @@ and **deferred (additive) growth**.
   closures (FN-6), copy/move+linearity (MEM-2); a value-expression in a read-only `ptr(R)` receiver slot gets a
   caller-owned temporary to the end of the full expression, and a field, tuple component or array index of a
   value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11); an owning value-expression there gets no temporary and the call is
-  ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; open: spec#107, #115); the comparison relations borrow an
+  ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; open: spec#107; `for x in v` borrows `v`, CF-11); the comparison relations borrow an
   owning operand (MEM-13; open: spec#126, #128). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18, TYP-19
   (`bitsN` core + interpretations u/i/f,
@@ -59,7 +59,8 @@ and **deferred (additive) growth**.
   a non-literal argument in a comptime-variadic's template place — its first fixed `str` parameter — is a valid,
   untemplated call, FN-13/STD-5).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
-  break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8.
+  break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8; `for x in e`
+  applies `iter` to `e` as a receiver with auto-ref, so it borrows an owning `e` (CF-11).
 - `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
   (down-tree privacy), import/reexport = declaration `name := path` (`use` removed, MOD-4), dep local namespace names (MOD-14),
   no duplicates (MOD-8/MOD-4). FFI/linking manifest model specified: per-library **link mode**
@@ -105,7 +106,7 @@ and **deferred (additive) growth**.
   hole renders integers, `bool`, `char`, `str` and floats (shortest round-trip), any other type a comptime error
   (STD-7); `Vec(T)` admits an owning `T`, whose element is exchanged (`replace`/`swap`) or lent
   (`scoped` `at_ptr`/`at_mut`), never read by value or overwritten (STD-10; `Vec(T)` and `String` themselves are `@owning`, released by `free`, MEM-12; the rest of the owning
-  case is spec#96, #107, #115, #126, #128,
+  case is spec#96, #107, #126, #128,
   a store through a pointer to an owning place spec#97).
 - `[x]` **13. Tooling.** Manifest schema (configuration→build-plan), CLI, diagnostics (stage+span),
   cross-toolchain + reproducible builds (TOOL-1), the `@test` construct + `alatyr test` runner (TOOL-5),

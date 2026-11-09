@@ -107,9 +107,10 @@ is iterable: `for` iterates the returned slice directly (the built-in counted lo
 iterator is required. Ranges (`a..b`, `a..=b`), slices `[T]`, and arrays satisfy iterable from the
 prelude. An **owning** iterable (`Vec(T)`, §6; MEM-12) takes `self` of `iter` by scoped reference
 (`in self : ptr(Self)`), since passing an owning value `in` consumes it (Memory §5.9), as an owning
-allocator takes `mechanism`'s (§5.1). How `for x in v` applies `iter` to its operand — as a receiver
-with auto-ref, or as a by-value argument — is open, spec#115; what `iter` yields over an owning
-element is open, spec#96. (`Option(Item)` satisfies
+allocator takes `mechanism`'s (§5.1). `for x in e` applies `iter` to `e` as a UFCS receiver,
+`e.iter()`, with auto-ref (Control Flow §6; CF-11), so `for x in v` borrows `v`, and
+`for x in make_vec()` is ill-formed (Memory §1.6). What `iter` yields over an owning element is
+open, spec#96. (`Option(Item)` satisfies
 optional, but `for` depends on the **shape**, not the name.) Iterator **adapters**
 (`map` / `filter` / `fold` / `zip` / `enumerate` / …) compose on this protocol and are
 **additive** (FND-6) — v1 fixes the `next` / `iter` shape and `for`.

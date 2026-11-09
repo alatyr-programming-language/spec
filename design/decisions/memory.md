@@ -463,7 +463,8 @@ a `Vec(Vec(T))` is ill-formed by STD-10.
 `truncate` do with owning elements still in the vector (spec#107); how `==` / `<` / `hash`, whose
 operands are `in`, take an owning operand — STD-6's comparison of two `String`s (spec#106, decided by
 MEM-13: they borrow it); and how
-`for x in v` applies `iter` to its operand, so whether `for` over a `Vec` borrows it (spec#115). Latent:
+`for x in v` applies `iter` to its operand, so whether `for` over a `Vec` borrows it (spec#115, decided
+by CF-11: as a receiver with auto-ref). Latent:
 whether `HashMap(K, V)` is owning and how it is released (spec#108); views into a container's buffer
 across reallocation or `free` (spec#109).
 

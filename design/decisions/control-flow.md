@@ -198,3 +198,26 @@ explicit op); `from_failure` is uniform over any tryable shape and greppable (I3
 `@convert` `F -> Self`** — a `@convert` target is a single (source, target) constructor, but a
 tryable failure target is a *variant wrap* of an aggregate; folding them would blur two
 distinct mechanisms (OP-1).
+
+### CF-11. `for x in e` applies `iter` to `e` as a receiver, with auto-ref — spec#115
+*provenance: refines CF-2 (`for` over the structural iterator protocol) on MEM-12 (`Vec(T)` owning) and
+  the receiver coercion of MOD-3/OP-5 · spec: Control Flow §6; Type System §4.5; Stdlib appendix §2.4 ·
+  owner decision 2026-11-09, spec#115*
+
+**Question.** An owning iterable takes `iter`'s `self` by `ptr(Self)` (Stdlib appendix §2.4; MEM-12),
+but no passage said how `for x in e` applies `iter` to `e`. Auto-ref applies at a receiver written in
+the source, and `for` writes no call. So whether `for x in v` over a `Vec` compiles, and whether
+`for x in make_vec()` falls under Memory §1.6's owning-value-expression rule, had no answer.
+
+**Decision (owner, 2026-11-09).** **`for x in e` applies `iter` to `e` as a UFCS receiver (`e.iter()`)
+with auto-ref: `for x in v` borrows `v`; `for x in make_vec()` is ill-formed by Memory §1.6 (bind it
+first).** Same principle as MEM-13: an operation that only reads takes the value by reference.
+
+**Why.** The loop reads the container, as the explicit `v.iter()` would; nothing is consumed or
+released unseen (I3). The receiver coercion already exists, so nothing is added but naming `for`'s
+operand as a receiver position.
+
+**Rejected.** *Passing `e` by value (`iter(e)`)* — over an owning `v` a move into `iter`, which must then
+release or leak it (I3); or, with `iter` taking `ptr(Self)`, a type mismatch the user fixes with
+`for x in ptr(v)`. *`for` over an owning operand is ill-formed; iterate its view*
+(`for x in v[0..v.len()]`) — ceremony for the commonest loop, which a borrow already makes safe.

@@ -126,8 +126,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   resolution keyed on the receiver.
 
 - **Receiver/access coercion — auto-ref / auto-deref** (MOD-3 / OP-5) — the one-level adjustment, between a value
-  and a pointer to it, applied to the operand of a **value-access position**: a UFCS method receiver, a field
-  `a.field`, an index `a[i]`. **Auto-ref** lifts a value to a scoped reference when the position wants
+  and a pointer to it, applied to the operand of a **value-access position**: a UFCS method receiver (the operand of
+  `for x in e` included, `iter`'s receiver, CF-11), a field `a.field`, an index `a[i]`. **Auto-ref** lifts a value to a scoped reference when the position wants
   `ptr([mut] R)` and the operand is `R` (`a` → `ptr(a)` — how a method borrows its receiver without
   consuming it; a non-owning value-expression at a read-only `ptr(R)` slot passes the address of a
   caller-owned temporary, MEM-11, and an owning one there is ill-formed, MEM-12). **Auto-deref**, its dual, lowers a pointer to its pointee when the position wants `R` and the
