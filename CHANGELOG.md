@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.9.0 — 2026-11-09
+
 **Normative — a deferred action with a value is ill-formed (Memory §5.8; Grammar §3.7; Control Flow
 §9.3; SYN-10).**  Nothing said what happened to the value of `defer expr`, or of a deferred block ending
 in an expression. Such a `defer` is now ill-formed, as a procedure body ending in a value is: write
