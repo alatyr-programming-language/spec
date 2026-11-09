@@ -366,7 +366,8 @@ x := u64(b)          # b : bool — dispatches to the in-scope @convert whose
 is a required type `R = @require(pred) U` and `v` is assignable to the immediate `U`,
 the built-in contract gate (§8.1); otherwise (2) the **one** in-scope `@convert` whose
 return type is `T` and whose parameter **accepts** `typeof(v)` — equal to it, or
-assignable to it per §4.3 (the static type of `v`; Stdlib appendix §4.1) — declaring one
+assignable to it per §4.3 (the static type of `v`; Stdlib appendix §4.1), more than one
+being an ambiguity error (below) — declaring one
 for a pair §4.2 already fixes, other than a branded target, is ill-formed (the
 eligibility rule, above); otherwise
 (3) a builtin lattice conversion (§4.2) when one applies in `T`'s numeric domain.
@@ -403,8 +404,13 @@ with the named form `T(field = v)` or a named function.
 **name-resolution rules in effect at the call site** (Comptime §6.1): it participates
 in `T(v)` exactly where it is in scope (imported). There is **no global registry and no
 orphan rule** — to extend a foreign type's conversions, declare the `@convert` in your
-own module and import it. Two in-scope `@convert`s matching the same (source, target)
-at a site are an **ambiguity error** (no guessing, FND-3).
+own module and import it. A `T(v)` site at which step (2) finds **more than one** in-scope
+`@convert` to `T` accepting `typeof(v)` is an **ambiguity error**, whatever the conversions' sources — two
+matching the same (source, target) included — and never falls through to step (3) (no
+guessing, FND-3; TYP-19). An untyped literal `v` is accepted by **every** candidate whose
+parameter can represent it (Declarations §3.4): with conversions to `B` from `u32` and from
+`u64` in scope, `B(42)` is ambiguous. The explicit form names the source — `B(u64(42))`, or an
+annotated local `n : u64 = 42` then `B(n)` (I1, CG-11).
 
 **Always explicit, never the lattice.** A `@convert` fires **only** through an explicit
 `T(v)`; it is never an implicit conversion (only **widen** is implicit, §4.3), and it
