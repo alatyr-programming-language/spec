@@ -218,7 +218,7 @@ container:
 
 | container / os | state on entry | terminate with |
 |---|---|---|
-| `elf` (`Os.linux`, `freebsd`) | `sp` → `argc`, then `argv[]`, `NULL`, `envp[]`, `NULL`, `auxv[]`; stack aligned per §3.2; no return address — the entry **cannot** `ret` | the OS exit syscall (`@abi(syscall)`, §5; Stdlib §4.2) |
+| `elf` (`Os.linux`, `android`, `freebsd`) | `sp` → `argc`, then `argv[]`, `NULL`, `envp[]`, `NULL`, `auxv[]`; stack aligned per §3.2; no return address — the entry **cannot** `ret` | the OS exit syscall (`@abi(syscall)`, §5; Stdlib §4.2) |
 | `macho` (`Os.macos`) | `dyld` calls the entry **as a function**: `argc`, `argv`, `envp`, `apple[]` in the argument registers of §4 | `libSystem`'s `exit` (see the platform-library rule below) |
 | `pe` (`Os.windows`) | the loader passes **no** arguments and no command line; `argv` does not exist at entry — the library obtains it on demand | `kernel32`'s `ExitProcess` (see below); never a plain `ret` |
 
