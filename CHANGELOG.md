@@ -49,11 +49,11 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
-**Normative — `not` binds tighter than a comparison (Grammar §4; Control Flow §8.1, §11; SYN-11).**
-Control Flow §11 wrote `"not" expr`, against Grammar §4, which puts `not` with `-` and `~` at the unary
-level. Grammar §4 stands: `not a < b` is `(not a) < b`, ill-formed for a numeric `a`; a negated comparison
-is written `not (a < b)`, and `fmt` keeps the parentheses. Rejected: `not` looser than comparisons, a level
-of its own. (spec#144.)
+**Normative — `not` binds tighter than a comparison (Grammar §4; Control Flow §8.1, §11; SYN-11).**  Control
+Flow §11 wrote `"not" expr`, against Grammar §4, which puts `not` with `-` and `~` at the unary level.
+Grammar §4 stands: `not a < b` is `(not a) < b`, ill-formed for a numeric `a`; a negated comparison is
+written `not (a < b)`, and `fmt` keeps the parentheses. Rejected: `not` looser than comparisons, a level of
+its own. (spec#144.)
 
 **Normative — `typeinfo(T)` reports whether `T` is owning, and the `Vec` release check is guarded by
 it at comptime (Comptime §5.1, §11; Stdlib appendix §3.1, §3.2, §4.1, §6, §8; STD-12).**  Nothing said

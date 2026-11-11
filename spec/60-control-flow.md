@@ -335,11 +335,13 @@ is their normative home. (The eager value-operators — bitwise, comparison, ari
 
 `and` / `or` are **short-circuiting**: the right operand is evaluated **only when
 needed** (`and` stops at the first false, `or` at the first true); `not` is prefix
-logical negation. `not` is a **unary prefix** and binds tighter than every comparison (Grammar §4,
-level 2; SYN-11): `not a < b` is `(not a) < b`, which is ill-formed when `a` is numeric (a numeric
-scalar is not truthy, §4). Negate a comparison by grouping it: `not (a < b)`. Their laziness is **visible** (I3). Operands are truthy (§4). The
+logical negation. Their laziness is **visible** (I3). Operands are truthy (§4). The
 words-not-symbols choice (decisions OP-2) removes the `&`/`&&` footgun: the bitwise
 `& | ^ ~` are the eager functions, the words are the lazy control operators.
+
+`not` is a **unary prefix** and binds tighter than every comparison (Grammar §4, level 2;
+SYN-11): `not a < b` is `(not a) < b`, which is ill-formed when `a` is numeric (a numeric
+scalar is not truthy, §4). Negate a comparison by grouping it: `not (a < b)`.
 
 #### 8.2 The `?` try operator
 
@@ -462,7 +464,7 @@ continue-stmt ::= "continue" [ struct-label ]         (* struct-label must be a 
 return-stmt   ::= "return" [ expr ]                    (* expr only with a single anonymous projected output (§7.3) *)
 
 (* control-flow operators (§8) *)
-logical-expr  ::= expr ( "and" | "or" ) expr | "not" unary-expr   (* `and`/`or` short-circuit; `not` is a unary prefix, Grammar §4 level 2 (§8.1; SYN-11) *)
+logical-expr  ::= expr ( "and" | "or" ) expr | "not" unary-expr   (* short-circuit; `not` is unary (§8.1) *)
 try-expr      ::= expr "?"                                  (* postfix unwrap-or-propagate *)
 
 (* ranges — used both as iterators (§6) and as scalar match patterns (§5.4) *)
