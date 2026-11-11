@@ -814,7 +814,7 @@ A conforming implementation MUST:
    profile) (§1, §2; I6/TOOL-4/TOOL-3);
 2. support the manifest field set of §2 — package metadata (no `name`); **`targets`**
    (defaulted to a non-empty list of `Target`, each carrying a **`machine` variant** —
-   `Linux`/`Freebsd`/`Windows`/`Macos`/`Bare`/`Com`, holding that platform's own
+   `Linux`/`Freebsd`/`Windows`/`Macos`/`Android`/`Bare`/`Com`, holding that platform's own
    `arch`/`env`/`subsystem`/`startup` — plus the build fields
    `name`/`kind`/`entry`/`output`/`features`/`vector_length`/`code_size`/`arm_mode`/`auto_cfi`,
    and publishing the `target.*` projections of the variant; TOOL-18)
