@@ -220,6 +220,27 @@ not go unseen, and the rule is the one procedure bodies already follow.
 **Rejected.** *A deferred expression is evaluated for effect and its value discarded* — a silent discard,
 the one place besides a non-final statement where a value disappears unseen.
 
+### SYN-11. `not` binds tighter than a comparison — spec#144
+*provenance: refines SYN-5 (conventional precedence) · spec: Grammar §3.4, §4; Control Flow §8.1, §11 ·
+  owner decision 2026-11-11, spec#144*
+
+**Question.** Grammar §3.4/§4 put `not` with `-` and `~` at the unary level, tighter than comparisons,
+so `not a < b` is `(not a) < b`; Control Flow §11 wrote `"not" expr`, which reads as `not (a < b)`.
+The two readings differ only when `a` is numeric: one makes the program ill-formed, the other accepts it.
+
+**Decision (owner, 2026-11-11).** **Grammar §4 stands: `not` is a unary prefix at level 2.** `not a < b`
+is `(not a) < b`; Control Flow §11 is corrected to `"not" unary-expr`.
+
+**Derived (not the owner's wording).** With a numeric `a` the operand of `not` is not truthy (Control
+Flow §4), so `not 255 < x` is ill-formed and is refused with a located diagnostic; a negated comparison
+is written `not (a < b)`. `fmt` keeps those parentheses, since it preserves the AST (Tooling §4.3).
+
+**Why.** One table decides every precedence question, and the three unary prefixes share one level with
+no exception to remember; a misread negation is refused rather than given a meaning.
+
+**Rejected.** *`not` looser than comparisons, tighter than `and`* — reads as English and keeps the bare
+form valid, but adds a level and makes `not x < y` group differently from `-x < y`.
+
 ---
 
 ## `@` attributes

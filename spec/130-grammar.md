@@ -740,7 +740,10 @@ Notes:
   so they do not appear in the table (OP-2); write them explicitly when mixing with
   arithmetic to make intent and cost visible.
 - `not` is the unary logical operator; `and`/`or` are the binary short-circuit
-  operators (keywords; OP-2). The bitwise family `& | ^ ~` is greedy (OP-2).
+  operators (keywords; OP-2). `not` sits at level 2 with `-` and `~`, so it binds tighter
+  than every comparison: `not a < b` is `(not a) < b`, ill-formed for a numeric `a` (Control
+  Flow §4); a negated comparison is written `not (a < b)`, and `fmt` keeps those parentheses
+  (Tooling §4.3: it preserves the AST) (SYN-11). The bitwise family `& | ^ ~` is greedy (OP-2).
 - Assignment `place = expr` is a **statement**, not an expression (SYN-5); it has no
   precedence level and does not nest inside expressions.
 
