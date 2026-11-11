@@ -700,8 +700,8 @@ what makes **target gating** and **per-target / per-type specialization** possib
 simply **absent** (and unanalyzed) on another target; referencing the absent entity
 at a use site is a compile error (§7.1). The build target is observable through
 **`target.arch`** (compared against `Arch.<variant>`) and **`target.os`** (against
-`Os.<variant>` — `Os.linux`/`Os.windows`/`Os.macos`/`Os.freebsd`/`Os.none`, the last
-being freestanding); both fold to a comptime value, so `comptime if`/`when` can gate on
+`Os.<variant>` — the variants Manifest §3.2 declares, of which `Os.none` is
+freestanding); both fold to a comptime value, so `comptime if`/`when` can gate on
 either (e.g. a hosted-vs-freestanding `panic`). The **build profile** is likewise
 observable: **`build.debug`** (a comptime `bool`) and **`build.profile`** (the active
 profile's name, a `str`) fold for the selected profile, so a `comptime if build.debug { … }`
