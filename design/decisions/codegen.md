@@ -650,7 +650,7 @@ ill-formed on a non-ISA backend.
 non-ISA backend does not have, and each is scoped rather than left to be broken when such a backend lands:
 the **artifact name** (TOOL-11) is indexed by the four register-ISA containers, so a non-ISA backend's
 artifact naming is fixed with that backend; **`target.container`** matches no `Container` variant, exactly as
-`target.arch` matches no `Arch`; the **entry symbol stated to the linker** (TOOL-12; Codegen §6) presupposes
+`target.arch` matches no `Arch` (and so do `target.os` and `target.env`, TOOL-27); the **entry symbol stated to the linker** (TOOL-12; Codegen §6) presupposes
 a link step, so on a backend without one what the entry *is* belongs to that backend's rules; and
 **`startup`** (crt objects and libc) is inapplicable there. Scoping them now keeps the additivity promise
 (I10/FND-6): the backend arrives as an addition, not as a rewrite of v1 norms.

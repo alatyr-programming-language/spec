@@ -207,7 +207,9 @@ that made a manifest's meaning depend on where it was built.
 variant's `arch` (`i386` for `Com`), `target.os` is `linux`/`android`/`freebsd`/`windows`/
 `macos`/`none`, `target.container` is `elf`/`pe`/`macho`/`com`, `target.env` is the
 variant's `env` (`bionic` for `Android`, `none` where the variant has none), `target.startup` is the variant's (`raw` for `Bare`/`Com`,
-which have no other mode), and `target.endian` follows the arch. So every existing gate —
+which have no other mode), and `target.endian` follows the arch. These lists are per variant; a
+directly driven non-ISA backend has no variant here, and there `target.arch`, `target.os`,
+`target.container` and `target.env` each equal no variant of their enum (Tooling §2.7). So every existing gate —
 `when target.arch == Arch.x86_64`, `when target.os == Os.none` — keeps working unchanged,
 and `Os` / `Container` remain prelude enums for those comparisons even though neither is a
 `Target` field.

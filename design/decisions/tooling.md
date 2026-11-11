@@ -1023,3 +1023,34 @@ header line is the one that names what the comment describes.
 from the header it was written beside, by the whole body. *(c) An own line above the
 statement* — against §4.3.4's rule that a trailing same-line comment stays on its line, and a
 `#` moved up can join an adjacent comment block (Grammar §2.5).
+
+### TOOL-27. On a directly driven non-ISA backend, `target.os` and `target.env` match no variant — spec#143
+*provenance: extends CG-14 (`target.arch`/`target.container` on a non-ISA backend) and refines TOOL-18
+  (`target.*` are projections of the `Machine` variant) · spec: Tooling §2.7; Manifest appendix §3.1 ·
+  owner decision 2026-11-11, spec#143*
+
+**Question.** Tooling §2.7 fixed `target.arch` and `target.container` on a directly driven non-ISA
+backend (WASM → WAT): each equals no variant of its enum. It said nothing of `target.os` and
+`target.env`, and Manifest §3.1 writes both per `Machine` variant, of which such a backend has none. So
+`when target.os == Os.linux` had no specified meaning on WASM, and two implementations could answer
+differently without either being wrong (FND-3).
+
+**Decision (owner, 2026-11-11).** Option (1). On a directly driven non-ISA backend `target.os` and
+`target.env` equal **no** `Os` / `Env` variant, exactly as `target.arch` and `target.container` do: every
+`target.os == Os.<v>` / `target.env == Env.<v>` folds false and every `!=` folds true. A `match` over them
+is exhaustive only for ISA targets, so portable code gives it a default arm; without one it is ill-formed
+on a non-ISA backend. A future WASM `Machine` variant (Manifest §3.1; together with spec#3) may fix real
+projections later, as an additive step (FND-6).
+
+**Derived (not the owner's wording).** `Os.none` and `Env.none` are variants like any other, so
+`target.os == Os.none` and `target.env == Env.none` fold false there too.
+
+**Why.** It extends the one rule §2.7 already applies to this backend and adds no entity (PRIN-1).
+`when target.os == Os.linux { … } else { … }` stays meaningful and selects the else. A program cannot tell
+WASM from these facets alone, but it already cannot through `target.arch`.
+
+**Rejected.** *(2) `os = none`, `env = none`: the backend counts as freestanding* — `Os.none` names a
+bare-metal target (Manifest §3.1), so code gated on it (freestanding start-up, no host services) would take
+that path under a WASI host that does provide services; it conflates two different situations. *(3)
+Define the WASM `Machine` variant now, with its projections* — the complete answer, but a much larger design
+step that depends on open spec#3 (the non-ISA OS surface); it stays the later additive path.
