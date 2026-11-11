@@ -293,9 +293,14 @@ duplicate-name error (Modules §5).
   a `match` over `target.arch` is exhaustive only for ISA targets, so portable code MUST give it a default
   arm — without one it is ill-formed on a non-ISA backend. **`target.container` behaves the same way**
   there (it matches no `Container` variant, since the four containers are the register-ISA ones, Manifest
-  §3.2), and **`target.startup`** is inapplicable — a backend with no start-up objects and no libc has
-  neither mode. Such a backend arrives as a new **`Machine` variant** (Manifest §3.1; TOOL-18) whose
-  projections are fixed together with it (CG-14; FND-6).
+  §3.2), and so do **`target.os`** and **`target.env`** (TOOL-27): each equals **no** `Os` / `Env`
+  variant, so every `target.os == Os.<v>` and `target.env == Env.<v>` folds **false** — `Os.none` and
+  `Env.none` included — and every `!=` folds **true**. A `match` over `target.os` or `target.env` is, like
+  one over `target.arch`, exhaustive only for ISA targets, so portable code MUST give it a default arm —
+  without one it is ill-formed on a non-ISA backend. **`target.startup`** is inapplicable — a backend with
+  no start-up objects and no libc has neither mode. Such a backend arrives as a new **`Machine` variant**
+  (Manifest §3.1; TOOL-18) whose remaining projections are fixed together with it, and which may fix real
+  `os` / `env` projections in place of the rule above as an additive step (CG-14; FND-6).
 
   Beyond the machine model, `target.*` exposes the selected target's **build fields**
   (§2.2; MOD-13), and the set is exactly: **`target.kind`**, **`target.startup`**

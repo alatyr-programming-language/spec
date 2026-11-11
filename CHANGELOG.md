@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — on a directly driven non-ISA backend, `target.os` and `target.env` match no variant
+(Tooling §2.7; Manifest appendix §3.1; TOOL-27, CG-14).**  §2.7 fixed `target.arch` and
+`target.container` on WASM → WAT but was silent on `target.os` and `target.env`. Both now equal no `Os` /
+`Env` variant there: every `==` folds false (`Os.none`/`Env.none` included), every `!=` true, and a `match`
+over them needs a default arm in portable code or is ill-formed on such a backend. A future WASM `Machine`
+variant may fix real projections additively. Rejected: `os = none`/`env = none`; defining the WASM
+`Machine` variant now. (spec#143.)
+
 **Normative — `not` binds tighter than a comparison (Grammar §4; Control Flow §8.1, §11; SYN-11).**  Control
 Flow §11 wrote `"not" expr`, against Grammar §4, which puts `not` with `-` and `~` at the unary level.
 Grammar §4 stands: `not a < b` is `(not a) < b`, ill-formed for a numeric `a`; a negated comparison is
