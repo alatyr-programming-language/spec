@@ -266,7 +266,7 @@ file** (so a bare `package.al` builds `package`; state `output` to name it other
 | `source` | *(no artifact)* | *(no artifact)* | *(no artifact)* | — |
 
 The columns are the **`target.container` projection** of the `Machine` variant (§3.1):
-`Machine.Linux`/`Freebsd`/`Bare` → `elf`, `Windows` → `pe`, `Macos` → `macho`, `Com` →
+`Machine.Linux`/`Freebsd`/`Android`/`Bare` → `elf`, `Windows` → `pe`, `Macos` → `macho`, `Com` →
 `com`. A **non-ISA backend** (a structured/VM backend such as WASM → WAT; CG-4/CG-14)
 arrives as a new `Machine` variant with no container projection, so its artifact naming is
 fixed **with that backend** (additive, FND-6), not by this table.
