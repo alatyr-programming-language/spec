@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.10.0 — 2026-11-12
+
 **Normative — on a directly driven non-ISA backend, `target.os` and `target.env` match no variant
 (Tooling §2.7; Manifest appendix §3.1; TOOL-27, CG-14).**  §2.7 fixed `target.arch` and
 `target.container` on WASM → WAT but was silent on `target.os` and `target.env`. Both now equal no `Os` /
