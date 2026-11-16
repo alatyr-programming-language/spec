@@ -685,7 +685,7 @@ referent R may be stored only into a place that does **not** outlive R.
 - storing into a `static` / allocator-managed place, or into a field of any aggregate
   that outlives R;
 - being **captured by a closure that outlives R** — capturing a scoped reference makes
-  the closure itself scoped (§6.3), bound by these same rules; a **`dyn`** closure
+  the closure itself scoped (§6.4), bound by these same rules; a **`dyn`** closure
   (§6.3 / FN-11) likewise borrows its env storage and MUST NOT outlive it.
 
 **Second-class returns (the dual of a scoped parameter, MEM-3).** A function MAY return a scoped
