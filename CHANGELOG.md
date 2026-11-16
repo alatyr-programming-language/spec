@@ -50,12 +50,13 @@ several at once (see `CONTRIBUTING.md`).
 ## Unreleased
 
 **Normative — a built-in element store evaluates its right-hand side before the bounds check (Type
-System §6.4; Memory §1.6; OP-10).**  For `xs[i] = v` on an array or slice element with a runtime index,
-the spec did not say whether `v` is evaluated before or after the bounds check of `i`. The order is: the
-base, then the index, then `v`, then the bounds check and the store; so `v`'s effects happen before an
-out-of-range trap, as they already do for a library aggregate's `index_set(a, i, v)`. The base is
-evaluated in full first, including the check of any index inside it. A compound assignment
-`xs[i] ⊕= rhs` reads the element before `rhs`, so its check precedes `rhs` (Memory §1.6, unchanged).
+System §6.4; Memory §1.6; OP-10).**  For `xs[i] = v` on an array or slice element, the spec did not say
+whether `v` is evaluated before or after the bounds check of `i`. The order is: the base, then the index,
+then `v`, then the bounds check and the store; so `v`'s effects happen before an out-of-range trap, as
+they already do for a library aggregate's `index_set(a, i, v)`. An index inside the base keeps its own
+operation-site guard (CG-13), so `m[i][k] = v` checks `i` before `k` and `v`. A compound assignment
+`xs[i] ⊕= rhs` takes the element's address before `rhs`, so its check precedes `rhs` (Memory §1.6,
+unchanged).
 Rejected: checking the index before `v` — `xs[10] = f()` would then run `f()` on a `Vec` but not on an
 array. (spec#163.)
 

@@ -155,8 +155,8 @@ rule (I1; nothing hidden, I3): the **place is evaluated once**. Its address is t
 into a fresh temporary `t`, then the store is `deref(t) = deref(t) ⊕ rhs` — so any
 side effects in the place (an index `a[f()]`, a dereference `deref(p())`) occur
 **exactly once**, and `rhs` is evaluated once, after the place. On an array or slice
-element the element is read (`deref(t)`, the left operand of `⊕`) before `rhs` is evaluated, so
-its bounds check precedes `rhs`; a plain store `a[i] = v` instead evaluates `v` before the check
+element the address is taken through the guarded index (Type System §4.5; CG-13) before `rhs` is
+evaluated, so the bounds check precedes `rhs`; a plain store `a[i] = v` instead evaluates `v` before the check
 (Type System §6.4; OP-10). For a plain binding the
 rule degenerates to `x = x ⊕ rhs`. Because `⊕` is an overloadable operator-function (Type
 System §5.3; TYP-5), `⊕=` applies to any type that defines `⊕`; it introduces no new

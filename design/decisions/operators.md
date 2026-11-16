@@ -269,22 +269,24 @@ place-expressions; Type System §4.5 names it beside the array/slice built-ins.
 *provenance: refines OP-3 (the built-in index) and OP-2 (compound assignment, place before `rhs`);
   reads OP-7 and Functions §5.4 · spec: Type System §6.4; Memory §1.6*
 
-**Question.** For a plain store `xs[i] = v` into an array or slice element with a runtime index,
+**Question.** For a plain store `xs[i] = v` into an array or slice element,
 the spec did not fix whether `v` is evaluated before or after the bounds check of `i`. The
 difference is observable when `v` has an effect (a write, a trap, a call that does not return) and
 `i` is out of range. Memory §1.6 fixed the order only for `place ⊕= rhs` (the place, then `rhs`),
 and Functions §5.4 the order of a library aggregate's `index_set(a, i, v)`.
 
 **Decision (owner, 2026-11-17).** **The right-hand side first.** The order is: the base, then the
-index; then `v`; then the bounds check, and the store if it passes. The base is evaluated in full
-before the index, including the check of any index inside it (`m[i][k] = v` checks `i` before it
-evaluates `k` and `v`); only the stored element's own check follows `v`. Inside `unchecked` there is
-no check and the rest of the order stands. A compound assignment `xs[i] ⊕= rhs` keeps Memory
-§1.6's lowering: the element is read before `rhs` (the left operand of `⊕`), so its check precedes
-`rhs` (this follows from Memory §1.6 and Functions §5.4; it is not part of the owner's choice).
+index; then `v`; then the bounds check, and the store if it passes. Inside `unchecked` there is
+no check and the rest of the order stands.
 
-**Why.** It is the order a reader reads the source in, left to right, with the check where the
-element is first touched: by the store, or by the read in a compound assignment. It is the order a
+Two consequences follow from existing text and are not part of the owner's choice. An index
+inside the base keeps its guard at its own operation site (CG-13), so `m[i][k] = v` checks `i`
+while it evaluates the base, before `k` and `v`; only the stored element's own check is part of
+the store. A compound assignment `xs[i] ⊕= rhs` keeps Memory §1.6's lowering: the address is taken
+through the guarded index before `rhs` is evaluated, so the check precedes `rhs`.
+
+**Why.** It is the order a reader reads the source in, left to right, with the store's own check
+part of the store, after its value exists. It is the order a
 library aggregate already has: `a[i] = v` is `index_set(a, i, v)`, whose arguments are evaluated
 left to right before its own check runs inside the call, so `xs[10] = f()` runs `f()` and then traps
 alike for an array, a slice and a `Vec` (one indexing surface, OP-3), and `a[i] ⊕= rhs` checks in
@@ -293,8 +295,8 @@ before the right-hand side.
 
 **Rejected.** *Index, bounds check, then `v`* (fail fast, so `v`'s effect never happens on a bad
 index). It would make the built-in store differ from `index_set`, so the same `xs[10] = f()` would
-run `f()` on a `Vec` and not on an array; and it would make the check part of evaluating the place,
-which a store does not need before it has the value to store.
+run `f()` on a `Vec` and not on an array; and it would check the stored element before the store
+has the value it stores.
 
 ---
 
