@@ -1005,11 +1005,13 @@ used: a fat value of a code pointer plus an environment pointer. Its environment
 MUST live in **explicit** storage (a region, arena, or allocation, §5) — **never**
 a hidden box (I3). The call is indirect (a visible cost). Its **type** is
 `dyn fn(T…) -> R` (Functions §1.6, FN-11); it is **constructed** by the prelude
-`dyn_over(ptr(mut store))` over a **named place** `store` holding a static closure
-(§6.2), and **called** `d(args)` (indirect through `code`, passing `env`). The `dyn`
-value **borrows** its env storage and is bounded by the **escape rule** (§5.3.1) — it
-MUST NOT outlive that storage (a stack env → scoped to the frame; an arena/allocation
-env → valid as long as that region).
+`dyn_over(ptr(store))` over a **named place** `store` holding a static closure
+(§6.2) — the address of `store` an ordinary address-of, so §4.4 binds it with no
+carve-out for the builtin: `ptr(mut store)` is admissible only over a writable
+place, `ptr(store)` over any — and **called** `d(args)` (indirect through `code`,
+passing `env`). The `dyn` value **borrows** its env storage and is bounded by the
+**escape rule** (§5.3.1) — it MUST NOT outlive that storage (a stack env → scoped
+to the frame; an arena/allocation env → valid as long as that region).
 
 #### 6.4 Capture mode
 

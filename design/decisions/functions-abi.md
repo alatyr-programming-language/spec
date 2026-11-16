@@ -321,7 +321,8 @@ imply a further data-dereference that code does not have (Types §7, the raw-cod
 discussion).
 
 ### FN-11. The `dyn` type-erased closure — `dyn fn(T…) -> R` over explicit storage
-*spec: Functions §1.6; Memory §6.3, §5.3.1; Grammar §2.3, §3.3, §3.6*
+*spec: Functions §1.6, §10; Memory §6.3, §5.3.1; Grammar §2.3, §3.3, §3.6 · owner decision
+  2026-11-16, spec#152*
 
 **Why.** FN-6 named the third function-value level — a **type-erased `dyn`**, a fat value
 `{code, env}` that lets **different capturing closures share one runtime type** (uniform
@@ -351,16 +352,36 @@ env storage and MUST NOT escape it — a **stack** env makes the `dyn` scoped to
 outlives). No new lifetime discipline is introduced.
 
 **Construction — `dyn_over`.** A prelude word-function (a builtin, OP-1; the name echoes
-`arena_over`, MEM-3 — "*X* over caller-provided storage"): `dyn_over(ptr(mut store))`, where
+`arena_over`, MEM-3 — "*X* over caller-provided storage"): `dyn_over(ptr(store))`, where
 `store` is a **named place** holding a **static closure** (Memory §6.2 — a concrete
 aggregate of captures + the known function). It yields the fat pair
 `{code = <the adapter monomorphized for `store`'s concrete type>, env = ptr(store)}`, typed
 `dyn <store's call signature>` and assignable to a compatible `dyn fn(T…)->R` binding. The
-**storage is explicit in the syntax** (the named place and its address `ptr(mut store)`), so
+**storage is explicit in the syntax** (the named place and its address `ptr(store)`), so
 the environment's location and lifetime are recoverable from the closed package
 (I3 / MEM-5's closed-package reading). The `code` adapter is a compiler-synthesized
 monomorphic wrapper — a documented, transparent lowering (I1); the env-pointer mutability
-flows from the `ptr(mut …)` / `ptr(…)` form.
+flows from the `ptr(…)` / `ptr(mut …)` form, and **Memory §4.4 decides which form the
+place admits**: the builtin takes an ordinary address-of, with no carve-out from monotonic
+permissions, so `ptr(mut store)` over an immutable `store` is ill-formed there as it is
+anywhere else, while `ptr(store)` is admissible over any place — Memory §4.4 permits a
+read-only pointer to a mutable place. `ptr(store)` is therefore the **canonical** spelling:
+Memory §4.4 admits it over every place, so it is the one form that never depends on the
+place's mutability. `ptr(mut store)` is admissible only over a writable place, where the
+program chose a writable env. Whether the adapter may write the synthesized capture slots
+is not stated by Memory §6.2 and is open (spec#154); nothing in this decision decides it.
+
+*Refined 2026-11-16 (spec#152, owner decision): the canonical spelling was `ptr(mut store)`
+here and in every chapter that cited it — the Stdlib appendix alone spelled `ptr([mut] store)`,
+which this makes exact — and the Functions §1.6 example declared `store := fn(…)` (immutable
+under Memory §3.1) beside it, taking `ptr(mut …)` to a place Memory §4.4 says yields only
+`ptr(T)`. The spelling moves to `ptr(store)`; Memory §4.4 stays unconditional. Rejected:
+keeping `ptr(mut store)` and declaring the example's store `mut` — that makes the marker
+boilerplate the callee dictates rather than a fact the program chose, and Memory §3.1's
+opt-in is meant to say the program made this writable; note the rejection is of making `mut`
+*mandatory* there, not of writing it over a genuinely `mut store`, which Memory §4.4 permits
+and this keeps; and carving `dyn_over` out of Memory §4.4 — a MUST-level exception for one
+builtin invites the next.*
 
 **Call — `d(args)`.** The ordinary postfix call (Grammar §3.4), no new form: for a
 `dyn`-typed callee it lowers to an **indirect call through `code`**, passing `env` as the

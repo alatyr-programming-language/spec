@@ -226,15 +226,24 @@ fat pair), **not** an `@`-attribute (which is compile-time only, never a represe
   **escape rule** (Memory §5.3.1): it MUST NOT outlive its env storage. A **stack** env
   makes the `dyn` scoped to the frame; an **arena/allocation** env lets it live as long as
   that region (and be stored where the region outlives). No new lifetime discipline is added.
-- **Construction — `dyn_over`.** The prelude word-function `dyn_over(ptr(mut store))` (a
+- **Construction — `dyn_over`.** The prelude word-function `dyn_over(ptr(store))` (a
   builtin; the name echoes `arena_over`, Memory §5.4) pairs a **static closure** held in a
   **named place** `store` (Memory §6.2) with that place as its environment, yielding
   `{code = <the adapter monomorphized for `store`'s type>, env = ptr(store)}`, typed
   `dyn <store's call signature>` and assignable to a compatible `dyn fn(T…)->R`. The storage
   is **explicit in the source** (`store` and its address), so its location and lifetime are
   recoverable from the package (I3). The `code` adapter is a compiler-synthesized monomorphic
-  wrapper (a documented lowering, I1); the env-pointer mutability follows the `ptr(mut …)` /
-  `ptr(…)` form.
+  wrapper (a documented lowering, I1). The address of `store` is an **ordinary address-of**:
+  Memory §4.4 binds it with **no carve-out for this builtin**, so the written form is
+  limited by the place — `ptr(mut store)` is admissible **only** over a writable one,
+  while `ptr(store)` is admissible over any place, mutable or not (Memory §4.4 permits a
+  read-only pointer to a mutable place) — and taking the `mut` form over a place whose
+  AND-path is not writable (Memory §3.3) is ill-formed here exactly as it is anywhere
+  else. `ptr(store)` is the **canonical** spelling: Memory §4.4 admits it over every place,
+  so it is the one form that never depends on the place's mutability, and the `mut`
+  qualifier appears only where the program made the store place writable. Whether the
+  adapter may write the synthesized capture slots is not stated by Memory §6.2 and is open
+  (spec#154); nothing in this clause decides it.
 - **Call.** `d(args)` — the ordinary postfix call (§3.2) — lowers, for a `dyn`-typed callee,
   to an **indirect call through `code`** passing `env` as the leading environment pointer to
   the adapter. Nothing is hidden (I3).
@@ -246,7 +255,7 @@ fat pair), **not** an `@`-attribute (which is compile-time only, never a represe
 
 ```
 store := fn(x : u64) -> u64 { x + base }          # a static closure; explicit env storage (a named place)
-d : dyn fn(u64) -> u64 = dyn_over(ptr(mut store))  # erase: {code, env = ptr(store)}; d borrows `store`
+d : dyn fn(u64) -> u64 = dyn_over(ptr(store))      # erase: {code, env = ptr(store)}; d borrows `store`
 r := d(3)                                          # indirect call through the fat pair
 ```
 
@@ -637,8 +646,9 @@ fn-type      ::= "fn" "(" [ fn-type-param { ("," | newline) fn-type-param } ] ")
 fn-type-param ::= [ "in" | "out" | "in" "out" ] type-expr    (* direction (default in) + type, no name *)
 (* the type-erased dyn closure TYPE (§1.6, FN-11) — `dyn` keyword over a fn-type; a {code, env} fat pair *)
 dyn-type     ::= "dyn" fn-type
-(* construction (§1.6) is the prelude word-function `dyn_over(ptr(mut store))` — a builtin, no grammar (OP-1);
-   the call `d(args)` is the ordinary postfix call (§3.2). *)
+(* construction (§1.6) is the prelude word-function `dyn_over(ptr(store))` — a builtin, no grammar (OP-1);
+   the address form follows Memory §4.4 (`ptr(mut store)` only over a writable place); the call
+   `d(args)` is the ordinary postfix call (§3.2). *)
 param-list   ::= variadic-param
                | param { ("," | newline) param } [ ("," | newline) variadic-param ]  (* at most one variadic, last; may be the sole parameter (§7) *)
 param        ::= in-param | place-param
@@ -713,8 +723,10 @@ A conforming implementation MUST:
    non-default-convention function, or any on a target whose default selector is `naked`
    (§1.5, §1.6; FN-10); admit the **type-erased** closure type `dyn fn(T…) -> R`
    (the `dyn` keyword over a fn-type) as a two-word `{code, env}` fat pair, construct it
-   with the prelude `dyn_over(ptr(mut store))` over a **named place** holding a static
-   closure (environment in explicit storage, never a hidden box), call it `d(args)` as an
+   with the prelude `dyn_over(ptr(store))` over a **named place** holding a static
+   closure — the address of that place an ordinary address-of, so `ptr(mut store)` is
+   admissible only over a writable one (Memory §4.4) — with the environment in explicit
+   storage, never a hidden box, call it `d(args)` as an
    indirect call through `code` passing `env`, and bound its validity by its env storage's
    extent via the escape rule (§1.6; FN-11; Memory §5.3.1 / §6.3; I3);
 2. monomorphize generic functions over comptime arguments, with no runtime dispatch

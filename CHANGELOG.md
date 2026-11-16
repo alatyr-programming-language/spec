@@ -49,6 +49,22 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — the `dyn_over` construction takes the address form the place admits, and the canonical
+spelling is `ptr(store)` (Functions §1.6, §10 item 1; Memory §6.3; Grammar §3.6; glossary; FN-11).** The
+chapter's own example declared `store := fn(…)` — an immutable place under Memory §3.1 — and then wrote
+`dyn_over(ptr(mut store))`, which Memory §4.4 declares ill-formed at MUST level ("an immutable place
+yields only `ptr(T)`"; "a permission may only be **dropped**, never gained"). The builtin is given no
+carve-out from Memory §4.4: it takes an **ordinary address-of**, so `ptr(mut store)` is admissible
+**only** over a writable place while `ptr(store)` is admissible over any (Memory §4.4 permits a
+read-only pointer to a mutable place), and `ptr(store)` is canonical because Memory §4.4 admits it over
+every place, so it is the one form that never depends on the place's mutability. A program taking
+`ptr(mut store)` over an immutable place **remains** ill-formed, as Memory §4.4 already required: what
+changes is that Functions §1.6 no longer tells the reader to write it. Whether the adapter may write
+the synthesized capture slots is open (spec#154); nothing here decides it. Rejected:
+declaring the example's store `mut` — that makes the marker boilerplate the callee dictates rather than
+a fact the program chose, against Memory §3.1's stated purpose; and carving `dyn_over` out of Memory
+§4.4 — a MUST-level exception for one builtin invites the next. (spec#152.)
+
 ## 1.10.0 — 2026-11-12
 
 **Normative — on a directly driven non-ISA backend, `target.os` and `target.env` match no variant
