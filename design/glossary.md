@@ -403,6 +403,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   (`ptr(mut store)` only over a writable place). **Call:** `d(args)` — indirect through `code`, passing
   `env`. Visible cost: two words + one indirect call. Deliberately unlike a `Box<dyn>` (no hidden allocation).
 
+- **Pack** — the trailing arguments a comptime-variadic parameter `args : ...` collects (Functions §7.1).
+  Its name is **not a value**: it appears only as the collection of a `comptime for`, and any other use —
+  `inner(args)` included — is ill-formed (FN-14). `args…` in the chapters is meta-notation, not source.
+
 - **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap) — an OS
   object or an exclusive right over storage (an arena's right to allocate and reclaim, MEM-2).
   A type is owning iff it carries the **`@owning`** marker or is an aggregate transitively

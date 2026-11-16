@@ -359,7 +359,8 @@ distinct from a compile-time-known string, which is just a literal).
   was given, and a total past `usize`, are open (spec#82). The hole set is `format`'s: the
   template trigger of Functions §7.1 itself restricts no argument type;
 - **`print("…", args…)`** is **`format` to standard output**: `print(t, args…)` ≡
-  `format(stdout, t, args…)` (the std stream of §7), with the same template rules — its first
+  `format(stdout, t, args…)` (the std stream of §7; `args…` is meta-notation for the pack's
+  elements, not a forwarding a program can write, Functions §7.1), with the same template rules — its first
   fixed parameter is the `str` template — the same hole set, and the same result and failure
   behaviour: `Result(usize, IoError)`, stopping at the first failed write to standard output
   (STD-7). It is **hosted only**: it is a

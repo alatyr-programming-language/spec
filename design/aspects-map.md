@@ -58,7 +58,8 @@ and **deferred (additive) growth**.
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
   overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
   a non-literal argument in a comptime-variadic's template place — its first fixed `str` parameter — is a valid,
-  untemplated call, FN-13/STD-5).
+  untemplated call, FN-13/STD-5; a comptime-variadic's pack name is not a value, only a `comptime for`
+  collection, FN-14).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8; `for x in e`
   applies `iter` to `e` as a receiver with auto-ref, so it borrows an owning `e` (CF-11).

@@ -49,6 +49,15 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a comptime-variadic's pack name is not a value (Functions §7.1, §10 item 8; Comptime §8.3;
+Stdlib appendix §2.7; glossary; FN-14, FN-5).**  §7.1 defined only walking the pack with `comptime for`, so
+`inner(args)` could spread the pack, pass it as one tuple, or be ill-formed. The pack name now MAY appear
+only as the collection of a `comptime for`; every other use — a call argument, an expression, a binding, a
+store, a return — is ill-formed with a located Semantic diagnostic. The loop's elements are values used
+freely. `args…` in the text is meta-notation. Spreading stays a possible additive extension (I10).
+Rejected: one tuple argument (forwarding inexpressible, and a type error far from its cause); spreading now
+(a pack name unlike an equal tuple, plus rules for mixed forms). (spec#155.)
+
 **Normative — the `dyn_over` construction takes the address form the place admits, and the canonical
 spelling is `ptr(store)` (Functions §1.6, §10 item 1; Memory §6.3; Grammar §3.6; glossary; FN-11).** The
 chapter's own example declared `store := fn(…)` — an immutable place under Memory §3.1 — and then wrote

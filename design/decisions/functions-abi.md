@@ -114,7 +114,8 @@ that named→positional reordering affects binding, not evaluation (nothing hidd
 Variadics** are a single trailing-rest parameter, with the comptime-variadic (`args : ...`,
 a monomorphized heterogeneous comptime tuple) as the main form, a typed rest (`args : ...T`)
 for the homogeneous runtime-slice case, and the C-variadic reserved for FFI under an
-`@abi(c)` context (and forbidden in checked code).
+`@abi(c)` context (and forbidden in checked code). A comptime-variadic's pack name is not a value: it
+appears only as a `comptime for` collection (FN-14).
 
 TYP-12 applies the ordinary `in` rule literally to a checked `@require` predicate while
 preserving the constructor result: one distinct logical by-value argument, classified as
@@ -486,3 +487,34 @@ existing advice in the same paragraph stays valid as advice about *templating*: 
 in a fixed parameter after the first `str` one, in the pack, or passed as a runtime value, is
 not split. A runtime value in the template's place becomes the pack's first fragment, as decided
 above.
+
+### FN-14. A comptime-variadic's pack name is not a value — spec#155
+*provenance: refines FN-5 (variadics) · spec: Functions §7.1, §10 item 8; Comptime §8.3; Stdlib
+  appendix §2.7 · owner decision 2026-11-16, spec#155*
+
+**Question.** Functions §7.1 said the trailing arguments of `args : ...` are collected into a comptime
+tuple that the body walks with `comptime for`, and nothing about the name `args` anywhere else. So
+`outer := fn(args : ...) -> u64 { inner(args) }` had three readings: the pack **spreads** into `inner`'s
+pack (A), it is **one** tuple argument (B), or the name is **not a value** and the use is ill-formed
+(C). The compiler ran the program to 0 or 20, matching none of them (compiler#1698).
+
+**Decision (owner, 2026-11-16).** **C.** The pack name MAY appear only as the collection of a `comptime
+for` (a `for` already comptime in a comptime context included). Every other use — a call argument such
+as `inner(args)`, an operand or any other expression, a binding, a store, a return — is ill-formed, with
+a located Semantic diagnostic at the use. The elements the loop binds are values and are used freely.
+`args…` with an ellipsis in the chapters (`print(t, args…)` ≡ `format(stdout, t, args…)`) is
+meta-notation, not a forwarding a program can write.
+
+**Why.** The pack is a compile-time list of arguments, not data the program holds: walking it is the
+one thing §7.1 defined, and C keeps it to that. It is the narrowest answer and the only one that can
+grow: spreading (A) can be added later without breaking any v1 program (I10), because every program it
+would give a meaning to is ill-formed under C. A or B, once chosen, could not be swapped for the other.
+
+**Rejected.**
+- *B — the pack name is one tuple argument.* Forwarding becomes inexpressible (a generic wrapper cannot
+  re-spell its callers' arguments), and the natural `inner(args)` fails with a type error inside
+  `inner` — a tuple added to a number — far from the call that caused it.
+- *A — the pack spreads.* A pack name would behave unlike a comptime tuple of equal contents passed the
+  same way (a named tuple `t` stays one argument in `inner(t)`), and mixed forms (`inner(args, x)`,
+  `inner(x, args)`) need rules of their own. It remains a possible future extension, compatible under
+  I10 for the reason above.

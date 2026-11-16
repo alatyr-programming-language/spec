@@ -36,7 +36,7 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | `foundations.md` | Methodology, conformance, limits, niche | FND-1..13 |
 | `memory.md` | Memory, lifetime, ownership, allocation | MEM-1..13 |
 | `types.md` | Types, layout, branding, construction | TYP-1..19 |
-| `functions-abi.md` | Functions, declarations, ABI | FN-1..13 |
+| `functions-abi.md` | Functions, declarations, ABI | FN-1..14 |
 | `comptime.md` | Comptime, generics, protocols, introspection | CT-1..14 |
 | `operators.md` | Operators, indexing, member access, conversions | OP-1..9 |
 | `control-flow.md` | Control flow, labels, errors (`?`/`!`, Tryable) | CF-1..11 |
