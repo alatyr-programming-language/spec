@@ -379,6 +379,9 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Closure** — a function + captured environment. *Static* — a concrete type (an aggregate of captures +
   function), zero-cost, monomorphized. *Type-erased (dyn)* — a fat value (a code pointer +
   a pointer-to-environment), the environment in explicit storage (MEM-1), an indirect call. Capture by value by default.
+  The capture slots are immutable: a captured name is read-only in the body, and a write to it, or its use as an
+  `out` / `in out` argument or under `ptr(mut …)`, is ill-formed; outer state changes through a captured pointer
+  (Memory §6.2, §6.4; MEM-14).
 
 - **Function-value type** — `fn(T0, T1, …) -> R` (FN-10): the **type** of a **non-capturing** function value
   (a top-level function or non-capturing lambda), written in **type position** as the **bodyless** signature
@@ -402,6 +405,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   a static closure (Memory §6.2) — the address an ordinary address-of, so Memory §4.4 decides the form
   (`ptr(mut store)` only over a writable place). **Call:** `d(args)` — indirect through `code`, passing
   `env`. Visible cost: two words + one indirect call. Deliberately unlike a `Box<dyn>` (no hidden allocation).
+
+- **Pack** — the trailing arguments a comptime-variadic parameter `args : ...` collects (Functions §7.1).
+  Its name is **not a value**: it appears only as the collection of a `comptime for`, and any other use —
+  `inner(args)` included — is ill-formed (FN-14). `args…` in the chapters is meta-notation, not source.
 
 - **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap) — an OS
   object or an exclusive right over storage (an arena's right to allocate and reclaim, MEM-2).

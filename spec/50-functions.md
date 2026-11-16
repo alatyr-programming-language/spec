@@ -241,9 +241,9 @@ fat pair), **not** an `@`-attribute (which is compile-time only, never a represe
   AND-path is not writable (Memory §3.3) is ill-formed here exactly as it is anywhere
   else. `ptr(store)` is the **canonical** spelling: Memory §4.4 admits it over every place,
   so it is the one form that never depends on the place's mutability, and the `mut`
-  qualifier appears only where the program made the store place writable. Whether the
-  adapter may write the synthesized capture slots is not stated by Memory §6.2 and is open
-  (spec#154); nothing in this clause decides it.
+  qualifier appears only where the program made the store place writable. Either way the
+  adapter only reads `env`: a static closure's capture slots are immutable (Memory §6.2;
+  MEM-14), and a `ptr(mut store)` env does not make them writable (Memory §3.3).
 - **Call.** `d(args)` — the ordinary postfix call (§3.2) — lowers, for a `dyn`-typed callee,
   to an **indirect call through `code`** passing `env` as the leading environment pointer to
   the adapter. Nothing is hidden (I3).
@@ -570,6 +570,20 @@ into a **comptime tuple**: the function is **monomorphized** over their types, s
 **type-safe and heterogeneous**, and the body walks them with `comptime for`
 (Comptime §8.3). This is the primary, checked-code variadic.
 
+**The pack name is not a value (FN-14).** The parameter's name (`args` in `args : ...`)
+names the **pack** of trailing arguments, and it MAY appear in the body **only** as the
+collection of a `comptime for` (Comptime §8.3) — `comptime for a in args { … }`, or a `for`
+over it that is already comptime inside a comptime context (Comptime §8.4). **Every other
+use of the name is ill-formed**, with a located Semantic diagnostic at that use: as a call
+argument (`inner(args)`, whatever the callee, another comptime-variadic included), as an
+operand or in any other expression, bound to a name (`t := args`), stored, or returned.
+The element a `comptime for` binds is used like any other value: inside the loop
+`inner(a)` is a call with one argument. A pack is therefore never forwarded: v1 has no
+form that passes a pack's elements on to another call, and `args…`
+with an ellipsis, in this chapter and in the Stdlib appendix (`print(t, args…)` ≡
+`format(stdout, t, args…)`, §2.7), is meta-notation for "the pack's elements, in order",
+not source text.
+
 **Format-template shape (the specified trigger).** When a comptime-variadic has a fixed
 parameter of type `str`, its **first fixed parameter of type `str`** — wherever it stands
 among the fixed parameters, so `format(w, "…", args…)` with a leading writer `w` is covered
@@ -759,7 +773,9 @@ A conforming implementation MUST:
    §3.1, §3.3);
 8. provide comptime-tuple variadics (primary), slice variadics (homogeneous), and
    C-variadics only under `@abi(c)` within an `unchecked` grant — forbidden in
-   checked code (§7; I11);
+   checked code (§7; I11); and reject, with a located Semantic diagnostic, any use of a
+   comptime-variadic's pack name other than as the collection of a `comptime for`
+   (§7.1; FN-14);
 9. run `defer` actions on every normal exit including `return`, and introduce no
    hidden control flow, allocation, or copies in calls (§8; I3);
 10. permit a name to bind several function values that differ in **parameter

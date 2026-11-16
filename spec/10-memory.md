@@ -998,6 +998,14 @@ allocation). A call to a statically-known closure is direct or inlinable. Generi
 code that takes a callable **monomorphizes** over the concrete closure type
 (Type System / Comptime chapters); there is no `dyn` indirection unless requested.
 
+The aggregate's **capture slots** — the fields the compiler synthesizes, one per
+capture — are **immutable** (MEM-14). No program declares them, so none is `mut`, and
+§3.2 applies to them as written: each is initialized when the closure value is
+constructed and is never assigned afterward. Their mutability does not follow the place
+that holds the closure: a `mut` binding holding it, or a `ptr(mut store)` env (§6.3),
+does not make a slot writable (the AND rule, §3.3). The code a closure runs — its body,
+or a `dyn` adapter over its env — therefore only reads its slots.
+
 #### 6.3 Type-erased (`dyn`) closure
 
 When heterogeneous callables must be stored together, a **type-erased** value is
@@ -1022,6 +1030,28 @@ When a closure is supplied as an `@require` predicate (Type System §8.1), the n
 contract applies: every capture MUST be comptime-known and is specialized away. A
 runtime value or reference capture is rejected, so that predicate call carries no
 runtime environment.
+
+**A capture is read-only in the closure body (MEM-14).** A captured name is read-only
+in the body, because its capture slot is immutable (§6.2) whatever the mutability of the
+binding it was captured from: capturing a `mut v` copies its value, not its write
+permission. Reading it is permitted. A use that requires a **writable place** is
+**ill-formed**, with a located Semantic diagnostic at that use:
+
+- assigning to it, or to a path rooted at it that passes through no dereference
+  (`v = …`, `v.f = …`, an element of a captured array; §3.3);
+- passing it, or such a path, as an `out` / `in out` argument (Functions §2.3);
+- taking `ptr(mut …)` of it or of such a path (§4.4), written or supplied by a receiver's
+  auto-ref (Type System §4.5) — so `ptr(mut v)` in the body is never a reference capture
+  of the outer `v`.
+
+A path that passes through a dereference, written or supplied by auto-deref (Type System
+§4.5) — `deref(v.p) = …`, `v.p.x = …` for a pointer field `p`, an element of a captured
+slice — takes the permission its pointer or slice type carries (`ptr(mut T)` §3.3,
+`[mut T]` Stdlib appendix §3.5) instead, as it does anywhere.
+So a closure changes outer state **through a captured pointer**: with `p := ptr(mut v)`
+bound outside and `p` captured, the body writes `deref(p) = 30`, and the escape rule
+bounds the closure (§5.3.1). A closure that needs a mutable copy binds one in its body
+(`mut w := v`). v1 has no form that declares a capture slot `mut`.
 
 ---
 
@@ -1120,7 +1150,10 @@ A conforming implementation MUST:
    values with explicit environment storage, bounding each `dyn` by its env storage's
    extent via the escape rule; for an `@require` predicate, accept only comptime-known
    captures specialized away and reject a runtime environment (§6; §5.3.1; Type System
-   §8.1; FN-11);
+   §8.1; FN-11); treat a static closure's capture slots as immutable fields and reject,
+   with a located Semantic diagnostic, a use of a captured name in the closure body that
+   requires a writable place — an assignment, an `out` / `in out` argument, `ptr(mut …)` —
+   on it or on a path rooted at it through no dereference (§6.2, §6.4; MEM-14);
 9. introduce **no** hidden control flow, allocation, copy, or run-time type
    information in any of the above (I3).
 

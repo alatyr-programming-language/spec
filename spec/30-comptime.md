@@ -632,6 +632,8 @@ over an enum (e.g. `typeinfo(T)`'s) is exhaustive on the same rule as a runtime 
 
 **Unrolling**: the body is emitted **once per element**, with `x` bound as a
 **comptime value**. The result is straight-line code with **no runtime loop**.
+The collection may be a comptime-variadic's pack name — the only position that name may
+take (Functions §7.1; FN-14).
 
 #### 8.4 Marking
 

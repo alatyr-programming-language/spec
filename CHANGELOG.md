@@ -49,6 +49,25 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a static closure's capture slots are immutable; a capture is read-only in the closure body
+(Memory §6.2, §6.4, §8 item 8; Functions §1.6; glossary; MEM-14, FN-6, FN-11).**  Memory §6.2 never said
+what mutability the synthesized capture slots carry. They are immutable: §3.2 applies as written, and
+neither a `mut` place holding the closure nor a `ptr(mut store)` env makes them writable. In the body,
+assigning to a captured name or a path rooted at it through no dereference, passing it as an `out` /
+`in out` argument, or taking `ptr(mut …)` of it is ill-formed with a located Semantic diagnostic; outer
+state changes through a captured pointer. A `dyn` adapter only reads `env`. Rejected: mutable slots — a
+write to `v` in a lambda would look like a write to the outer `v` while changing only the closure's copy.
+(spec#154.)
+
+**Normative — a comptime-variadic's pack name is not a value (Functions §7.1, §10 item 8; Comptime §8.3;
+Stdlib appendix §2.7; glossary; FN-14, FN-5).**  §7.1 defined only walking the pack with `comptime for`, so
+`inner(args)` could spread the pack, pass it as one tuple, or be ill-formed. The pack name now MAY appear
+only as the collection of a `comptime for`; every other use — a call argument, an expression, a binding, a
+store, a return — is ill-formed with a located Semantic diagnostic. The loop's elements are values used
+freely. `args…` in the text is meta-notation. Spreading stays a possible additive extension (I10).
+Rejected: one tuple argument (forwarding inexpressible, and a type error far from its cause); spreading now
+(a pack name unlike an equal tuple, plus rules for mixed forms). (spec#155.)
+
 **Normative — the `dyn_over` construction takes the address form the place admits, and the canonical
 spelling is `ptr(store)` (Functions §1.6, §10 item 1; Memory §6.3; Grammar §3.6; glossary; FN-11).** The
 chapter's own example declared `store := fn(…)` — an immutable place under Memory §3.1 — and then wrote
@@ -60,7 +79,7 @@ read-only pointer to a mutable place), and `ptr(store)` is canonical because Mem
 every place, so it is the one form that never depends on the place's mutability. A program taking
 `ptr(mut store)` over an immutable place **remains** ill-formed, as Memory §4.4 already required: what
 changes is that Functions §1.6 no longer tells the reader to write it. Whether the adapter may write
-the synthesized capture slots is open (spec#154); nothing here decides it. Rejected:
+the synthesized capture slots was left to spec#154, which makes them immutable (above). Rejected:
 declaring the example's store `mut` — that makes the marker boilerplate the callee dictates rather than
 a fact the program chose, against Memory §3.1's stated purpose; and carving `dyn_over` out of Memory
 §4.4 — a MUST-level exception for one builtin invites the next. (spec#152.)

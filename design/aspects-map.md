@@ -32,7 +32,8 @@ and **deferred (additive) growth**.
   value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11); an owning value-expression there gets no temporary and the call is
   ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; over an owning element `free`/`clear`/`truncate` trap unless drained, STD-11;
   `for x in v` borrows `v`, CF-11); the comparison relations borrow an
-  owning operand (MEM-13; open: spec#126, #128). Joint detailing is complete.
+  owning operand (MEM-13; open: spec#126, #128); a static closure's capture slots are immutable, so a capture is
+  read-only in the closure body (MEM-14). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18, TYP-19
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
@@ -58,7 +59,8 @@ and **deferred (additive) growth**.
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
   overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
   a non-literal argument in a comptime-variadic's template place — its first fixed `str` parameter — is a valid,
-  untemplated call, FN-13/STD-5).
+  untemplated call, FN-13/STD-5; a comptime-variadic's pack name is not a value, only a `comptime for`
+  collection, FN-14).
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8; `for x in e`
   applies `iter` to `e` as a receiver with auto-ref, so it borrows an owning `e` (CF-11).
