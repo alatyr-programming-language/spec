@@ -266,8 +266,8 @@ place-expressions; Type System §4.5 names it beside the array/slice built-ins.
 ---
 
 ### OP-10. A built-in element store evaluates its right-hand side before the bounds check — spec#163
-*provenance: refines OP-3 (the built-in index) and OP-2 (compound assignment, place before `rhs`);
-  reads OP-7 and Functions §5.4 · spec: Type System §6.4; Memory §1.6*
+*provenance: refines OP-3 (the built-in index); reads OP-2 (compound assignment, place before
+  `rhs`), OP-7, CG-13 and Functions §5.4 · spec: Type System §6.4; Memory §1.6*
 
 **Question.** For a plain store `xs[i] = v` into an array or slice element,
 the spec did not fix whether `v` is evaluated before or after the bounds check of `i`. The
@@ -289,14 +289,14 @@ through the guarded index before `rhs` is evaluated, so the check precedes `rhs`
 part of the store, after its value exists. It is the order a
 library aggregate already has: `a[i] = v` is `index_set(a, i, v)`, whose arguments are evaluated
 left to right before its own check runs inside the call, so `xs[10] = f()` runs `f()` and then traps
-alike for an array, a slice and a `Vec` (one indexing surface, OP-3), and `a[i] ⊕= rhs` checks in
-`at` before `rhs` on both kinds (OP-7). It keeps Memory §1.6's rule that the place is evaluated
-before the right-hand side.
+alike for an array, a slice and a `Vec` (one indexing surface, OP-3); and `a[i] ⊕= rhs` checks
+before `rhs` on both kinds: in `at` for a library aggregate (OP-7), and for a built-in when the
+element's address is taken through the guarded index (Memory §1.6). The base and the index are
+evaluated before the right-hand side, as Memory §1.6 evaluates a compound assignment's place.
 
 **Rejected.** *Index, bounds check, then `v`* (fail fast, so `v`'s effect never happens on a bad
 index). It would make the built-in store differ from `index_set`, so the same `xs[10] = f()` would
-run `f()` on a `Vec` and not on an array; and it would check the stored element before the store
-has the value it stores.
+run `f()` on a `Vec` and not on an array.
 
 ---
 

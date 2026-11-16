@@ -782,9 +782,9 @@ so `m[i][k] = v` checks `i` while it evaluates the base, before `k` and `v`. Ins
 the check is absent and the rest of the order stands. This is the order of a library aggregate's
 `a[i] = v` ≡ `index_set(a, i, v)`, whose arguments are evaluated left to right (Functions §5.4)
 before its check runs inside the call, so `xs[10] = f()` runs `f()` and then traps alike for an
-array, a slice and a `Vec`; and it keeps Memory §1.6's order of a compound assignment, the place
-before the right-hand side. A compound assignment `a[i] ⊕= rhs` checks before `rhs` (Memory §1.6;
-OP-10).
+array, a slice and a `Vec`; and the base and the index are evaluated before the right-hand side, as
+Memory §1.6 evaluates a compound assignment's place. A compound assignment `a[i] ⊕= rhs` checks
+before `rhs` (Memory §1.6; OP-10).
 
 Indexing **through a pointer** auto-derefs one level: when the base has type
 `ptr([mut] R)` for an indexable `R`, `p[i]` ≡ `deref(p)[i]` (§4.5 / OP-5), after which
