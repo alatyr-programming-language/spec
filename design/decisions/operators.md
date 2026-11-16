@@ -265,6 +265,41 @@ place-expressions; Type System §4.5 names it beside the array/slice built-ins.
 
 ---
 
+### OP-10. A built-in element store evaluates its right-hand side before the bounds check — spec#163
+*provenance: refines OP-3 (the built-in index); reads OP-2 (compound assignment, place before
+  `rhs`), OP-7, CG-13 and Functions §5.4 · spec: Type System §6.4; Memory §1.6*
+
+**Question.** For a plain store `xs[i] = v` into an array or slice element,
+the spec did not fix whether `v` is evaluated before or after the bounds check of `i`. The
+difference is observable when `v` has an effect (a write, a trap, a call that does not return) and
+`i` is out of range. Memory §1.6 fixed the order only for `place ⊕= rhs` (the place, then `rhs`),
+and Functions §5.4 the order of a library aggregate's `index_set(a, i, v)`.
+
+**Decision (owner, 2026-11-17).** **The right-hand side first.** The order is: the base, then the
+index; then `v`; then the bounds check, and the store if it passes. Inside `unchecked` there is
+no check and the rest of the order stands.
+
+Two consequences follow from existing text and are not part of the owner's choice. An index
+inside the base keeps its guard at its own operation site (CG-13), so `m[i][k] = v` checks `i`
+while it evaluates the base, before `k` and `v`; only the stored element's own check is part of
+the store. A compound assignment `xs[i] ⊕= rhs` keeps Memory §1.6's lowering: the address is taken
+through the guarded index before `rhs` is evaluated, so the check precedes `rhs`.
+
+**Why.** It is the order a reader reads the source in, left to right, with the store's own check
+part of the store, after its value exists. It is the order a
+library aggregate already has: `a[i] = v` is `index_set(a, i, v)`, whose arguments are evaluated
+left to right before its own check runs inside the call, so `xs[10] = f()` runs `f()` and then traps
+alike for an array, a slice and a `Vec` (one indexing surface, OP-3); and `a[i] ⊕= rhs` checks
+before `rhs` on both kinds: in `at` for a library aggregate (OP-7), and for a built-in when the
+element's address is taken through the guarded index (Memory §1.6). The base and the index are
+evaluated before the right-hand side, as Memory §1.6 evaluates a compound assignment's place.
+
+**Rejected.** *Index, bounds check, then `v`* (fail fast, so `v`'s effect never happens on a bad
+index). It would make the built-in store differ from `index_set`, so the same `xs[10] = f()` would
+run `f()` on a `Vec` and not on an array.
+
+---
+
 ## Member access on unions
 
 ### OP-4. Raw-union member access reuses constructor, assignment, and projection syntax

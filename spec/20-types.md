@@ -772,6 +772,20 @@ an `unchecked` scope** the bounds check is omitted (the verification mode, CG-7/
 `unchecked a[i]` for one access, `unchecked { … }` for a region). `N` is a compile-time value. A **dynamic** length is a
 **slice** — a library type (pointer + length), **not** a layout primitive.
 
+**The order of an element store.** A store `a[i] = v` into an array or slice element (Stdlib
+appendix §3.5) runs in this order: the base `a` is evaluated, then the index `i`; then the
+right-hand side `v`; then the bounds check, and the store if the check passes. The check and the
+store use the base and the index as evaluated. So an effect of `v` — a write, a trap, a call that
+does not return — happens before an out-of-range index traps. Only the stored element's own check
+is part of the store: an index inside the base keeps its guard at its own operation site (CG-13),
+so `m[i][k] = v` checks `i` while it evaluates the base, before `k` and `v`. Inside `unchecked`
+the check is absent and the rest of the order stands. This is the order of a library aggregate's
+`a[i] = v` ≡ `index_set(a, i, v)`, whose arguments are evaluated left to right (Functions §5.4)
+before its check runs inside the call, so `xs[10] = f()` runs `f()` and then traps alike for an
+array, a slice and a `Vec`; and the base and the index are evaluated before the right-hand side, as
+Memory §1.6 evaluates a compound assignment's place. A compound assignment `a[i] ⊕= rhs` checks
+before `rhs` (Memory §1.6; OP-10).
+
 Indexing **through a pointer** auto-derefs one level: when the base has type
 `ptr([mut] R)` for an indexable `R`, `p[i]` ≡ `deref(p)[i]` (§4.5 / OP-5), after which
 the index operator resolves on the pointee `R` (this built-in for an array/slice or a `str` (Stdlib appendix §3.6), or the type's

@@ -38,7 +38,7 @@ resolve design forks. Terms are defined once in **`../glossary.md`**.
 | `types.md` | Types, layout, branding, construction | TYP-1..19 |
 | `functions-abi.md` | Functions, declarations, ABI | FN-1..14 |
 | `comptime.md` | Comptime, generics, protocols, introspection | CT-1..14 |
-| `operators.md` | Operators, indexing, member access, conversions | OP-1..9 |
+| `operators.md` | Operators, indexing, member access, conversions | OP-1..10 |
 | `control-flow.md` | Control flow, labels, errors (`?`/`!`, Tryable) | CF-1..11 |
 | `modules.md` | Modules, visibility, packages, paths | MOD-1..15 |
 | `codegen.md` | Codegen, lowering, optimization, backends, conventions | CG-1..19 |
