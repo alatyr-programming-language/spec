@@ -136,6 +136,8 @@ directly/inlined, and monomorphized by generics → zero-cost with no `dyn` unti
 environment lives in *explicit* storage (region/arena/heap), an indirect call with visible
 cost. Captures are by value by default (a copy into the environment, so the closure is
 independent); an explicit reference capture makes the closure scoped and unable to escape.
+A capture slot is immutable, so a capture is read-only in the body and outer state changes
+through a captured pointer (MEM-14).
 "Callable" as a generic constraint is just a comptime-structural predicate — no special
 function trait.
 
@@ -369,8 +371,8 @@ anywhere else, while `ptr(store)` is admissible over any place — Memory §4.4 
 read-only pointer to a mutable place. `ptr(store)` is therefore the **canonical** spelling:
 Memory §4.4 admits it over every place, so it is the one form that never depends on the
 place's mutability. `ptr(mut store)` is admissible only over a writable place, where the
-program chose a writable env. Whether the adapter may write the synthesized capture slots
-is not stated by Memory §6.2 and is open (spec#154); nothing in this decision decides it.
+program chose a writable env. Either way the adapter only reads `env`: the capture slots
+are immutable (MEM-14, spec#154), and a writable env does not make them writable.
 
 *Refined 2026-11-16 (spec#152, owner decision): the canonical spelling was `ptr(mut store)`
 here and in every chapter that cited it — the Stdlib appendix alone spelled `ptr([mut] store)`,

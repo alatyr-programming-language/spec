@@ -514,3 +514,37 @@ heterogeneous pair — and which sites select it, since a `ptr(K)` slot would al
 pair under FN-7: spec#126, blocking for that case only. The structural derive's enum arm over a borrowed
 operand — an enum owning through a payload (`Option(String) == Option(String)`), whose `T.(v)(p)` pattern would move
 the payload out of a place behind a pointer (spec#97): spec#128, blocking for that case only.
+
+### MEM-14. A static closure's capture slots are immutable; a capture is read-only in the body — spec#154
+*provenance: refines FN-6 (static closures, capture by value) and MEM-7 (per-field mutability) for the
+  fields no program declares; reads FN-11 (the `dyn` env) · spec: Memory §6.2, §6.4, §8 item 8;
+  Functions §1.6 · owner decision 2026-11-16, spec#154*
+
+**Question.** A static closure is an anonymous aggregate of its captures plus the known function
+(Memory §6.2), and Memory §3.2 makes a field immutable unless declared `mut`. Nobody declares the
+capture slots, so §3.2 reached them only by inference. Two readings fit: the slots are immutable, or
+they are the compiler's storage and so writable. With `mut v : u64 = 2` and `f := fn() { v = 30 }`, the
+first makes the store ill-formed; the second makes it legal and invisible outside `f`, the caller's `v`
+staying 2. The compiler refused it with a wrong diagnostic (compiler#1703) and refused `put(v)` into an
+`in out` parameter as an immutable binding (compiler PR #1689), applying the first reading unchosen.
+
+**Decision (owner, 2026-11-16).** **The capture slots are immutable.** §3.2 applies to them as written:
+each is initialized when the closure value is constructed and never assigned afterward. In the closure
+body a captured name is read-only, whatever the mutability of the binding it was captured from. A use
+needing a writable place — an assignment to it or to a path rooted at it through no dereference, an
+`out` / `in out` argument, `ptr(mut …)` — is ill-formed, with a located Semantic diagnostic at the use.
+Outer state changes **through a captured pointer** (`p := ptr(mut v)` outside, `deref(p) = 30` inside),
+whose store takes the pointee mutability (§3.3); a mutable scratch copy is a local of the body
+(`mut w := v`). v1 has no `mut` capture form.
+
+**Why.** It is the rule non-`mut` fields already follow (§3.2): `mut` keeps meaning "this is written
+here", and nothing in a closure's body marks its slots as written. The answer is also the one that fits
+FN-11 (spec#152): a place holding the closure, `mut` or not, and a `ptr(mut store)` env give the slots
+no write permission (the AND rule, §3.3), so a capture slot is never a writable place and the `dyn`
+adapter only reads `env`. The canonical `ptr(store)` spelling rests on Memory §4.4 and is unchanged.
+
+**Rejected.** *Mutable slots, writes landing in the closure's own copy.* A write to `v` inside a lambda
+looks like a write to the outer `v` but is not: the program above would answer 42 with the store
+silently invisible to the caller, the kind of hidden divergence I3 rules out. It would also make a
+`dyn` over a `ptr(store)` env write through a read-only address, which Memory §4.4 forbids, unless a
+rule of its own required `ptr(mut store)` for such closures — one Memory §4.4 alone does not give.

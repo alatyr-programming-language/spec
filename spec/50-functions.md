@@ -241,9 +241,9 @@ fat pair), **not** an `@`-attribute (which is compile-time only, never a represe
   AND-path is not writable (Memory §3.3) is ill-formed here exactly as it is anywhere
   else. `ptr(store)` is the **canonical** spelling: Memory §4.4 admits it over every place,
   so it is the one form that never depends on the place's mutability, and the `mut`
-  qualifier appears only where the program made the store place writable. Whether the
-  adapter may write the synthesized capture slots is not stated by Memory §6.2 and is open
-  (spec#154); nothing in this clause decides it.
+  qualifier appears only where the program made the store place writable. Either way the
+  adapter only reads `env`: a static closure's capture slots are immutable (Memory §6.2;
+  MEM-14), and a `ptr(mut store)` env does not make them writable (Memory §3.3).
 - **Call.** `d(args)` — the ordinary postfix call (§3.2) — lowers, for a `dyn`-typed callee,
   to an **indirect call through `code`** passing `env` as the leading environment pointer to
   the adapter. Nothing is hidden (I3).

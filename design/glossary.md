@@ -379,6 +379,9 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
 - **Closure** — a function + captured environment. *Static* — a concrete type (an aggregate of captures +
   function), zero-cost, monomorphized. *Type-erased (dyn)* — a fat value (a code pointer +
   a pointer-to-environment), the environment in explicit storage (MEM-1), an indirect call. Capture by value by default.
+  The capture slots are immutable: a captured name is read-only in the body, and a write to it, or its use as an
+  `out` / `in out` argument or under `ptr(mut …)`, is ill-formed; outer state changes through a captured pointer
+  (Memory §6.2, §6.4; MEM-14).
 
 - **Function-value type** — `fn(T0, T1, …) -> R` (FN-10): the **type** of a **non-capturing** function value
   (a top-level function or non-capturing lambda), written in **type position** as the **bodyless** signature

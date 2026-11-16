@@ -32,7 +32,8 @@ and **deferred (additive) growth**.
   value-expression is a value-expression, so `f().x = 1` is ill-formed (MEM-11); an owning value-expression there gets no temporary and the call is
   ill-formed, and `Vec(T)` and `String` are `@owning`, released by an explicit `free` (MEM-12; over an owning element `free`/`clear`/`truncate` trap unless drained, STD-11;
   `for x in v` borrows `v`, CF-11); the comparison relations borrow an
-  owning operand (MEM-13; open: spec#126, #128). Joint detailing is complete.
+  owning operand (MEM-13; open: spec#126, #128); a static closure's capture slots are immutable, so a capture is
+  read-only in the closure body (MEM-14). Joint detailing is complete.
 - `[x]` **4. Type system.** Foundations TYP-1–CT-2; detailing TYP-2–TYP-15, TYP-17, TYP-18, TYP-19
   (`bitsN` core + interpretations u/i/f,
   construction machinery, aggregates, layout control, value construction, `uint(N)` multiword unsigned
