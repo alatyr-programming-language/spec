@@ -398,9 +398,10 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   is a **type-constructor keyword** (it switches the representation), not an `@`-attribute. The environment
   lives in **explicit user-provided storage** the `dyn` value **borrows** — never a hidden heap box (I3) — and
   its validity is bounded by that storage's extent, checked by the **escape rule** (Memory §5.3.1).
-  **Construction:** the prelude word-function **`dyn_over(ptr(mut store))`** over a named place `store` holding
-  a static closure (Memory §6.2). **Call:** `d(args)` — indirect through `code`, passing `env`. Visible cost:
-  two words + one indirect call. Deliberately unlike a `Box<dyn>` (no hidden allocation).
+  **Construction:** the prelude word-function **`dyn_over(ptr(store))`** over a named place `store` holding
+  a static closure (Memory §6.2) — the address an ordinary address-of, so Memory §4.4 decides the form
+  (`ptr(mut store)` only over a writable place). **Call:** `d(args)` — indirect through `code`, passing
+  `env`. Visible cost: two words + one indirect call. Deliberately unlike a `Box<dyn>` (no hidden allocation).
 
 - **Owning value** — a value-"ticket" behind a real resource (file/region/piece of heap) — an OS
   object or an exclusive right over storage (an arena's right to allocate and reclaim, MEM-2).

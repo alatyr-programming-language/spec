@@ -533,7 +533,8 @@ fn-sig       ::= "fn" "(" [ param-list ] ")" [ "->" type-expr ] [ when-clause ] 
 fn-type      ::= "fn" "(" [ fn-type-param { item-sep fn-type-param } ] ")" [ "->" type-expr ]
 fn-type-param ::= [ "in" | "out" | "in" "out" ] type-expr    (* direction (default in) + type — no name *)
 (* the type-erased dyn closure TYPE (a `type-atom`, §3.3; Functions §1.6, FN-11): `dyn` over a fn-type =
-   a {code, env} fat pair. Constructed by the prelude `dyn_over(ptr(mut store))` (a builtin, no grammar);
+   a {code, env} fat pair. Constructed by the prelude `dyn_over(ptr(store))` (a builtin, no grammar;
+   the address form follows Memory §4.4 — `ptr(mut store)` only over a writable place);
    called `d(args)` via the ordinary postfix call (§3.4). *)
 dyn-type     ::= "dyn" fn-type
 param-list   ::= variadic-param
