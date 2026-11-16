@@ -49,6 +49,16 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a built-in element store evaluates its right-hand side before the bounds check (Type
+System §6.4; Memory §1.6; OP-10).**  For `xs[i] = v` on an array or slice element with a runtime index,
+the spec did not say whether `v` is evaluated before or after the bounds check of `i`. The order is: the
+base, then the index, then `v`, then the bounds check and the store; so `v`'s effects happen before an
+out-of-range trap, as they already do for a library aggregate's `index_set(a, i, v)`. The base is
+evaluated in full first, including the check of any index inside it. A compound assignment
+`xs[i] ⊕= rhs` reads the element before `rhs`, so its check precedes `rhs` (Memory §1.6, unchanged).
+Rejected: checking the index before `v` — `xs[10] = f()` would then run `f()` on a `Vec` but not on an
+array. (spec#163.)
+
 **Normative — a static closure's capture slots are immutable; a capture is read-only in the closure body
 (Memory §6.2, §6.4, §8 item 8; Functions §1.6; glossary; MEM-14, FN-6, FN-11).**  Memory §6.2 never said
 what mutability the synthesized capture slots carry. They are immutable: §3.2 applies as written, and

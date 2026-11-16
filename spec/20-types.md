@@ -772,6 +772,21 @@ an `unchecked` scope** the bounds check is omitted (the verification mode, CG-7/
 `unchecked a[i]` for one access, `unchecked { … }` for a region). `N` is a compile-time value. A **dynamic** length is a
 **slice** — a library type (pointer + length), **not** a layout primitive.
 
+**The order of an element store.** A store `a[i] = v` into an array or slice element (Stdlib
+appendix §3.5), with a runtime index, runs in this order: the base `a` is evaluated, then the index
+`i`; then the right-hand side `v`; then the bounds check, and the store if the check passes. So an
+effect of `v` — a write, a trap, a call that does not return — happens before an out-of-range
+index traps. Evaluating the base is complete before `i` is evaluated, including the bounds check of
+any index inside the base: `m[i][k] = v` checks `i` before it evaluates `k` and `v`, and only the
+stored element's own check follows `v`. Inside `unchecked` the check is absent and the rest of the
+order stands. This is the order of a library aggregate's `a[i] = v` ≡ `index_set(a, i, v)`, whose
+arguments are evaluated left to right (Functions §5.4) before its check runs inside the call, so
+`xs[10] = f()` runs `f()` and then traps alike for an array, a slice and a `Vec`; and it keeps
+Memory §1.6's order of a compound assignment, the place before the right-hand side. A compound
+assignment `a[i] ⊕= rhs` on an array or slice reads the element before it evaluates `rhs`
+(Memory §1.6), so there the bounds check precedes `rhs`, as `at`'s check does in a library
+aggregate's `index_set(a, j, at(a, j) ⊕ rhs)` (OP-7; OP-10).
+
 Indexing **through a pointer** auto-derefs one level: when the base has type
 `ptr([mut] R)` for an indexable `R`, `p[i]` ≡ `deref(p)[i]` (§4.5 / OP-5), after which
 the index operator resolves on the pointee `R` (this built-in for an array/slice or a `str` (Stdlib appendix §3.6), or the type's

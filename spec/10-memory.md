@@ -106,7 +106,8 @@ The fundamental operations relating values and places are:
 
 - **Load** (place → value): reading a place in value context yields its value.
 - **Store** (value → place): assignment evaluates the right-hand value-expression
-  and writes it into the left-hand place-expression.
+  and writes it into the left-hand place-expression (for an array or slice element, the order
+  of the place, the value and the bounds check is Type System §6.4's).
 - **Address-of** (place → address): yields the address of a memory-resident place
   (§4).
 - **Dereference** (address → place): yields the place that an address denotes
@@ -153,7 +154,10 @@ binary glyph operators `+ - * / % & | ^` (OP-2), is **sugar** lowered by this do
 rule (I1; nothing hidden, I3): the **place is evaluated once**. Its address is taken once
 into a fresh temporary `t`, then the store is `deref(t) = deref(t) ⊕ rhs` — so any
 side effects in the place (an index `a[f()]`, a dereference `deref(p())`) occur
-**exactly once**, and `rhs` is evaluated once, after the place. For a plain binding the
+**exactly once**, and `rhs` is evaluated once, after the place. On an array or slice
+element the element is read (`deref(t)`, the left operand of `⊕`) before `rhs` is evaluated, so
+its bounds check precedes `rhs`; a plain store `a[i] = v` instead evaluates `v` before the check
+(Type System §6.4; OP-10). For a plain binding the
 rule degenerates to `x = x ⊕ rhs`. Because `⊕` is an overloadable operator-function (Type
 System §5.3; TYP-5), `⊕=` applies to any type that defines `⊕`; it introduces no new
 overload point. The place MUST be mutable (§3) and definitely assigned (it is read), as
