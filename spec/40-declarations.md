@@ -238,7 +238,8 @@ such as `-1` — is checked against its context the same way, an integer one by 
 
 ### 5. Scope
 
-Scope is **lexical and block-structured**. The scopes are:
+Scope is **lexical and block-structured**, with module scopes nested along the module
+tree (below). The scopes are:
 
 - a **block** `{ … }`;
 - a **function** (its parameters and body);
@@ -250,6 +251,20 @@ nested scope sees the names of its enclosing scopes. **Scope is the *name* axis*
 (Memory §1.5) — independent of the binding's storage class (space) and
 lifetime (time).
 
+**Module scopes nest along the module tree** (Modules §1), not along the text. A child
+module's scope is nested in its parent module's scope whether the child is an inline
+`mod { … }` or a file-defined module: `geo/child.al` (module `geo::child`) is nested in
+`geo`'s scope although it is not textually inside `geo.al`. So an **ancestor module's names
+are in scope unqualified** in every descendant: a bare `f(x)` in `geo::child` resolves to the
+`f` that `geo` binds, with no binding and no path. A name resolves to the **innermost** scope
+that binds it — the blocks, function or comptime block around the use, then the module's own
+scope, then its parent's, and so on outward to the package root (MOD-16). An ancestor's scope
+is in scope **whole**: it binds its own declarations, imports and re-exports *and* its child
+modules by path (Modules §5), so inside `geo::child` a bare `vec` is the sibling module
+`geo::vec` and a bare `child` is the module itself. Being in scope does not widen visibility: a
+use of an ancestor's name — a sibling module's name included — is checked against the entity it
+resolves to like any other use (Modules §3, MOD-15).
+
 ---
 
 ### 6. Shadowing
@@ -259,6 +274,21 @@ lifetime (time).
 A declaration in an inner scope **may shadow** an outer name; within the inner
 scope the inner name wins, and the outer name is again visible after the inner scope
 ends.
+
+This holds between module scopes too (§5). A name a descendant module binds itself — a
+declaration, or an alias such as `f := b::f` (Modules §4.1), including a name a listed
+projection binds (Modules §4.1.1) — **shadows** an ancestor's binding of that name within the
+descendant and within the descendant's own descendants. It is not a same-scope redeclaration
+(§6.2, MOD-8), because the two bindings are in different scopes.
+
+Between module scopes, shadowing replaces the **whole name**: when the ancestor's name is an
+overload set (Functions §1.4), the descendant's binding of that name hides **every** ancestor
+overload, a generic default included; it does not join the ancestor's set, and a call the
+descendant's binding does not accept is ill-formed (Functions §1.4) rather than a fall-back to
+an ancestor overload. An overload set forms only among the bindings of one scope (§6.2).
+Whether the injected **base prelude** is such an enclosing scope — whether a module's own `eq`
+shadows the prelude's generic `eq` or joins its overload set — is **open** (spec#166); nothing
+here decides it.
 
 #### 6.2 Same scope — forbidden
 
@@ -390,9 +420,12 @@ A conforming implementation MUST:
 5. enforce definite assignment before any read, forbid reading uninitialized storage
    in checked code, impose no implicit zero-initialization, and allow an immutable
    binding to be established exactly once (§4; I3/I11);
-6. implement lexical block scope as the name axis (§5);
-7. allow shadowing across scopes and reject same-scope redeclaration with a
-   diagnostic (§6);
+6. implement lexical block scope as the name axis, nesting each module's scope in its
+   parent module's along the module tree, so an ancestor's names are in scope unqualified
+   in every descendant, inline or file-defined (§5);
+7. allow shadowing across scopes — module scopes included, a descendant's own binding
+   shadowing an ancestor's whole name, overload set and all — and reject same-scope
+   redeclaration with a diagnostic (§6);
 8. make module-level declarations order-independent (mutual recursion, no forward
    declarations) with compile-time-known module initializers evaluated in dependency
    order (cycles an error), evaluate a checked module-level `@require` gate entirely at

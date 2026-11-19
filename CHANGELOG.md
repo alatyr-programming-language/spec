@@ -49,6 +49,19 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — module scopes nest along the module tree: an ancestor's names are in scope unqualified in
+a descendant (Declarations §5, §6.1, §10; Modules §3, §4.1, §4.5, §5, §11; MOD-16, MOD-2, MOD-8,
+FN-2).**  The spec granted a descendant the right to name its ancestors' items, but never said whether a
+bare `f(x)` in a file-defined child (`geo/child.al`) finds the `f` its parent `geo` declares. It does: a
+child module's scope, inline or file-defined, is nested in its parent's, so a name resolves to the
+innermost scope that binds it, outward to the package root. A name the descendant binds itself — a
+declaration or an alias such as `f := b::f`, a listed projection included — shadows the ancestor's within
+the descendant; it is not a MOD-8 clash, which is a rule within one scope. Shadowing replaces the whole
+name: a descendant's binding of an ancestor's overloaded name hides every ancestor overload rather than
+joining the set. Visibility stays a permission and is checked as before. Rejected: permission only (an
+inline and a file child would read the same text differently); a cross-scope clash; merging overloads
+across scopes. (spec#167.)
+
 **Normative — a built-in element store evaluates its right-hand side before the bounds check (Type
 System §6.4; Memory §1.6; OP-10).**  For `xs[i] = v` on an array or slice element, the spec did not say
 whether `v` is evaluated before or after the bounds check of `i`. The order is: the base, then the index,

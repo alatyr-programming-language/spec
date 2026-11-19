@@ -39,7 +39,9 @@ one level (to the parent), further by chain. Subtree-down (Rust-style) was chose
 the language has only `pub`: with no `pub(super)` / `pub(crate)`, strict module-locality
 would force `pub`-ing helpers merely so a submodule could see them — over-exposure. The
 linker emission of a symbol is a **separate axis** (`@export`, MOD-5), not governed by this
-visibility.
+visibility. Visibility is the **permission** to name; where a bare name is **looked up** is
+MOD-16 — module scopes nest along the tree, so an ancestor's items are also in scope
+unqualified in a descendant.
 
 **Rejected.** Strict module-locality (no down-tree access) — forces over-exposing helpers
 for a submodule's sake, given only one `pub` keyword.
@@ -172,6 +174,8 @@ predictable. **Child modules count too** (refined by TOOL-15): a module's scope 
 declarations/imports/re-exports *and* by its child modules by path, so a declaration colliding with a
 same-named file-module is this same error — including, at the anonymous root, the manifest handle against
 a module of `source_dir`. Where one side is a file rather than a declaration, the diagnostic names both.
+The rule is **per scope**: an ancestor's names sit in an enclosing scope, so a module binding a
+name its ancestor binds shadows it (MOD-16) rather than clashing.
 
 ### MOD-9. Foreign-library link mode is first-class and per-library; hermetic-static is the default
 *provenance: refines FN-8 (manifest-driven linking) and MOD-7 (reproducibility-first packages) · 
@@ -493,3 +497,82 @@ the private shapes and legal controls for `pub`-through-alias and down-tree, aft
 semantic probe of that population. Compiler#1429 carries the defect; spec#27 is the
 `pub use` shape of the same question, answered the same way: the alias governs nothing,
 the entity does.
+
+### MOD-16. Module scopes nest along the module tree — an ancestor's names are in scope in a descendant
+*provenance: refines MOD-2 (which grants a descendant the right to name its ancestors' items
+  but not where a bare name is looked up), MOD-8 (per scope) and FN-2 (lexical scope,
+  cross-scope shadowing) · spec: Declarations §5, §6.1, §10; Modules §3, §4.1, §4.5, §5, §11*
+
+**Question.** In a file-defined child module (`geo/child.al`, module `geo::child`), does a
+**bare** `f(x)` resolve to the `f` its ancestor `geo` declares, with no binding and no path?
+And if the child also binds `f` (`f := b::f`), which wins, or is it an error? Declarations §5
+said a nested scope sees its enclosing scopes and listed the module/file scope, and MOD-2 made
+an ancestor's items visible to all of its descendants, file-based and inline. But Modules §3
+defines visibility as *who may name a declaration* — permission, not lookup — §4.1 reaches an
+ancestor's item through a binding or a path, and a file child is not textually inside its
+parent. No passage said a file module's scope encloses its children's (spec#167, found by
+compiler#1773).
+
+**Options.**
+1. **Nested scopes along the module tree:** an ancestor's names are in scope unqualified in
+   every descendant; a descendant's own binding of a name shadows the ancestor's.
+2. **Permission only:** an ancestor's item is reached through a binding or a path; nothing of
+   the ancestor is in scope unqualified in a file child.
+
+**Decision.** **Option 1**, the owner's choice (2026-11-19). Module scopes nest as ordinary
+lexical scopes do, **along the module tree** rather than the text: a child module's scope —
+inline `mod { … }` or file-defined — is nested in its parent module's. A name resolves to the
+innermost scope that binds it: blocks, function and comptime block, then the module's own
+scope, then its parent's, outward to the package root. A name the descendant binds itself — a
+declaration, or an alias such as `f := b::f`, including a listed projection — **shadows** the
+ancestor's name within the descendant (and the descendant's own descendants), as an inner scope
+shadows an outer one (Declarations §6.1). It is **not** a MOD-8 clash, which is a rule within
+one scope.
+Visibility stays permission (MOD-2, MOD-15): being in scope grants no right the site lacks.
+
+**Overloads split across the boundary.** Shadowing replaces the **whole name**: a descendant's
+binding of `f` hides the ancestor's `f` entirely — every overload of an ancestor overload set,
+a generic default included — and does not join that set. An overload set (FN-7) forms only
+among the bindings of one scope, which is what Declarations §6.2 and Functions §1.4 already
+say. So when `geo` declares `f(u32)` and `geo::child` declares `f(str)`, `f(1)` in `geo::child`
+is ill-formed; it reaches `geo`'s overload as `geo::f(1)`. How a module's binding combines with
+an injected base-prelude name is a separate question, not settled here (spec#166).
+
+**Why.** One lookup rule for every module, whatever its file layout: an inline child and a
+file child are "the same kind of thing" (MOD-1), and under option 2 moving `mod { … }` out to
+its own file would change what a bare name in it means. It makes MOD-2's down-tree privacy
+usable as written — a submodule uses its parent's helpers by name, without a binding per helper
+— and it is the reading Declarations §5 already gave for scopes in general. Shadowing the whole
+name keeps a bare name resolvable by reading one scope: the nearest binding is the answer, and
+no overload is gathered from a scope the reader is not looking at (I3). This is **lexical
+nesting, not a glob import**: no name is copied into the descendant's own scope — §4.5 forbids
+a glob *import form* — the lookup chain simply walks the scopes the module tree already fixes,
+determinable from the closed package (I3).
+
+**Rejected.**
+- *(2) Permission only.* An inline and a file child would resolve the same text differently, and
+  every use of a parent's helper would need a binding or a path — boilerplate MOD-2 meant to
+  avoid.
+- *A descendant's binding of an ancestor's name is a clash.* MOD-8 is a same-scope rule; making
+  it reach across scopes would forbid ordinary shadowing, which FN-2 allows, and would make a
+  new helper in a parent break every descendant that already binds that name.
+- *A descendant's overloads merge with the ancestor's set.* A call's meaning would then depend
+  on overloads in every ancestor up to the root, and a new overload added in a parent could make
+  a call in a descendant ambiguous — the cross-scope coupling shadowing exists to prevent.
+
+**Consequences.** Declarations §5 states the nesting and §6.1 the cross-module shadowing and the
+whole-name rule; Modules §3 separates permission from lookup, §4.1 and §4.5 say an ancestor's name
+is shadowed rather than clashed, §5 makes MOD-8 per scope; both conformance lists follow. Because the
+package root is every module's outermost ancestor, whatever the **root's scope** binds is in scope
+unqualified package-wide: the root module's own declarations and the **manifest handle**, which
+down-tree privacy already made visible (MOD-2; Tooling §2.7), and — by Manifest §3.4 and Modules §8,
+which put them in the root's namespace, not by MOD-2's privacy of a root declaration — the
+**dependency names** and the ambient **`alloc` / `std`** roots sharing that namespace. Stdlib §1's
+"their names are **not** injected unqualified the way base is" speaks of an alloc/std tier's
+**members** (`Vec`, `IoError`), which still must be reached qualified or bound by name; what is in
+scope here is the **root name as a path head** (`std::io::stdout`), the very spelling Stdlib §1
+gives them. Nesting likewise carries an ancestor's **child module names** down (Modules §5): inside
+`geo::child` a bare `vec` is the sibling module `geo::vec` and a bare `child` is the module itself —
+in scope as names, each still governed at its use-site by §3's permission. The reference compiler's
+checker and legacy emitter already follow this reading; its shared IR builder refuses such calls
+until this revision is pinned.

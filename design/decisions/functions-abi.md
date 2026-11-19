@@ -37,7 +37,9 @@ duplicate names and no implicit winner. There is no separate `const`: a "constan
 orthogonal axes — keeping keywords to a minimum. Declaration **order** splits by level:
 module/top-level is **order-independent** (mutual recursion without forward declarations);
 local/in-block is **order-dependent** (visible from the point of declaration, which definite
-assignment needs).
+assignment needs). Module scopes nest along the **module tree**, not the text, so an
+ancestor module's names are in scope in a descendant, file-defined or inline, and shadowing
+replaces the whole name, overload set and all (MOD-16).
 
 **Rejected.** Same-scope shadowing (Rust-style) — rejected for the sake of clarity.
 
