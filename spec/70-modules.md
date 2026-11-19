@@ -76,13 +76,21 @@ distinct from **linker-symbol emission** (whether a symbol appears in the object
 file), which is §6; `@export` (§6.3) controls the latter and is **not** governed by
 the rules here.
 
+Visibility is **permission**, not **lookup**: it decides whether a site may name a
+declaration, not where a bare name is found. Lookup is Declarations §5: module scopes
+nest along the module tree, so an ancestor module's items — its non-`pub` ones included —
+are **also in scope unqualified** in every descendant, inline or file-defined; a bare
+`f(x)` in `geo::child` calls `geo`'s `f` with no binding and no path. A name the descendant
+binds itself shadows the ancestor's (Declarations §6.1). (MOD-16.)
+
 Privacy flows **down** the module tree, exposure flows **up** only through `pub`:
 
 - A declaration is **private by default**. A **non-`pub`** declaration of module `M`
   is visible to **`M` itself and to every module nested within `M` (its
   descendants)** — and to `M`'s own inner scopes (blocks, functions, comptime
-  blocks). A **descendant module sees its ancestors' non-`pub` items**; this is what
-  lets a submodule use its parent's internal helpers without exposing them. It is
+  blocks). A **descendant module may name its ancestors' non-`pub` items** (and finds
+  them unqualified, above); this is what lets a submodule use its parent's internal
+  helpers without exposing them. It is
   **not** visible to `M`'s ancestors, siblings, or unrelated modules.
 - **`pub`** (a bare prefix keyword, Declarations §2) makes a declaration visible to
   `M`'s **enclosing (parent) module** — i.e. **upward** by one level. Visibility
@@ -105,7 +113,7 @@ Privacy flows **down** the module tree, exposure flows **up** only through `pub`
   **spelled** head and not against the resolved entity has a hole, not a loophole.
   (MOD-15; spec#27.)
 - A child module (whether file-defined or inline `mod { … }`, §1) is a **descendant
-  scope** for this rule: it sees its ancestors' private items, but to expose its own
+  scope** for this rule: it may name its ancestors' private items, but to expose its own
   items upward it must `pub` them. There is **no** friend / sibling / package-private
   access beyond this down-tree privacy and up-tree `pub`.
 
@@ -135,6 +143,10 @@ the alias is **erased**, it is transparent to visibility in both directions: cre
 requires the site to be allowed to name the entity, and every later use through the
 alias is judged against **that entity's** visibility, never against the alias's own name
 or the shape of the head (§3, MOD-15).
+A binding is not needed to reach an **ancestor's** item, which is already in scope
+unqualified (§3; Declarations §5). A binding whose name an ancestor also binds — `f := b::f`
+in `geo::child` while `geo` declares `f` — **shadows** the ancestor's `f` throughout
+`geo::child` (Declarations §6.1); it is not a clash (§4.5, §5).
 Renaming is automatic — the **left-hand** name is whatever you choose (`len`, `vec`).
 
 A binding to a **runtime** place (e.g. a mutable global) is **not** an import: it is
@@ -225,8 +237,10 @@ repetition — sugar for the *N* single declarations. A whole library is still o
 binding (`Lib := dep::lib`, accessed `Lib::…`); the full path is always an alternative
 to importing at all.
 
-A binding whose name **clashes** with an existing name in the module scope is a
-**compile error** — no implicit winner (§5).
+A binding whose name **clashes** with an existing name in the module's **own** scope is a
+**compile error** — no implicit winner (§5). A name an **ancestor** binds is in an
+enclosing scope, not the module's own: binding it again **shadows** it (Declarations §6.1;
+MOD-16) and is not a clash.
 
 ---
 
@@ -234,7 +248,10 @@ A binding whose name **clashes** with an existing name in the module scope is a
 
 Within a module scope, **no two** declarations, imports, or re-exports may yield the
 **same final name** — a clash is a **compile error**, with no implicit winner
-(decisions MOD-8; consistent with same-scope redeclaration, Declarations §6.2).
+(decisions MOD-8; consistent with same-scope redeclaration, Declarations §6.2). The rule
+is per scope: an ancestor's names are in an **enclosing** scope (Declarations §5), not in
+the module's own, so a module binding a name its ancestor binds is shadowing (Declarations
+§6.1; MOD-16), not a duplicate.
 
 Because identifiers are **case-sensitive and underscore-significant** (Lexis chapter),
 names differing only by case or underscore are **distinct** — they are **not** duplicates;
@@ -593,7 +610,11 @@ A conforming implementation MUST:
    for further outward / external visibility; no friend/sibling/package-private access
    beyond this (§3); and check visibility against the **resolved entity**, never against
    the spelled head — a comptime alias is transparent to visibility, so it neither
-   creates a new entity nor launders the visibility of what it names (§3, §4.1);
+   creates a new entity nor launders the visibility of what it names (§3, §4.1); and keep
+   visibility (permission) apart from lookup: an ancestor's items are in scope unqualified
+   in every descendant, inline or file-defined, and a descendant's own binding of a name
+   shadows the ancestor's whole name rather than clashing with it or joining its overload
+   set (§3, §4.1, §4.5; Declarations §5, §6.1);
 4. provide **no** `use` construct: import / alias / re-export are the ordinary
    declaration `name := path` (a comptime alias of a namespace entity, erased, no
    symbol) and `pub name := path` (re-export); navigate a module-valued binding with
