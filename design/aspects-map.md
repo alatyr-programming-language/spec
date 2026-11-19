@@ -66,7 +66,8 @@ and **deferred (additive) growth**.
   applies `iter` to `e` as a receiver with auto-ref, so it borrows an owning `e` (CF-11).
 - `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
   (down-tree privacy) with module scopes nested along the tree, so an ancestor's names are in scope
-  unqualified in a descendant and a descendant's own binding shadows them (MOD-16), import/reexport = declaration `name := path` (`use` removed, MOD-4), dep local namespace names (MOD-14),
+  unqualified in a descendant and a descendant's own binding shadows them (MOD-16),
+  import/reexport = declaration `name := path` (`use` removed, MOD-4), dep local namespace names (MOD-14),
   no duplicates (MOD-8/MOD-4). FFI/linking manifest model specified: per-library **link mode**
   (`static`/`dynamic`, static default) → hermetic-static default binary, non-hermetic status
   manifest-determinable + toolchain-surfaced (MOD-9).

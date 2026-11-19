@@ -90,8 +90,8 @@ Privacy flows **down** the module tree, exposure flows **up** only through `pub`
   descendants)** — and to `M`'s own inner scopes (blocks, functions, comptime
   blocks). A **descendant module may name its ancestors' non-`pub` items** (and finds
   them unqualified, above); this is what lets a submodule use its parent's internal
-  helpers without exposing them. It is
-  **not** visible to `M`'s ancestors, siblings, or unrelated modules.
+  helpers without exposing them. It is **not** visible to `M`'s ancestors, siblings, or
+  unrelated modules.
 - **`pub`** (a bare prefix keyword, Declarations §2) makes a declaration visible to
   `M`'s **enclosing (parent) module** — i.e. **upward** by one level. Visibility
   propagates further **outward only through a continuous `pub` chain**: it reaches
@@ -142,12 +142,13 @@ privacy, §3); a non-`pub` name of a non-ancestor module is **not** accessible. 
 the alias is **erased**, it is transparent to visibility in both directions: creating it
 requires the site to be allowed to name the entity, and every later use through the
 alias is judged against **that entity's** visibility, never against the alias's own name
-or the shape of the head (§3, MOD-15).
+or the shape of the head (§3, MOD-15). Renaming is automatic — the **left-hand** name is
+whatever you choose (`len`, `vec`).
+
 A binding is not needed to reach an **ancestor's** item, which is already in scope
 unqualified (§3; Declarations §5). A binding whose name an ancestor also binds — `f := b::f`
 in `geo::child` while `geo` declares `f` — **shadows** the ancestor's `f` throughout
 `geo::child` (Declarations §6.1); it is not a clash (§4.5, §5).
-Renaming is automatic — the **left-hand** name is whatever you choose (`len`, `vec`).
 
 A binding to a **runtime** place (e.g. a mutable global) is **not** an import: it is
 an ordinary read of that place's value (Memory-model) — a distinct operation. Import
