@@ -257,10 +257,13 @@ module's scope is nested in its parent module's scope whether the child is an in
 `geo`'s scope although it is not textually inside `geo.al`. So an **ancestor module's names
 are in scope unqualified** in every descendant: a bare `f(x)` in `geo::child` resolves to the
 `f` that `geo` binds, with no binding and no path. A name resolves to the **innermost** scope
-that binds it — the blocks and function around the use, then the module's own scope, then its
-parent's, and so on outward to the package root (MOD-16). Being in scope does not widen
-visibility: a use of an ancestor's name is checked against the entity it resolves to like any
-other use (Modules §3, MOD-15).
+that binds it — the blocks, function or comptime block around the use, then the module's own
+scope, then its parent's, and so on outward to the package root (MOD-16). An ancestor's scope
+is in scope **whole**: it binds its own declarations, imports and re-exports *and* its child
+modules by path (Modules §5), so inside `geo::child` a bare `vec` is the sibling module
+`geo::vec` and a bare `child` is the module itself. Being in scope does not widen visibility: a
+use of an ancestor's name — a sibling module's name included — is checked against the entity it
+resolves to like any other use (Modules §3, MOD-15).
 
 ---
 
@@ -278,11 +281,14 @@ projection binds (Modules §4.1.1) — **shadows** an ancestor's binding of that
 descendant and within the descendant's own descendants. It is not a same-scope redeclaration
 (§6.2, MOD-8), because the two bindings are in different scopes.
 
-Shadowing replaces the **whole name**. When the outer name is an overload set (Functions §1.4),
-an inner binding of that name hides **every** outer overload, a generic default included; it
-does not join the outer set, and a call the inner binding does not accept is ill-formed
-(Functions §1.4) rather than a fall-back to an outer overload. An overload set forms only
-among the bindings of one scope (§6.2).
+Between module scopes, shadowing replaces the **whole name**: when the ancestor's name is an
+overload set (Functions §1.4), the descendant's binding of that name hides **every** ancestor
+overload, a generic default included; it does not join the ancestor's set, and a call the
+descendant's binding does not accept is ill-formed (Functions §1.4) rather than a fall-back to
+an ancestor overload. An overload set forms only among the bindings of one scope (§6.2).
+Whether the injected **base prelude** is such an enclosing scope — whether a module's own `eq`
+shadows the prelude's generic `eq` or joins its overload set — is **open** (spec#166); nothing
+here decides it.
 
 #### 6.2 Same scope — forbidden
 

@@ -522,11 +522,12 @@ compiler#1773).
 **Decision.** **Option 1**, the owner's choice (2026-11-19). Module scopes nest as ordinary
 lexical scopes do, **along the module tree** rather than the text: a child module's scope —
 inline `mod { … }` or file-defined — is nested in its parent module's. A name resolves to the
-innermost scope that binds it: blocks and function, then the module's own scope, then its
-parent's, outward to the package root. A name the descendant binds itself — a declaration, or
-an alias such as `f := b::f`, including a listed projection — **shadows** the ancestor's name
-within the descendant (and the descendant's own descendants), as an inner scope shadows an
-outer one (Declarations §6.1). It is **not** a MOD-8 clash, which is a rule within one scope.
+innermost scope that binds it: blocks, function and comptime block, then the module's own
+scope, then its parent's, outward to the package root. A name the descendant binds itself — a
+declaration, or an alias such as `f := b::f`, including a listed projection — **shadows** the
+ancestor's name within the descendant (and the descendant's own descendants), as an inner scope
+shadows an outer one (Declarations §6.1). It is **not** a MOD-8 clash, which is a rule within
+one scope.
 Visibility stays permission (MOD-2, MOD-15): being in scope grants no right the site lacks.
 
 **Overloads split across the boundary.** Shadowing replaces the **whole name**: a descendant's
@@ -543,7 +544,10 @@ its own file would change what a bare name in it means. It makes MOD-2's down-tr
 usable as written — a submodule uses its parent's helpers by name, without a binding per helper
 — and it is the reading Declarations §5 already gave for scopes in general. Shadowing the whole
 name keeps a bare name resolvable by reading one scope: the nearest binding is the answer, and
-no overload is gathered from a scope the reader is not looking at (I3).
+no overload is gathered from a scope the reader is not looking at (I3). This is **lexical
+nesting, not a glob import**: no name is copied into the descendant's own scope — §4.5 forbids
+a glob *import form* — the lookup chain simply walks the scopes the module tree already fixes,
+determinable from the closed package (I3).
 
 **Rejected.**
 - *(2) Permission only.* An inline and a file child would resolve the same text differently, and
@@ -558,9 +562,17 @@ no overload is gathered from a scope the reader is not looking at (I3).
 
 **Consequences.** Declarations §5 states the nesting and §6.1 the cross-module shadowing and the
 whole-name rule; Modules §3 separates permission from lookup, §4.1 and §4.5 say an ancestor's name
-is shadowed rather than clashed, §5 makes MOD-8 per scope; both conformance lists follow. The
-names of the root's scope — its declarations, the manifest handle, dependency names, and the
-ambient `alloc` / `std` roots that share it — are thereby in scope unqualified in every module of
-the package, as down-tree privacy already made them visible. The reference compiler's checker and
-legacy emitter already follow this reading; its shared IR builder refuses such calls until this
-revision is pinned.
+is shadowed rather than clashed, §5 makes MOD-8 per scope; both conformance lists follow. Because the
+package root is every module's outermost ancestor, whatever the **root's scope** binds is in scope
+unqualified package-wide: the root module's own declarations and the **manifest handle**, which
+down-tree privacy already made visible (MOD-2; Tooling §2.7), and — by Manifest §3.4 and Modules §8,
+which put them in the root's namespace, not by MOD-2's privacy of a root declaration — the
+**dependency names** and the ambient **`alloc` / `std`** roots sharing that namespace. Stdlib §1's
+"their names are **not** injected unqualified the way base is" speaks of an alloc/std tier's
+**members** (`Vec`, `IoError`), which still must be reached qualified or bound by name; what is in
+scope here is the **root name as a path head** (`std::io::stdout`), the very spelling Stdlib §1
+gives them. Nesting likewise carries an ancestor's **child module names** down (Modules §5): inside
+`geo::child` a bare `vec` is the sibling module `geo::vec` and a bare `child` is the module itself —
+in scope as names, each still governed at its use-site by §3's permission. The reference compiler's
+checker and legacy emitter already follow this reading; its shared IR builder refuses such calls
+until this revision is pinned.
