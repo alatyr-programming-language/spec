@@ -530,7 +530,9 @@ host owns it.)
   **compiler-provided ambient root modules** of those names (Stdlib §1), sharing this
   same tree — reached qualified (`std::io::stdout`) or bound (`out := std::io::stdout`,
   §4.1), gated by the `no_alloc` / `freestanding` limits. The base prelude is injected
-  unqualified. No manifest entry brings them in.
+  unqualified, and a module-level function named like one of its functions joins that
+  name's overload set rather than shadowing it (Declarations §6.1; FN-15). No manifest
+  entry brings them in.
 
 ---
 

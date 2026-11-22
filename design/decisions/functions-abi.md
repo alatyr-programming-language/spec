@@ -39,7 +39,9 @@ module/top-level is **order-independent** (mutual recursion without forward decl
 local/in-block is **order-dependent** (visible from the point of declaration, which definite
 assignment needs). Module scopes nest along the **module tree**, not the text, so an
 ancestor module's names are in scope in a descendant, file-defined or inline, and shadowing
-replaces the whole name, overload set and all (MOD-16).
+replaces the whole name, overload set and all (MOD-16). The base prelude is not an
+enclosing scope: a module-level function named like a prelude function joins its overload set
+rather than shadowing it (FN-15).
 
 **Rejected.** Same-scope shadowing (Rust-style) — rejected for the sake of clarity.
 
@@ -168,7 +170,8 @@ definition** with concrete overloads (the generic-default + concrete-override pa
 structural derives need): resolution prefers the *more specific* — a concrete match wins, and
 only on concrete-miss does the generic apply (monomorphized at the inferred type). That is
 the *only* mixing allowed; two same-concrete-signature functions, or two generic definitions,
-remain forbidden.
+remain forbidden. The base prelude's functions of a name take part in the set a bare call of it
+resolves over, so a module-level function named like one joins it under these rules (FN-15).
 
 **Rejected.** Overloading on the **result** type — a call could not be resolved in isolation,
 breaking left-to-right typing. An explicit per-type **dispatch-table** value — redundant with
@@ -522,3 +525,53 @@ would give a meaning to is ill-formed under C. A or B, once chosen, could not be
   same way (a named tuple `t` stays one argument in `inner(t)`), and mixed forms (`inner(args, x)`,
   `inner(x, args)`) need rules of their own. It remains a possible future extension, compatible under
   I10 for the reason above.
+
+### FN-15. A module-level function named like a base-prelude function joins its overload set — spec#166
+*provenance: refines FN-2 (scope, cross-scope shadowing), FN-7 (overload sets) and SYN-2 (built-ins
+  are prelude names); completes MOD-16 · spec: Declarations §6.1, §10 item 7; Functions §1.4, §10
+  item 10; Stdlib §1; Modules §8; Grammar §2.3; Stdlib appendix §2.6 · owner decision 2026-11-22,
+  spec#166*
+
+**Question.** SYN-2 makes the built-ins (`len`, `eq`, `lt`, `hash`, `bitcast`, `shl`, …) ordinary
+identifiers, so a program may declare one at module level, and Stdlib §1 injects the base prelude
+unqualified. Nothing said into which scope. If the prelude is an enclosing scope, a module-level `len`
+**shadows** the prelude's; if not, it **joins** the prelude's overload set. The readings part on a call
+the program's function does not accept — `len := fn(x : u64) -> u64 { x }` beside `len(xs)` on a slice
+is ill-formed under the first and the prelude's `len` under the second — and on an identical signature.
+Functions §1.4 and Stdlib appendix §2.6 already relied on the second for `eq` / `lt` / `hash` without
+stating it as the prelude's scope (found by compiler#1434).
+
+**Decision (owner, 2026-11-22).** The base prelude is **not** an enclosing scope. A module-level function
+declaration named like a base-prelude function **joins** that name's overload set; it does not shadow
+the prelude function. Built-in functions always take part in resolving a bare call of their name beside
+the program's declarations: where the name resolves to a module scope's function bindings, the
+module's own or an ancestor's (MOD-16), the prelude's functions of the name join them; where no scope
+binds it, the prelude's functions resolve it alone. The joined set obeys FN-7 as one scope's set does.
+Overload identity is FN-7's **parameter signature**, the ordered list of value-parameter types, so a
+program function whose parameter signature equals a concrete prelude function's is **ill-formed**, a
+redefinition error located at the program's declaration, not a replacement (`panic := fn(in msg : str)
+-> Never { … }`). Because FN-7 admits one generic definition per name, so is a program's generic
+definition of a name the prelude defines generically. A concrete program function beside a generic
+prelude one is FN-7's generic-default + concrete-override, so a type's own `eq` serves `==` on that type
+while every other type keeps the structural default. A module-level non-function binding of such a name,
+a binding of one in an inner scope, and a qualified path to one are not settled here (spec#173).
+
+**Why.** It is the only reading consistent with MOD-16 without an exception. MOD-16 makes cross-scope
+shadowing hide the whole name. Were the prelude the outermost scope, a module declaring `eq` for `Money`
+would lose `==` on every other type, and the structural derives of Stdlib appendix §2.6 and Functions
+§1.4 would need an `eq` / `lt` / `hash` exception, two rules where one serves. It keeps SYN-2 whole:
+built-ins stay ordinary names a program may use. It satisfies I3: which function a call selects is
+visible from the signatures in the program and the prelude catalog, by the one FN-7 rule.
+
+**Rejected.**
+- *A — the prelude is the outermost scope, and a program declaration shadows it.* By MOD-16 a shadowing
+  binding hides the whole name, so declaring `eq` for `Money` would hide the structural `eq` from every
+  other type in that module; keeping the derives working would need an exception for `eq` / `lt` /
+  `hash`.
+- *C — declaring a base-prelude name is forbidden.* It contradicts SYN-2, under which built-ins are
+  ordinary names and not reserved words, and it breaks the per-type `eq` / `hash` override the derives
+  rest on.
+
+**Consequences.** Declarations §6.1 states the rule and replaces its open marker; Functions §1.4 says the
+prelude's functions take part; Stdlib §1, Modules §8, Grammar §2.3 and Stdlib appendix §2.6 point to it;
+both conformance lists follow. MOD-16's note that the prelude question is separate now points here.

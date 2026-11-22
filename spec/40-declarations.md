@@ -286,9 +286,37 @@ overload set (Functions §1.4), the descendant's binding of that name hides **ev
 overload, a generic default included; it does not join the ancestor's set, and a call the
 descendant's binding does not accept is ill-formed (Functions §1.4) rather than a fall-back to
 an ancestor overload. An overload set forms only among the bindings of one scope (§6.2).
-Whether the injected **base prelude** is such an enclosing scope — whether a module's own `eq`
-shadows the prelude's generic `eq` or joins its overload set — is **open** (spec#166); nothing
-here decides it.
+
+**The base prelude is not an enclosing scope.** The base prelude's names are injected
+unqualified (Stdlib §1), but no scope around the package root binds them, so a module-level
+declaration does not shadow a prelude function. A **module-level function** declaration — an
+alias of a function included (MOD-4) — named like a base-prelude function (`len`, `eq`, `lt`,
+`hash`, `bitcast`, `shl`, …) **joins** that name's overload set (Functions §1.4) instead. Where
+a bare name resolves to a module scope's function bindings — the module's own or an ancestor's
+(§5) — the prelude's functions of that name take part in the call's resolution beside them;
+where no scope around the use binds the name, the prelude's functions resolve it alone. A
+descendant's binding that hides an ancestor's overloads (above) therefore still has the
+prelude's beside it. The joined set obeys Functions §1.4 as one scope's set does: a program
+function whose **parameter signature** — the ordered list of value-parameter types — equals a
+prelude function's concrete signature is a **redefinition error** (§6.2) located at the
+program's declaration, not a replacement; so is a program's generic definition of a name the
+prelude defines generically, since a name admits one generic definition. A concrete program
+function beside a generic prelude one is the generic-default + concrete-override pattern: a
+call it accepts exactly resolves to it, and any other call falls back to the prelude's generic
+(Stdlib appendix §2.6). (FN-15.)
+
+```
+len := fn(x : u64) -> u64 { x }
+count := fn(xs : [u64]) -> usize { len(xs) + 38 }
+```
+
+Here a call `len(n)` with `n : u64` calls the program's `len`, and `len(xs)` — which the
+program's `len` does not accept — calls the prelude's slice `len` (Stdlib appendix §3.5), so
+`count` over a four-element slice answers 42. Beside the prelude's `panic(in msg : str) ->
+Never`, a module-level `panic := fn(in msg : str) -> Never { trap() }` is a redefinition error.
+How a module-level **non-function** binding of a prelude function's name, a binding of one in a
+block, function or comptime-block scope, and a qualified path to one (`geo::eq`) combine with
+the prelude is not settled here (spec#173).
 
 #### 6.2 Same scope — forbidden
 
@@ -425,7 +453,11 @@ A conforming implementation MUST:
    in every descendant, inline or file-defined (§5);
 7. allow shadowing across scopes — module scopes included, a descendant's own binding
    shadowing an ancestor's whole name, overload set and all — and reject same-scope
-   redeclaration with a diagnostic (§6);
+   redeclaration with a diagnostic (§6); never let a module-level function shadow a
+   base-prelude function: one named like it joins its overload set, the prelude's
+   functions take part in resolving a bare call of the name beside the program's, and one whose
+   parameter signature equals a prelude function's concrete signature — or a second generic
+   definition of the name — is a redefinition error located at the declaration (§6.1);
 8. make module-level declarations order-independent (mutual recursion, no forward
    declarations) with compile-time-known module initializers evaluated in dependency
    order (cycles an error), evaluate a checked module-level `@require` gate entirely at

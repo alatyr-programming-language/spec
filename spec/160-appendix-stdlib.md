@@ -270,8 +270,10 @@ no implicit-type-parameter form — every generic names `T : type`, Functions §
 **overrides** the structural default by defining its own **concrete** `eq` / `lt` / `hash`
 for itself (e.g. `eq := fn(in a : Money, in b : Money) -> bool { … }`): overload resolution
 (FN-7) prefers the **more specific** concrete definition over the generic default at a call
-on that type. Derivation is **comptime + monomorphized** → zero-cost and fully erased
-(I2/I7), no RTTI; satisfaction is structural (`resolves(eq, …)`, …), not by name. The v1 derived core is
+on that type. The module-level `eq` joins the prelude's `eq` overload set rather than shadowing
+it, so `==` on every other type still reaches the default (Declarations §6.1; FN-15).
+Derivation is **comptime + monomorphized** → zero-cost and fully erased (I2/I7), no RTTI;
+satisfaction is structural (`resolves(eq, …)`, …), not by name. The v1 derived core is
 `eq` / `lt` / `hash`, and the prelude ships the **v1 `Ord` consumers** over it:
 
 - **`min`** / **`max`** — `min(in a : T, in b : T) -> T` / `max(…) -> T` (base); a tie
