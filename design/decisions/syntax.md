@@ -173,8 +173,10 @@ silently (I1). `fmt` still prints one canonical form, `mut v : u64 = 0`: its lay
 function of width and content, never of the input's line breaks (Tooling §4.3.3).
 
 **Rejected.** *(2) `:` and `:=` do not continue* — stricter, but an exception to the
-general argument, and a list of continuing tokens is needed anyway (`.` in a call chain,
-the operator a wrapped chain begins its line with, Tooling §4.3.3).
+general argument, and a list of continuing tokens is needed anyway (`.` beginning a line in
+a call chain, or `else` after a `}`). `fmt` relies on one: the `|` an overflowing
+OR-pattern begins its line with (Tooling §4.3.3); a binary-operator chain breaks after each
+operator, so no chain operator begins a line (TOOL-28).
 
 ---
 

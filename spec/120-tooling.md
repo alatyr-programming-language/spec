@@ -630,8 +630,19 @@ and of the construct's content (never of the input's original line breaks):
   **one** level beyond the opening line, the closing `)` / `]` at the opening line's indent.
   A wrapped list carries a **trailing comma** after its last element (a single-line list does
   **not**); this keeps element-wise diffs minimal and is itself canonical.
-- A **binary-operator chain** that overflows breaks **before** each operator at the
-  continuation indent (one level), the operator beginning the continuation line.
+- A **binary-operator chain** that overflows breaks **after** each operator, for every binary
+  operator (TOOL-28): the operator **ends** the line, and the next operand begins the
+  continuation line at the continuation indent (one level). A line ending in a binary operator
+  is incomplete, so the newline never ends the statement there (Grammar §2.6), whichever the
+  operator; a line beginning with `-` would begin a fresh statement instead. So a
+  `x := aaaa - bbbb` too wide for one line is laid out
+
+  ```alatyr
+  x := aaaa -
+    bbbb
+  ```
+
+  and never as `x := aaaa` followed by a line `- bbbb`, which is two statements.
 - A **`match` arm list** is **always** wrapped, whether or not it would fit on one line: **each
   arm on its own line**, indented one level beyond the `match` line, the closing `}` at the
   `match`'s indent. There is **no** one-line canonical `match` (TOOL-23): a source `match`
@@ -667,7 +678,7 @@ and of the construct's content (never of the input's original line breaks):
   multi-line element is **always** wrapped, one element per line with the trailing comma, as if
   it overflowed (TOOL-25): the multi-line element opens on its own line at the element indent
   and continues by its own construct's rule, and the closing `)` / `]` stands on its own line
-  after it. A **binary-operator chain** with an always multi-line operand likewise breaks before
+  after it. A **binary-operator chain** with an always multi-line operand likewise breaks after
   each operator. Such a list or chain is itself always multi-line, so the rule applies again to
   the list or chain around it.
 - Wrapping is applied at the **outermost** construct that makes the line fit; an inner
