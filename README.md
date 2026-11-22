@@ -3,7 +3,7 @@
 **A systems programming language whose ceiling of expressiveness equals the assembler's —
 with abstractions that stay transparent in code generation.**
 
-![spec version 1.10.0](https://img.shields.io/badge/spec-1.10.0-blue)
+![spec version 1.11.0](https://img.shields.io/badge/spec-1.11.0-blue)
 ![status: draft under review](https://img.shields.io/badge/status-draft%20under%20review-orange)
 ![license CC BY 4.0 / Apache-2.0](https://img.shields.io/badge/license-CC%20BY%204.0%20%2F%20Apache--2.0-green)
 
@@ -23,7 +23,17 @@ contradiction between two files is a defect to be fixed rather than a matter of 
 
 ## Status
 
-**Version `1.10.0` — the Alatyr v1 specification, under review. Not accepted.**
+**Version `1.11.0` — the Alatyr v1 specification, under review. Not accepted.**
+
+Revision 1.11.0 records eight normative decisions. Module scopes nest along the module tree, so
+an ancestor's names are in scope unqualified in a descendant (MOD-16). A module-level function
+named like a base-prelude function joins its overload set instead of shadowing it (FN-15). A short
+call that could omit either an elided allocator or a defaulted parameter is ill-formed (FN-16). A
+line continues the previous one exactly when its first token is on Grammar §2.6's closed list of
+continuing tokens (SYN-12). And four narrower rules: a built-in element store evaluates its
+right-hand side before the bounds check (OP-10), a static closure's captures are read-only
+(MEM-14), a comptime-variadic's pack name is not a value (FN-14), and `dyn_over` takes the address
+form the place admits (FN-11).
 
 Revision 1.10.0 records three normative decisions. `not` is a unary prefix that binds tighter
 than a comparison, so a negated comparison is written `not (a < b)` (SYN-11). On a directly
@@ -334,7 +344,7 @@ shifted, or repurposed; a decision that changes is superseded by a new entry.
 
 | Repository | What it holds | Status |
 |---|---|---|
-| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.10.0` — under review |
+| [`spec`](https://github.com/alatyr-programming-language/spec) (this one) | The normative specification and the design record behind it | `1.11.0` — under review |
 | [`compiler`](https://github.com/alatyr-programming-language/compiler) | The reference toolchain — front end, lowering, GAS / WAT emission, the CLI — together with the prelude and standard library specified in chapter [100](spec/100-stdlib.md) and appendix [160](spec/160-appendix-stdlib.md) | In development |
 
 The direction of authority runs one way and does not reverse: **the toolchain conforms to
@@ -357,7 +367,7 @@ confer it either: an independent implementation is conforming when it matches *t
 not when it matches the reference. Three things worth knowing before you start:
 
 - The specification is a **draft under review**. Cite the revision you built against
-  (`1.10.0`) — or, until you conform to one, name it as your **target revision** and publish
+  (`1.11.0`) — or, until you conform to one, name it as your **target revision** and publish
   your known deviations (Overview §6) — and expect the text to move under you: during
   review, MINOR is the digit that bumps whenever a norm changes. The leading `1` is the
   *language* version, not a claim that the text is settled — see `CHANGELOG.md`.

@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.11.0 — 2026-11-22
+
 **Normative — a short call that could omit either an elided allocator or a defaulted parameter is
 ill-formed (Functions §5.3, §5.5, §10 item 6; FN-16, FN-5, MEM-5).**  With
 `dk := fn(ar : ptr(mut alloc), k : u64 = 7) -> u64 { k }`, the spec did not say whether `dk(ptr(mut other))`
