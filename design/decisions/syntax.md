@@ -174,9 +174,9 @@ function of width and content, never of the input's line breaks (Tooling §4.3.3
 
 **Rejected.** *(2) `:` and `:=` do not continue* — stricter, but an exception to the
 general argument, and a list of continuing tokens is needed anyway (`.` beginning a line in
-a call chain, or `else` after a `}`). `fmt` adds no case: it
-breaks a wrapped binary-operator chain after each operator, so no chain operator begins a
-line (Tooling §4.3.3, TOOL-28).
+a call chain, or `else` after a `}`). `fmt` relies on one: the `|` an overflowing
+OR-pattern begins its line with (Tooling §4.3.3); a binary-operator chain breaks after each
+operator, so no chain operator begins a line (TOOL-28).
 
 ---
 
