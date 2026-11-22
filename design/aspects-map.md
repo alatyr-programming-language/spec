@@ -142,7 +142,8 @@ and **deferred (additive) growth**.
   **output verbosity** may not affect a build (TOOL-22); `fmt` lays out every `match` wrapped, one arm
   per line, with no one-line form (TOOL-23); a value-`if` is likewise always wrapped (TOOL-24); a
   list or operator chain holding an always multi-line element is wrapped one element per line
-  (TOOL-25); a trailing comment on a line `fmt` expands trails the first output line (TOOL-26); and on
+  (TOOL-25); an overflowing binary-operator chain breaks after each operator, the operator ending the
+  line (TOOL-28); a trailing comment on a line `fmt` expands trails the first output line (TOOL-26); and on
   a directly driven non-ISA backend `target.os`/`target.env` match no variant, like `target.arch` (TOOL-27).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`
   only, no comma after an arm, SYN-8; a line continues when its first token cannot begin a

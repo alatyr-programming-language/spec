@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` breaks an overflowing binary-operator chain after each operator (Tooling §4.3.3;
+TOOL-28, TOOL-25, TOOL-2, SYN-12).**  §4.3.3 broke a chain before each operator, the operator beginning
+the continuation line. `-` has a prefix form, so a line beginning with it does not continue (Grammar
+§2.6, SYN-12): a too-wide `x := aaaa - bbbb` was laid out as the two statements `x := aaaa` and
+`-bbbb`, and `fmt` changed the program's meaning. A chain now breaks after each operator, for every
+binary operator, the chain with an always multi-line operand included: the operator ends the line, and
+the next operand begins the continuation line one level deeper (`x := aaaa -` then `  bbbb`). A line
+ending in a binary operator always continues, so the break never ends a statement. Rejected: break
+before but after `-` (two shapes for one construct); parenthesising an overflowing chain (`fmt` would
+insert tokens). (spec#185.)
+
 ## 1.11.0 — 2026-11-22
 
 **Normative — a short call that could omit either an elided allocator or a defaulted parameter is

@@ -57,7 +57,8 @@ first gave contradicted the grammar); a `match` is always wrapped, with no one-l
 an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
 layout, always, with no one-line form (TOOL-24), so no construct has two shapes; a list or
-operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25).)*
+operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25); and an
+overflowing binary-operator chain breaks after each operator, never before it (TOOL-28).)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -984,7 +985,8 @@ constructs, a non-empty block, and any expression containing one. A list — cal
 array/list literal, struct/enum constructor fields, parameters — with an always multi-line
 element is always wrapped, one element per line with the trailing comma; the element opens on its
 own line at the element indent, and the closing `)` / `]` stands on its own line. A
-binary-operator chain with such an operand breaks before each operator. A list or chain so
+binary-operator chain with such an operand breaks after each operator (TOOL-28; superseded:
+before each operator, which split a chain wrapped before `-` into two statements). A list or chain so
 wrapped is itself always multi-line, so the rule climbs to the enclosing list or chain. An
 always multi-line construct never "fits".
 
@@ -1054,3 +1056,46 @@ bare-metal target (Manifest §3.1), so code gated on it (freestanding start-up, 
 that path under a WASI host that does provide services; it conflates two different situations. *(3)
 Define the WASM `Machine` variant now, with its projections* — the complete answer, but a much larger design
 step that depends on open spec#3 (the non-ISA OS surface); it stays the later additive path.
+
+### TOOL-28. `fmt` breaks an overflowing binary-operator chain after each operator — spec#185
+*provenance: supersedes TOOL-2's break-before rule for a binary-operator chain (§4.3.3), and the
+  same rule in TOOL-25, after SYN-12 (continuing tokens) · spec: Tooling §4.3.3 · owner decision
+  2026-11-22, spec#185*
+
+**Question.** Tooling §4.3.3 broke an overflowing binary-operator chain **before** each operator,
+the operator beginning the continuation line. `-` has a prefix form, so a line beginning with it
+does not continue the previous one (Grammar §2.6, SYN-12). A `x := aaaa - bbbb` too wide for one
+line came out as
+
+```alatyr
+x := aaaa
+  - bbbb
+```
+
+which is two well-formed statements, `x := aaaa` and `-bbbb`: `fmt` changed the program's meaning,
+against §4.3 (semantics-preserving) and I1.
+
+**Options.**
+- **A.** Break **after** each operator, for every binary operator.
+- **B.** Break before each operator, but after `-` (and `..`).
+- **C.** Wrap an overflowing chain in parentheses, inside which newlines are free, and keep
+  break-before.
+
+**Decision (owner, 2026-11-22).** Option **A**. An overflowing binary-operator chain breaks after
+each operator, whichever the operator: the operator ends the line, and the next operand begins the
+continuation line at the continuation indent (one level). A chain with an always multi-line
+operand (TOOL-25) breaks the same way.
+
+```alatyr
+x := aaaa -
+  bbbb
+```
+
+**Why.** A line ending in a binary operator is already incomplete and continues (Grammar §2.6, a
+trailing binary operator), whatever the operator, so the break can never end a statement and the
+wrapped text always parses to the program it came from. One rule holds for every operator, with no
+exception to remember: one canonical shape per construct.
+
+**Rejected.** *B. Break before, but after `-` (and `..`)* — two shapes for one construct, chosen by
+which operator it holds. *C. Parenthesise an overflowing chain* — `fmt` would insert tokens the
+author did not write.
