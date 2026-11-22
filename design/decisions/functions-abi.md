@@ -114,7 +114,8 @@ arguments reuse existing mechanisms** — `in`-parameter defaults are visible in
 (the omitted expression is supplied at the call site); named arguments use the *same* `=`
 label mechanism as struct construction, giving order-independence that combines with
 defaults; and argument expressions **evaluate left-to-right in call-site source order** so
-that named→positional reordering affects binding, not evaluation (nothing hidden). **(4)
+that named→positional reordering affects binding, not evaluation (nothing hidden); a short
+call that could omit either an elided allocator or a defaulted parameter is refused (FN-16). **(4)
 Variadics** are a single trailing-rest parameter, with the comptime-variadic (`args : ...`,
 a monomorphized heterogeneous comptime tuple) as the main form, a typed rest (`args : ...T`)
 for the homogeneous runtime-slice case, and the C-variadic reserved for FFI under an
@@ -575,3 +576,55 @@ visible from the signatures in the program and the prelude catalog, by the one F
 **Consequences.** Declarations §6.1 states the rule and replaces its open marker; Functions §1.4 says the
 prelude's functions take part; Stdlib §1, Modules §8, Grammar §2.3 and Stdlib appendix §2.6 point to it;
 both conformance lists follow. MOD-16's note that the prelude question is separate now points here.
+
+### FN-16. A short call that could omit either the allocator or a defaulted parameter is ill-formed — spec#171
+*provenance: refines FN-5 (defaults, named arguments) and MEM-5 (allocator elision), which each
+  let a call omit an argument but never said which one a call omits when both apply · spec:
+  Functions §5.3, §5.5, §10 item 6 · owner decision 2026-11-22, spec#171*
+
+**Question.** Positional arguments bind by position (Functions §5.3); an allocator parameter may be
+elided and filled from the ambient (§5.5), and the UFCS note there says an elided one takes no
+position; a defaulted `in` parameter may be omitted (§5.1). With
+`dk := fn(ar : ptr(mut alloc), k : u64 = 7) -> u64 { k }`, does `dk(ptr(mut other))` inside
+`alloc::with(amb)` bind `ar = ptr(mut other), k = 7`, or elide `ar` and bind `k = ptr(mut other)`?
+Both readings bind every parameter, so the meaning and the well-formedness of the call hang on the
+answer. The compiler read it both ways at once: `dk(42)` outside `alloc::with` ran 7, and the call
+inside ran 131, the ambient's address read as `k` (compiler#1831, compiler#1822).
+
+**Options.**
+- **A.** Refuse the call whose omitted argument could be either.
+- **B.** Elision first: with an ambient in scope, the written arguments skip the allocator.
+- **C.** Position first: the allocator is omitted only when the arguments do not reach its position.
+
+**Decision (owner, 2026-11-22).** **A.** A free call to a callee with one allocator parameter `a`,
+not named at the call, and no comptime type-parameter has a **written** reading (`a` takes its
+position) and an **elided** reading (`a` takes none, and the positional arguments bind the other
+parameters in order). A reading is viable when its arguments all bind (a trailing variadic is always
+bound, possibly to no arguments), nothing is bound twice, and each parameter it leaves unbound may
+be omitted (a default, an `out` by projection, or `a`). One viable reading is the binding; two that
+bind alike — the arguments stop before `a` — are one binding with `a` elided. When both are viable,
+bind differently, and the written reading omits a defaulted `in` parameter the elided reading binds,
+the call is ill-formed, with a located Semantic diagnostic that names `a` and that parameter. The
+readings depend only on the parameter list and on the count and names of the arguments — never on
+their types or on whether an ambient is in scope. Both intents stay expressible: write the default
+(`dk(ptr(mut other), 7)`) to pass the allocator, or name the defaulted argument (`dk(k = 42)`) to
+take the ambient.
+
+**Why.** No guess (I1, I3, FND-3): when the source does not say which argument it omits, a reader
+cannot predict the binding, and two implementations would differ. Deciding by count and names, not
+by types or the ambient, keeps the classification readable from the signature and the call and the
+same in every scope. A refusal is the one answer that can grow: B or C can be adopted later without
+breaking a program, because every call either would give a meaning to is ill-formed now (I10).
+
+**Rejected.**
+- *B — elision first.* The same call would mean different things inside and outside
+  `alloc::with`, and an allocator passed explicitly inside one silently binds the next parameter:
+  measured in the compiler as 131 and 251 instead of 7 (compiler#1831, compiler#1845).
+- *C — strictly positional.* An allocator first in the parameter list — the §5.5 library
+  convention, `f(a, …)` the fully explicit form — could never be elided while any later parameter
+  has a default.
+
+**Not settled here.** Readings that differ in an `out` or through a variadic, a callee with several
+allocator parameters (spec#175), the receiver call `recv.f(…)` (spec#176), and which parameter types
+are allocator parameters, and a callee with a comptime type-parameter, which a call may leave
+unwritten for inference (Comptime §3.3) (spec#177).

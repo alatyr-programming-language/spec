@@ -452,7 +452,9 @@ combinable with defaults (omit an argument that has a default; name the rest).
 
 Positional and named arguments may be combined per the Grammar rules (positional
 arguments bind by position, then named arguments bind by name); an argument MUST NOT
-be given both positionally and by name.
+be given both positionally and by name. An elided allocator parameter takes no position;
+which parameter a short call omits when it could be either the allocator or a defaulted
+one is §5.5.
 
 #### 5.4 Evaluation order
 
@@ -487,6 +489,55 @@ is a local arena, `defer close(a)`, and `alloc::with(a) { … }` or an explicit 
 §5.2.1). An elided argument is a use of the ambient place: if that place is consumed on a path
 reaching the call (`alloc::with(a) { close(a) ; f() }`), the call is a linearity error (Memory
 §5.9).
+
+**Which parameter a short call omits (FN-16).** A free call `f(…)` whose callee has one
+allocator parameter `a`, not named at the call, and no comptime type-parameter (which a call
+may leave unwritten, Comptime §3.3) has two **readings**:
+
+- the **written** reading — `a` takes its position, and the *i*-th positional argument binds
+  the *i*-th parameter (§5.3);
+- the **elided** reading — `a` is elided and takes no position, and the *i*-th positional
+  argument binds the *i*-th parameter other than `a`.
+
+A reading is **viable** when every positional argument binds a parameter (a trailing variadic
+parameter takes the surplus, §7, and is always bound, possibly to no arguments), no parameter
+is bound both positionally and by name (§5.3), and every parameter it leaves unbound may be
+omitted: an `in` parameter with a default (§5.1), an `out` parameter by projection (§2.3), or
+`a` itself, resolved by steps (1)–(4) above. The readings depend on the parameter list, the
+number of positional arguments and the names of the named ones — never on the argument types,
+and never on whether an ambient is in scope, so a call means the same inside and outside
+`alloc::with`.
+
+- If exactly one reading is viable, it is the call's binding. If both are viable and bind
+  every argument to the same parameter — the positional arguments do not reach `a`'s
+  position — they are one binding, with `a` elided. If neither is viable, the call is
+  ill-formed.
+- If both are viable, bind differently, and the written reading omits an `in` parameter with
+  a default that the elided reading binds, the call is **ill-formed**: a located Semantic
+  diagnostic naming both candidates, `a` and that defaulted parameter. The caller writes the
+  default explicitly to pass the allocator, or names the defaulted argument to take the
+  allocator from the ambient.
+
+```
+dk := fn(ar : ptr(mut alloc), k : u64 = 7) -> u64 { k }
+
+alloc::with(amb) {
+  v := dk(ptr(mut other))      # ill-formed: is `ar` or `k` omitted? (FN-16)
+  w := dk(ptr(mut other), 7)   # written reading only: ar = ptr(mut other), k = 7
+  x := dk(k = 42)              # elided: ar = ptr(mut amb), k = 42
+  y := dk()                    # elided: ar = ptr(mut amb), k = 7
+}
+```
+
+`dk(42)` is the same ill-formed shape outside any `alloc::with`. With
+`g := fn(ar : ptr(mut alloc), x : u64, k : u64 = 7) { … }`, `g(5)` has only the elided reading
+(the written one leaves `x` unbound) and `g(p, 5, 7)` only the written one, while `g(p, 5)`
+is ill-formed; `g(p, 5, 7)` or `g(ar = p, x = 5)` says the written intent and `g(p, k = 5)`
+the elided one. Where both readings are viable and differ otherwise — the written reading
+omits an `out`, or a variadic takes the difference — and for a callee with several allocator
+parameters, the binding is not settled here (spec#175); nor is the receiver call `recv.f(…)`
+(spec#176), nor a callee with a comptime type-parameter (spec#177). Naming the allocator
+beside positional arguments, `dk(5, ar = p)`, gives `ar` twice and is §5.3's error.
 
 **UFCS interaction.** An elided allocator parameter does **not** participate in receiver
 binding: `recv.f(…)` binds `recv` to the first **written** (non-elided) parameter, and the
@@ -771,7 +822,12 @@ A conforming implementation MUST:
    §8.1; I1/I3);
 6. permit defaults only on `in` parameters (visible in the signature, evaluated at
    the call site) and named arguments via the struct-construction `=` mechanism,
-   rejecting an argument given both positionally and by name (§5);
+   rejecting an argument given both positionally and by name (§5); and bind a short free
+   call to a callee with one allocator parameter and no comptime type-parameter by its
+   written and elided readings, rejecting with a located Semantic diagnostic that names
+   both parameters a call whose two viable readings differ in whether the allocator or a
+   defaulted parameter is omitted — by the parameter list and the argument count and
+   names alone, never by the argument types or the ambient (§5.5; FN-16);
 7. treat an ABI as a comptime value, default it from the target, allow per-site
    `@abi(value)` selecting the calling convention on a function, provide the prelude
    ABI values and accept a user-defined `Abi(...)` value, and support `@abi(naked)` —
