@@ -82,15 +82,16 @@ one-per-line style without making commas mandatory. To keep newline-as-separator
 unambiguous it follows a **deterministic Go/Swift-style continuation rule**: a newline does
 *not* terminate when the line is explicitly incomplete (last token cannot end a
 statement — a trailing binary operator/`=`/`,`/open bracket/`.`, or the next line starts
-with a continuing token); inside `(...)`/`[...]` newlines are always free. Determinism is
-the point — the rule never needs lookahead beyond the line boundary.
+with a continuing token — one that cannot begin a statement, listed closed by SYN-12);
+inside `(...)`/`[...]` newlines are always free. Determinism is the point — the rule never
+needs lookahead beyond the line boundary.
 
 **Rejected (carve-out).** The one disambiguation needed: a line-leading *non-prefix*
-operator glyph (`/`, `%`, `==`, `<=`, …) normally continues the previous line, but when
+operator glyph (`/`, `%`, `==`, `<=`, `+`, …) normally continues the previous line, but when
 **immediately followed by `:=`/`:`** it is an operator-name *binding* (the glyph is the
 declaration's name, e.g. `/ := fn(…)`), so the newline stays a separator. This is needed
-only for the non-prefix operators; the prefix-capable `+`/`-`/`*`/`&`/`~` already start a
-fresh line unambiguously.
+only for the non-prefix operators; the prefix `-`/`~` already start a fresh line
+unambiguously.
 
 ### SYN-8. `match` arms take no comma — spec#24
 *provenance: refines SYN-4 (separators) and corrects TOOL-2's arm-wrapping extension ·
@@ -119,6 +120,60 @@ with one.
 **Rejected.** *Make `,` an arm separator* (for expression arms, or for all arms). That
 would give one thing two spellings, `;` and `,`, and blur §2.6's split between the
 statement/arm separator and the sequence-element separator.
+
+### SYN-12. A continuing token is one that cannot begin a statement — spec#172
+*provenance: refines SYN-4 (which named "a continuing token" but never listed one) and
+  corrects its carve-out's "prefix-capable `+`/`*`/`&`" · spec: Grammar §2.6, §5;
+  Declarations §9 · owner decision 2026-11-22, spec#172*
+
+**Question.** Grammar §2.6 and Declarations §9 keep a newline from ending a line when "the
+next line begins with a continuing token", and neither says which tokens those are. Is
+
+```alatyr
+mut v
+  : u64 = 0
+```
+
+one declaration, or does the newline end the statement after `mut v`, leaving `: u64 = 0`
+ill-formed? The same holds for `:=` at a line start. The reference compiler read it as one
+declaration in its parser and differently in code that recovers declarations from the
+source, and a `#` comment between the name and the `:` lost the type (compiler#1859).
+
+**Options.**
+1. **A closed list:** a line continues the previous one when its first token cannot begin a
+   statement — `:`, `:=`, `=`, `.`, the binary operators with no prefix form, … — so the
+   form above is one declaration.
+2. **`:` and `:=` do not continue:** a line starting with either is a Parse diagnostic.
+
+**Decision.** **Option 1**, the owner's choice (2026-11-22). A line continues the previous
+one when its first token is one that cannot begin a statement, a module item or a `match`
+arm, and Grammar §2.6 lists those tokens closed. The operator-glyph binding head (SYN-4's
+carve-out, `/ := fn(…)`) stays the one exception.
+
+**Derived (not the owner's wording).** The list is read off Grammar §3: `:` `:=` `=` and
+the compound assignments; `.` `::`; the binary operators with no prefix form, `*` `/` `%` `+`
+`&` `^` `|` `==` `!=` `<` `<=` `>` `>=` `and` `or`, and `..=`; `?` `->` `=>` `...`; `else`,
+`when` and the reserved `abi`, which occurs only after `@`; `,` `;` `)` `]` `}`. The unary
+prefixes of §3.4 are `-` `~` `not` only, so `+`, `*` and `&` have no prefix form and
+continue, and SYN-4's carve-out, which called them prefix-capable, is corrected; `-`, which
+is both prefix and infix, does not continue. `..` does not continue, since `..hi` is a range
+(§3.4). The contextual `in`, `out` and `scoped` are identifiers at a statement's start
+(§2.3), so they do not continue either; `async` and `await` have no production in v1 and are
+not in the list. A comment is not a token (§2.1), so a comment trailing the previous line,
+as in compiler#1859, leaves the continuation as it was. Whether a blank or comment-only
+line between the two lines interrupts it is not settled here (spec#178).
+
+**Why.** SYN-4 already let a non-prefix operator continue because it "cannot begin a fresh
+expression"; this is the same argument applied to every token, so one rule answers each
+case and no token is an exception to remember. A line that begins with a continuing token
+cannot parse on its own, so joining it never turns one well-formed program into a different
+well-formed one — it only separates an error from a valid program, and no meaning changes
+silently (I1). `fmt` still prints one canonical form, `mut v : u64 = 0`: its layout is a
+function of width and content, never of the input's line breaks (Tooling §4.3.3).
+
+**Rejected.** *(2) `:` and `:=` do not continue* — stricter, but an exception to the
+general argument, and a list of continuing tokens is needed anyway (`.` in a call chain,
+the operator a wrapped chain begins its line with, Tooling §4.3.3).
 
 ---
 

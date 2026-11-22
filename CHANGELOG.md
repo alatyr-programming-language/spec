@@ -49,6 +49,18 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a line continues the previous one when its first token cannot begin a statement
+(Grammar §2.6, §5; Declarations §9; SYN-12, SYN-4).**  The spec let "a continuing token" at a line
+start join the line to the previous one but never said which tokens those are, so `mut v` followed by
+a line `: u64 = 0` had no answer. It is one declaration: Grammar §2.6 now lists the continuing tokens
+closed — `:` `:=` `=` and the compound assignments, `.` `::`, the binary operators with no prefix form
+(`*` `/` `%` `+` `&` `^` `|` `==` `!=` `<` `<=` `>` `>=` `and` `or`) and `..=`, `?` `->` `=>` `...`,
+`else` `when` `abi`, and `,` `;` `)` `]` `}` — each a token no statement, module item or `match` arm
+can begin with. The prefix `-` `~` `not` and `..` do not continue; the operator-glyph binding head
+`/ := fn(…)` stays the exception. `+`, `*` and `&`, which SYN-4 called prefix-capable but which have no
+prefix form, now continue a line. A comment trailing the previous line does not stop the continuation.
+Rejected: a line starting with `:` or `:=` does not continue. (spec#172.)
+
 **Normative — module scopes nest along the module tree: an ancestor's names are in scope unqualified in
 a descendant (Declarations §5, §6.1, §10; Modules §3, §4.1, §4.5, §5, §11; MOD-16, MOD-2, MOD-8,
 FN-2).**  The spec granted a descendant the right to name its ancestors' items, but never said whether a
