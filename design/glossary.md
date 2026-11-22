@@ -124,7 +124,8 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   definition** with concrete overloads — the derive `generic-default + concrete-override` pattern — with resolution
   preferring an exactly-matching **concrete** overload and falling back to the **generic** (monomorphized) only on
   concrete-miss; otherwise a generic function is monomorphized, not overloaded. UFCS method dispatch (MOD-3) is the same
-  resolution keyed on the receiver.
+  resolution keyed on the receiver. The base prelude's functions of a name take part beside the program's: a
+  module-level function named like one joins its set rather than shadowing it (FN-15).
 
 - **Receiver/access coercion — auto-ref / auto-deref** (MOD-3 / OP-5) — the one-level adjustment, between a value
   and a pointer to it, applied to the operand of a **value-access position**: a UFCS method receiver (the operand of

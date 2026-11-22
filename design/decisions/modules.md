@@ -535,8 +535,9 @@ binding of `f` hides the ancestor's `f` entirely — every overload of an ancest
 a generic default included — and does not join that set. An overload set (FN-7) forms only
 among the bindings of one scope, which is what Declarations §6.2 and Functions §1.4 already
 say. So when `geo` declares `f(u32)` and `geo::child` declares `f(str)`, `f(1)` in `geo::child`
-is ill-formed; it reaches `geo`'s overload as `geo::f(1)`. How a module's binding combines with
-an injected base-prelude name is a separate question, not settled here (spec#166).
+is ill-formed; it reaches `geo`'s overload as `geo::f(1)`. The base prelude is not such an
+enclosing scope: a module's function named like a prelude function joins the prelude's overload
+set rather than shadowing it (FN-15, spec#166).
 
 **Why.** One lookup rule for every module, whatever its file layout: an inline child and a
 file child are "the same kind of thing" (MOD-1), and under option 2 moving `mod { … }` out to

@@ -57,7 +57,8 @@ and **deferred (additive) growth**.
   function values (FN-6) + the function-value **type** `fn(T…)->R` (FN-10; a function value has the target's
   default convention — direct calls use the declared one, indirect calls the default) + the type-erased **`dyn fn(T…)->R`**
   closure surface (`dyn` keyword + `dyn_over` over explicit storage, FN-11 — resolves the §6.3 dyn spec gap),
-  overloading by signature (FN-7), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
+  overloading by signature (FN-7; a module-level function named like a base-prelude function joins its
+  overload set rather than shadowing it, FN-15), ABI=comptime value + passing modes + defaults/named + variadics (FN-5;
   a non-literal argument in a comptime-variadic's template place — its first fixed `str` parameter — is a valid,
   untemplated call, FN-13/STD-5; a comptime-variadic's pack name is not a value, only a `comptime for`
   collection, FN-14).
