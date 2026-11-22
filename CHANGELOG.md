@@ -61,6 +61,20 @@ can begin with. The prefix `-` `~` `not` and `..` do not continue; the operator-
 prefix form, now continue a line. A comment trailing the previous line does not stop the continuation.
 Rejected: a line starting with `:` or `:=` does not continue. (spec#172.)
 
+**Normative — a module-level function named like a base-prelude function joins its overload set
+(Declarations §6.1, §10; Functions §1.4, §10; Stdlib §1; Modules §8; Grammar §2.3; Stdlib appendix §2.6;
+FN-15, FN-2, FN-7, SYN-2, MOD-16).**  The spec injected the base prelude unqualified but never said into
+which scope, so a module-level `len` or `eq` could shadow the prelude's or join its overload set. It
+joins: the prelude is not an enclosing scope, and a bare call of a prelude function's name resolves over
+the program's functions and the prelude's together under FN-7. `len := fn(x : u64) -> u64 { x }` beside
+`len(xs)` on a slice calls the prelude's `len`; a type's own `eq` serves `==` on that type while every
+other type keeps the structural default. A program function whose parameter signature equals a concrete
+prelude function's, or a second generic definition of the name, is a redefinition error at the
+declaration, not a replacement. A non-function or inner-scope binding of such a name and a qualified
+path to one are left to spec#173. Rejected: the prelude as the outermost scope, shadowed (by MOD-16 it
+would hide the whole name and need an `eq` / `lt` / `hash` exception); forbidding prelude names
+(contradicts SYN-2). (spec#166.)
+
 **Normative — module scopes nest along the module tree: an ancestor's names are in scope unqualified in
 a descendant (Declarations §5, §6.1, §10; Modules §3, §4.1, §4.5, §5, §11; MOD-16, MOD-2, MOD-8,
 FN-2).**  The spec granted a descendant the right to name its ancestors' items, but never said whether a

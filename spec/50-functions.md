@@ -102,6 +102,14 @@ relations borrow their operands (Stdlib appendix §2.6, MEM-13): the one generic
 instantiated at `T`, the operands' type, and the instance takes each operand by its address —
 no second generic definition.
 
+**The base prelude's functions take part.** A module-level function named like a base-prelude
+function joins that name's overload set rather than shadowing it, and a bare call of the name
+resolves over the program's functions and the prelude's together (Declarations §6.1). The rules
+above apply to that set unchanged: a program function with the same parameter signature as a
+concrete prelude function, or a second generic definition of the name, is a redefinition error;
+a concrete program function beside a generic prelude one is a per-type override — which is how a
+type declares its own `eq` while `==` on every other type keeps the structural default. (FN-15.)
+
 **The one site this permission does not license.** A heterogeneous binding is admissible for **every**
 pair of types, pointer↔integer included: the declaration `eq(in a : ptr(T), in b : usize)` is legal, and
 this mechanism may select it. What is refused is the **comparison site**, not the binding — the grant
@@ -787,4 +795,6 @@ A conforming implementation MUST:
     definition** to coexist with concrete overloads of the name (the derive
     `generic-default + concrete-override` pattern), preferring an exactly-matching
     **concrete** overload and falling back to the **generic** only on concrete-miss
-    (§1.4; FN-7; I1/I2/I3).
+    (§1.4; FN-7; I1/I2/I3); count the base prelude's functions of a name in the overload set a
+    bare call of it resolves over, so a module-level function named like one joins that set
+    under these same rules instead of shadowing it (§1.4; Declarations §6.1; FN-15).

@@ -44,7 +44,9 @@ The prelude is **tiered**, mirroring the freestanding → allocating → hosted 
 dependencies (Modules §8 governs *external* path/git packages; the stdlib is neither).
 They differ only in **how their names enter scope**:
 
-- the **base** prelude is injected **unqualified** (auto-available, above);
+- the **base** prelude is injected **unqualified** (auto-available, above), but not as a
+  scope around the package root: a module-level function named like a base-prelude function
+  joins that name's overload set rather than shadowing it (Declarations §6.1; FN-15);
 - the **`alloc`** and **`std`** tiers are provided as **ambient root-level modules**
   named exactly **`alloc`** and **`std`** (alongside the package root, sharing the one
   module tree, Modules §1). "**Explicitly imported**" means their names are **not**

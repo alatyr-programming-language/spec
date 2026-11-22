@@ -44,7 +44,8 @@ introducer — a generic type is the ordinary `fn(…) -> type`. `abi` is reserv
 an introducer either (an ABI value is an ordinary `Abi(...)` struct). The built-ins
 (`typeinfo`/`bitcast`/`panic`/…) and `true`/`false`/`NaN`/`Infinity` are **prelude
 identifiers/constants, not keywords**, so the keyword surface does not grow with the
-library (OP-1). `async`/`await` are reserved now for additive async (CC-6) — a safe
+library (OP-1); a program's module-level function of such a name joins the prelude's
+overload set (FN-15). `async`/`await` are reserved now for additive async (CC-6) — a safe
 direction of breakage. Import/re-export is a plain declaration (`name := path`), so `use`
 is gone; `@extern`/`@label` are attributes (SYN-7), so `extern`/`label` are not keywords.
 `scoped` is **contextual** like the directions — a keyword only immediately before `ptr` in

@@ -138,7 +138,9 @@ reserved now so adding the feature later does not break programs.
 `dyn_over` (FN-11), the brand constructor `brand` (TYP-4; a type-returning call `brand(T)`,
 §3.3), instruction names, …)
 and members of the **prelude modules** `atomic` / `volatile` (`atomic::load`, …, reached by
-`::`). The constants `true`, `false`, `NaN`, `Infinity` — and the no-initializer marker `uninit` (Type System §9.4) — likewise. `extern` is **not** a keyword — it is the
+`::`). The constants `true`, `false`, `NaN`, `Infinity` — and the no-initializer marker `uninit` (Type System §9.4) — likewise.
+A program may declare a function named like a prelude function at module level; it joins that
+name's overload set (Declarations §6.1; FN-15). `extern` is **not** a keyword — it is the
 attribute `@extern` (§3.11). `use` does not exist (import is a declaration; MOD-4).
 
 #### 2.4 Literals
