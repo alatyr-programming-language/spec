@@ -216,8 +216,11 @@ item-sep   ::= newline | ","          (* between sequence elements: args, fields
   next line begins with a continuing token. **Inside `( … )` and `[ … ]` newlines are
   free** (never terminating).
   - **Continuing tokens** (SYN-12). A line continues the previous one when its first
-    token is one that cannot begin a statement, a module item or a `match` arm (§3).
-    The continuing tokens are exactly these, and no other token continues a line:
+    token is a continuing token. The list below is the definition; it is derived from
+    the tokens that cannot begin a statement, a module item, a `match` arm or an
+    element of a type's braces (§3), leaving out the reserved words `async` and `await`,
+    which begin nothing in v1. The continuing tokens are exactly these, and no other
+    token continues a line:
     - the binding and assignment tokens `:` `:=` `=` and the compound assignments
       `+=` `-=` `*=` `/=` `%=` `&=` `|=` `^=`;
     - member access and path navigation `.` `::`;
