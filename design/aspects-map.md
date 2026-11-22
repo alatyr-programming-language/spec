@@ -144,7 +144,8 @@ and **deferred (additive) growth**.
   (TOOL-25); a trailing comment on a line `fmt` expands trails the first output line (TOOL-26); and on
   a directly driven non-ISA backend `target.os`/`target.env` match no variant, like `target.arch` (TOOL-27).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`
-  only, no comma after an arm, SYN-8), declarations/expressions (SYN-5), the explicit discard `_ := expr`,
+  only, no comma after an arm, SYN-8; a line continues when its first token cannot begin a
+  statement, from a closed list, SYN-12), declarations/expressions (SYN-5), the explicit discard `_ := expr`,
   the lone `_` not a name (SYN-9), a deferred action with a value ill-formed (SYN-10), `not` binds tighter than a comparison (SYN-11),
   attributes `@` — flat syntax + a **family taxonomy** (storage/layout/contract/abi/codegen/linkage/build/
   control/test) for docs & diagnostics, no `@family.name` (SYN-7/3B; isolation via the diagnostic, which names

@@ -217,15 +217,39 @@ item-sep   ::= newline | ","          (* between sequence elements: args, fields
   construct (a trailing binary operator, `=`, `,`, `.`, or an open bracket), or the
   next line begins with a continuing token. **Inside `( … )` and `[ … ]` newlines are
   free** (never terminating).
-  - **Exception — an operator-glyph binding head.** A *non-prefix* operator at a line
-    start (`/`, `%`, `==`, `<=`, `|`, …) ordinarily **continues** the previous line
+  - **Continuing tokens** (SYN-12). A line continues the previous one when its first
+    token is a continuing token. The list below is the definition; it is derived from
+    the tokens that cannot begin a statement, a module item, a `match` arm or an
+    element of a type's braces (§3), leaving out the reserved words `async` and `await`,
+    which begin nothing in v1. The continuing tokens are exactly these, and no other
+    token continues a line:
+    - the binding and assignment tokens `:` `:=` `=` and the compound assignments
+      `+=` `-=` `*=` `/=` `%=` `&=` `|=` `^=`;
+    - member access and path navigation `.` `::`;
+    - the binary operators with no prefix form: `*` `/` `%` `+` `&` `^` `|` `==` `!=`
+      `<` `<=` `>` `>=` `and` `or`, and the inclusive range `..=`;
+    - the postfix try `?`, the arrows `->` `=>`, and the variadic `...`;
+    - the keywords `else` and `when`, and the reserved word `abi` (§2.3: it occurs only
+      after `@`);
+    - `,`, `;` and the closing brackets `)` `]` `}` — before `;` and a closing bracket
+      the continuation changes nothing, a separator there being collapsed or permitted
+      (below).
+
+    So `mut v` followed by a line `: u64 = 0` is the one declaration `mut v : u64 = 0`,
+    and `}` followed by a line `else { … }` continues the `if`. A token that can begin a
+    statement never continues a line, in particular the prefix operators `-` `~` `not`
+    (`-` has an infix form too) and `..` (a range whose lower bound is omitted, §3.4). A
+    comment is not a token (§2.1), so a comment trailing the previous line does not stop
+    the continuation: `v # the pair` followed by a line `: [u64; 2] = a` is one
+    declaration.
+  - **Exception — an operator-glyph binding head.** A continuing operator glyph at a line
+    start (`/`, `%`, `==`, `<=`, `|`, `+`, …) ordinarily **continues** the previous line
     (it cannot begin a fresh expression). But an **operator-name binding** (§4.5 / Type
     System §4.5 — the operator glyph **is** the declaration's name) begins exactly that
     way: `/ := fn(…)`. So when a line-leading operator glyph is **immediately followed
     by `:=` or `:`**, it is a **binding head**, not a continuation — the preceding
-    newline stays a separator. (Prefix-capable glyphs `+`/`-`/`*`/`&`/`~` already begin
-    a fresh line, so they need no exception; this disambiguates only the non-prefix
-    operators, which are the rest of the bindable set.)
+    newline stays a separator. (The prefix glyphs `-` and `~` already begin a fresh
+    line, so they need no exception.)
 
 A trailing `item-sep` / `sep` before a closing bracket is permitted; consecutive
 `sep`s are collapsed.
@@ -764,7 +788,7 @@ A conforming implementation MUST:
 2. apply the **separator and line-continuation** rules of §2.6 deterministically —
    newline-or-`;` between statements/`match` arms, comma-or-newline between sequence
    elements, free newlines inside `( … )` / `[ … ]`, and the incomplete-line
-   continuation rule (SYN-4);
+   continuation rule with its closed list of continuing tokens (SYN-4, SYN-12);
 3. **parse** the grammar of §3, including the optional file-level `@limits(...)`
    attribute, and the two distinct separator contexts (`sep` vs
    `item-sep`), accepting exactly the programs these productions admit and rejecting

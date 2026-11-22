@@ -413,8 +413,11 @@ Separators (decisions SYN-4; consolidated in Grammar):
   on one line);
 - a line is **not** terminated if it is syntactically incomplete — the last token
   cannot end a construct (a trailing binary operator, `=`, `,`, `.`, or an open
-  bracket), or the next line begins with a continuing token (deterministic,
-  Go/Swift-style); inside `( … )` / `[ … ]` newlines are free.
+  bracket), or the next line begins with a continuing token, one that cannot begin a
+  statement — `:`, `:=`, `=`, `.`, a binary operator with no prefix form, … (the
+  closed list is Grammar §2.6; SYN-12) — so `mut v` followed by a line `: u64 = 0` is
+  one declaration (deterministic, Go/Swift-style); inside `( … )` / `[ … ]` newlines
+  are free.
 
 Normative notes:
 
