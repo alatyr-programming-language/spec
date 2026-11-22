@@ -173,6 +173,8 @@ it. Temporary memory is therefore explicit — a local arena, `defer close(a)`, 
 `alloc::with(a) { … }` (Memory §5.2.1 shows the idiom). The elided argument is a use of the
 ambient place, so `alloc::with(a) { close(a) ; f() }` is a linearity error, as the written
 `f(ptr(mut a))` after `close(a)` is.
+An elided allocator takes no position among the arguments; a short call that could omit either
+it or a defaulted parameter is ill-formed (FN-16).
 
 **Rejected.** A fresh temporary allocator with **no closer** (the former "create-fresh
 default"): linearity cannot hold for an owning `Arena` that nothing consumes. *Rejected (for

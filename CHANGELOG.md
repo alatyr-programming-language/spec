@@ -49,6 +49,21 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — a short call that could omit either an elided allocator or a defaulted parameter is
+ill-formed (Functions §5.3, §5.5, §10 item 6; FN-16, FN-5, MEM-5).**  With
+`dk := fn(ar : ptr(mut alloc), k : u64 = 7) -> u64 { k }`, the spec did not say whether `dk(ptr(mut other))`
+inside `alloc::with(amb)` passes the allocator and takes `k`'s default, or elides the allocator and binds
+`k`. A free call to a callee with one allocator parameter, not named at the call, and no comptime
+type-parameter now has two readings — written (the allocator takes its position) and elided (it takes
+none). One viable reading is the binding; when both are viable, bind differently, and the written one
+omits a defaulted parameter the elided one binds, the call is a located Semantic diagnostic naming both
+parameters. The readings depend on the parameter list and the count and names of the arguments, never
+on argument types or on whether an ambient is in scope. Both intents stay expressible:
+`dk(ptr(mut other), 7)`, `dk(k = 42)`. Rejected: elision first (a call would mean different things
+inside and outside `alloc::with`); strictly positional (a leading allocator could never be elided
+beside a default). Neighbouring shapes, including a callee with a comptime type-parameter, are
+spec#175–#177. (spec#171.)
+
 **Normative — a line continues the previous one when its first token cannot begin a statement
 (Grammar §2.6, §5; Declarations §9; SYN-12, SYN-4).**  The spec let "a continuing token" at a line
 start join the line to the previous one but never said which tokens those are, so `mut v` followed by
