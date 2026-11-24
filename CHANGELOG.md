@@ -49,6 +49,8 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+## 1.12.0 — 2026-11-25
+
 **Normative — `fmt` breaks an overflowing binary-operator chain after each operator (Tooling §4.3.3;
 TOOL-28, TOOL-25, TOOL-2, SYN-12).**  §4.3.3 broke a chain before each operator, the operator beginning
 the continuation line. `-` has a prefix form, so a line beginning with it does not continue (Grammar
