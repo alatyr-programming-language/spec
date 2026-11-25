@@ -131,7 +131,7 @@ access that the reader must see, I3 — the arena is named at every `get`). The 
 de-privileges `get` *and* keeps store-safety *and* introduces no lifetime variable.
 
 ### MEM-4. The allocator protocol `alloc`
-*spec: Stdlib §160 §5.1*
+*spec: Stdlib appendix §5.1*
 
 **Why.** An allocator is an ordinary value satisfying a structural protocol
 (`mechanism`/`allocate`/`free`), named **`alloc`** — never a language entity. A function

@@ -155,7 +155,7 @@ fits any branch.)
 - the condition `cond` is a **truthy** value (`bool`, or a type satisfying the truthy
   protocol; Comptime §6.2) — **no parentheses** around it (decisions CF-1) — and each
   body is **braced**. A **numeric scalar is not truthy** (it provides no `is_true`,
-  Stdlib §2.1): a numeric condition uses an explicit comparison yielding `bool`
+  Stdlib appendix §2.1): a numeric condition uses an explicit comparison yielding `bool`
   (`if n != 0 { … }`), never a bare `if n { … }`;
 - as an **expression**, the branches MUST have a **compatible type** and the `if`
   yields that type; as a **statement**, the branches may be value-less;
@@ -363,7 +363,7 @@ otherwise a compile error. This is **declared and visible** (I8/I3), not a hidde
 `no_abstractions` auto-application is **off** (exact match or an on-site conversion `OutErr(x)?` required).
 The converted failure is then **wrapped** into the enclosing tryable: for `Option`/`Result` by their
 built-in failure case (`None`/`Err`), for a **user** tryable by its **`from_failure`** constructor (the
-fourth `Tryable` operation, CF-10 / Stdlib §2.2) — except where the enclosing type **is** the operand's
+fourth `Tryable` operation, CF-10 / Stdlib appendix §2.2) — except where the enclosing type **is** the operand's
 own type, in which case the operand is returned verbatim.
 
 ---

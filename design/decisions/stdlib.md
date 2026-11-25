@@ -76,7 +76,7 @@ expressible by existing means (context-driven phase; the `Never` bottom type), s
 bars them.
 
 ### STD-2. A `Writer`'s error type is the implementer's own, tier-bounded
-*spec: Stdlib §1 (tier discipline), §2.7 (`Writer`)*
+*spec: Stdlib §1 (tier discipline), Stdlib appendix §2.7 (`Writer`)*
 
 **Why.** The draft fixed `Writer.write` to return `Result(usize, IoError)` *and*
 declared that an in-memory buffer (`String`, alloc tier) satisfies `Writer`. But

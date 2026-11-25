@@ -85,7 +85,7 @@ model, with **no glyph and no new mechanism**.
   `u32 +`/`<` and `i32 +`/`<` select different intrinsics over the shared block — **no** separate `sar`
   operator, so a value's type alone fixes the shift's meaning.
 - **Over-width shift → trap (I11).** A shift count `n ≥ N` (the operand's bit width) is a member of the
-  **checked-guard family** already fixed by Concurrency §6 / Assembly §80 (alongside div-by-zero): checked →
+  **checked-guard family** already fixed by Concurrency §6 / Assembly §3 (alongside div-by-zero): checked →
   **trap**; inside an `unchecked` scope it drops to the target's hardware behavior (never UB — I11). Nothing
   new is added to the checked family; shifts join the guard that already names them.
 - **Rotation is total — no over-width trap.** `rotl`/`rotr` lose no bits (vacated bits ← the bits shifted out
