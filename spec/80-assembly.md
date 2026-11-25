@@ -207,7 +207,7 @@ A few hardware instructions produce their result in an **implicit** register pai
 than a written destination — on x86_64, `div`/`idiv` and `mul`/`imul` use `rdx:rax` and
 leave the **quotient/low product in `rax`** and the **remainder/high product in `rdx`**.
 The 1:1 typed catalog exposes the quotient/low forms directly (`idiv`/`div`, `imul`/`mul`),
-but the library `%` operator and the `*`-overflow guard (Stdlib appendix §2.6 / TYP-2) need the
+but the library `%` operator and the `*`-overflow guard (Stdlib appendix §3 / Concurrency §6.1 / TYP-2) need the
 **remainder** and the **high half**. For these the per-arch table MAY list **synthetic
 destination-first intrinsics** — `remq`/`iremq` and `mulhiq`/`imulhiq` on x86_64 — which:
 emit the **same** one-operand `div`/`idiv` / `mul`/`imul` (the `rdx:rax` dance), but the
@@ -217,7 +217,7 @@ take the destination-first shape `remq(out, b)` ≡ `out := out % b`: one ISA so
 `rdx:rax` — so the form carries **one extra leading destination** over the bare hardware
 instruction. They are still 1:1 in *which* hardware instruction is emitted (§3); the
 synthesis is only the implicit-register **capture**, and each is enumerated as a normative
-row in the per-arch appendix (§170 §3.2) like any other intrinsic. (A target without such a
+row in the per-arch appendix (Arch appendix §3.2) like any other intrinsic. (A target without such a
 synthetic form re-expresses `%`/high-multiply over the listed `idiv`/`mul` + `cqo` + a
 register read; the synthetic intrinsic is the curated convenience.)
 
@@ -232,7 +232,7 @@ NaN-aware sequence (`seta` for ordered-`<`; `sete`+`setnp`+`andb` for ordered-`=
 zero-extend the byte. Like the setcc forms they take the fused shape `fltsd(out, a, b)` ≡
 `out := (a < b)` — the byte destination plus the two compared operands. They are the FP
 counterpart of `setb`/`sete`: the curated lowering of the library float `lt`/`eq` operator
-bodies, each a normative row in the per-arch appendix (§170 §3.2). The **non-strict** float
+bodies, each a normative row in the per-arch appendix (Arch appendix §3.2). The **non-strict** float
 operators `<=`/`>=` are **not** new intrinsics — they derive (Stdlib appendix §2.6) as the ordered
 `lt || eq` (both `false` for a NaN, so the result is `false`), never the total-order
 shortcut `not lt(swapped)` (which would be `true` for a NaN, violating §7.5).
