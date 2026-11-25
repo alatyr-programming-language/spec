@@ -425,9 +425,9 @@ ambiguity is thus resolved *by choice*, not by the language):
 - **Truth value from a number:** the canonical, allocation-free spelling stays the
   comparison `n != 0` (which yields `bool`). A library *may* expose an explicit
   `@convert` to `bool`, but it must commit to one meaning — a *checked narrow* (`5 ∉
-  {0,1} ⇒ trap`) or a *truthiness fold* (`5 != 0`) — and at most one such `@convert`
-  may be in scope at a site (else an ambiguity error, §4.6); `n != 0` stays the
-  recommended idiom.
+  {0,1} ⇒ trap`) or a *truthiness fold* (`5 != 0`) — and a `bool(n)` site at which
+  more than one in-scope `@convert` to `bool` accepts the operand is an ambiguity error
+  (Type System §4.6; TYP-19); `n != 0` stays the recommended idiom.
 - **Integer from a bool:** the direct spelling stays `if b { 1 } else { 0 }`. Since
   `b` is unambiguously `0`/`1`, a library may also expose `@convert`s such as `u64(b)`;
   the base tier ships the **idiom**, not the conversions — the language no longer
