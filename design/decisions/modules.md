@@ -577,3 +577,30 @@ gives them. Nesting likewise carries an ancestor's **child module names** down (
 in scope as names, each still governed at its use-site by §3's permission. The reference compiler's
 checker and legacy emitter already follow this reading; its shared IR builder refuses such calls
 until this revision is pinned.
+
+### MOD-17. A scanned file or directory stem is an identifier — otherwise the package is ill-formed
+*provenance: refines MOD-1 (files become modules by path) and MOD-12 (a file and a directory of the
+  same stem are one module); interacts with TOOL-13 (the manifest file lies outside `source_dir`) and
+  TOOL-14 (the manifest-less root file is excluded from the scan) · spec: Modules §1, §11; Tooling §5*
+
+**Question.** Modules §1 maps `geometry/vec.al` to the module `geometry::vec`, and §6 renders that path
+into a symbol, each `::` as `__`. Nothing said what a file or directory stem may contain, or what happens
+when a stem is not an identifier — `a-b.al`, `2d.al`, a stem spelled like a keyword, a directory
+`my-lib/`. Such a stem cannot be written as a path segment (spec#192, found by compiler#972).
+
+**Options.**
+1. **Ill-formed:** the package is rejected with a diagnostic that names the path.
+2. **Root-only:** such a file is a module reachable only as the root of its own invocation.
+3. **A mapped name:** the stem is turned into an identifier by a stated rule (`-` → `_`).
+
+**Decision.** **Option 1**, the owner's choice (2026-11-25). A source file or directory that the scan maps
+to a module path segment MUST have a stem that is an identifier (Grammar §2.2) and is not a keyword or a
+reserved word (Grammar §2.3). Otherwise the package is ill-formed, with a diagnostic located by the
+path and naming it and the reason (Tooling §5). The rule does not apply to the manifest file
+`package.al`, which lies outside `source_dir` (Manifest §3.8), nor to the root file of a manifest-less
+invocation, which is excluded from the scan (Tooling §4): a manifest-less root `hyphen-test.al` is
+valid, and its stem names no module.
+
+**Rejected.**
+- *(3) A `-` → `_` mapping:* one more implicit rule.
+- *(2) A root-only module:* a second kind of module.

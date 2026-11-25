@@ -37,6 +37,14 @@ There is **one** module tree (one language; Overview §3).
   by default the file `package.al`, which carries the single `Package` manifest value
   (configuration) **and** the root module's ordinary code, so a single-file package is normal
   (Tooling chapter; manifest appendix §1; TOOL-3).
+- **A scanned stem is an identifier** (MOD-17). A source file or directory that the scan
+  maps to a module path segment **MUST** have a **stem** that is an identifier (Grammar
+  §2.2) and is not a keyword or a reserved word (Grammar §2.3). Otherwise the package is
+  **ill-formed**: `a-b.al`, `2d.al`, `fn.al` or a directory `my-lib/` is a diagnostic
+  located by that path, naming it and the reason (Tooling §5). No name is derived from such
+  a stem, and it is not a module of some other kind. The rule does not apply to the
+  manifest file `package.al`, which lies outside `source_dir` (Manifest §3.8), nor to the
+  root file of a manifest-less invocation, which is excluded from the scan (Tooling §4).
 - **Inline modules** extend the *same* tree: `Name := mod { … }` — `mod { … }` is a
   value-expression yielding a **namespace value** (Declarations §1.3). A file-defined
   module and an inline module are the same kind of thing.
@@ -603,7 +611,7 @@ A conforming implementation MUST:
 
 1. build **one** module tree from files-by-path and inline `mod { … }` modules, with
    an anonymous manifest-defined package root, resolved at compile time and erased
-   (§1, §9);
+   (§1, §9), rejecting a scanned file or directory whose stem is not an identifier (§1);
 2. treat `::` as compile-time namespace navigation and `.` as value member
    access / UFCS, keeping them distinct (§2);
 3. make declarations **private by default** (Alatyr namespace visibility, distinct

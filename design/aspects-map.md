@@ -67,7 +67,8 @@ and **deferred (additive) growth**.
 - `[x]` **7. Control flow.** Raw asm (labels/jumps) + structured (if/match/loop/while/for/
   break/return) in a single language (CF-1/FND-9); match exhaustive; safety via MEM-2/TYP-8; `for x in e`
   applies `iter` to `e` as a receiver with auto-ref, so it borrows an owning `e` (CF-11).
-- `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`), private+`pub`-chain
+- `[x]` **8. Modules / visibility / packages.** Single tree (files-by-path + `mod{}`; a scanned file or
+  directory stem must be an identifier, else the package is ill-formed, MOD-17), private+`pub`-chain
   (down-tree privacy) with module scopes nested along the tree, so an ancestor's names are in scope
   unqualified in a descendant and a descendant's own binding shadows them (MOD-16),
   import/reexport = declaration `name := path` (`use` removed, MOD-4), dep local namespace names (MOD-14),

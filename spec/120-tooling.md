@@ -741,7 +741,9 @@ A diagnostic is **a stage + a mandatory source span + a message**:
   to source. The **one exception** is an **invocation-level** Config diagnostic, where no
   source exists to point at (no manifest and no file list; a file list together with
   `--manifest`; §4): it names the offending argument, or the working directory, in the
-  span's place (TOOL-14);
+  span's place (TOOL-14). A diagnostic about a scanned file's or directory's **stem**
+  (Modules §1) has that **path** as its span, with no text range, since the stem is in no
+  file's text; this is a location, not an exception;
 - diagnostics are **deterministic** over the **same build input** — the tuple
   `(source, manifest, target, profile, lockfile, toolchain)` (the same one that fixes a
   reproducible build, §6.2) — yields the same diagnostics (consistent with the pure
