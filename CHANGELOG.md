@@ -49,6 +49,17 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` breaks an overflowing member chain before each `.` (Tooling §4.3.3, §4.3.4;
+TOOL-29, TOOL-25, TOOL-2, SYN-12).** §4.3.3 had no wrapping rule for a chain of member accesses and
+calls (`recv.a().b(x).c()`), so two `fmt` implementations could lay out an overflowing one
+differently. A postfix expression with two or more `.` postfixes that overflows now breaks before each
+`.`: the receiver stays on the opening line and each link begins a continuation line one level deeper,
+`.` first; an argument list or index inside it wraps only if its line still overflows, and a single
+`.` is never broken. A chain with an always multi-line receiver or link breaks the same way (TOOL-25),
+and a comment on its line does not keep it on one line (§4.3.4). A line beginning with `.` continues
+(Grammar §2.6, SYN-12), so the break never ends a statement. Rejected: never breaking a chain;
+breaking after each `.`. Settled under the standing delegation for formatter-layout gaps. (spec#188.)
+
 ## 1.12.0 — 2026-11-25
 
 **Normative — `fmt` breaks an overflowing binary-operator chain after each operator (Tooling §4.3.3;

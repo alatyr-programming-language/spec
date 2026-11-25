@@ -58,7 +58,8 @@ an OR-pattern breaks before each `|`; the template stays a block even when it wo
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
 layout, always, with no one-line form (TOOL-24), so no construct has two shapes; a list or
 operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25); and an
-overflowing binary-operator chain breaks after each operator, never before it (TOOL-28).)*
+overflowing binary-operator chain breaks after each operator, never before it (TOOL-28); an overflowing
+member chain breaks before each `.` (TOOL-29).)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -985,10 +986,11 @@ constructs, a non-empty block, and any expression containing one. A list — cal
 array/list literal, struct/enum constructor fields, parameters — with an always multi-line
 element is always wrapped, one element per line with the trailing comma; the element opens on its
 own line at the element indent, and the closing `)` / `]` stands on its own line. A
-binary-operator chain with such an operand breaks after each operator (TOOL-28; superseded:
-before each operator, which split a chain wrapped before `-` into two statements). A list or chain so
-wrapped is itself always multi-line, so the rule climbs to the enclosing list or chain. An
-always multi-line construct never "fits".
+binary-operator chain with such an operand breaks after each operator (TOOL-28; superseded: before
+each operator, which split a chain wrapped before `-` into two statements), and a member chain with
+such a receiver or link breaks before each `.` (TOOL-29). A list or chain so wrapped is itself
+always multi-line, so the rule climbs to the enclosing list or chain. An always multi-line construct
+never "fits".
 
 **Why.** One canonical shape per construct, with list wrapping as the only width-dependent
 alternative: a list is laid out one way whenever it cannot be one line, whether width or a
@@ -1083,8 +1085,8 @@ against §4.3 (semantics-preserving) and I1.
 
 **Decision (owner, 2026-11-22).** Option **A**. An overflowing binary-operator chain breaks after
 each operator, whichever the operator: the operator ends the line, and the next operand begins the
-continuation line at the continuation indent (one level). A chain with an always multi-line
-operand (TOOL-25) breaks the same way.
+continuation line at the continuation indent (one level). A chain with an always multi-line operand
+(TOOL-25) breaks the same way.
 
 ```alatyr
 x := aaaa -
@@ -1099,3 +1101,54 @@ exception to remember: one canonical shape per construct.
 **Rejected.** *B. Break before, but after `-` (and `..`)* — two shapes for one construct, chosen by
 which operator it holds. *C. Parenthesise an overflowing chain* — `fmt` would insert tokens the
 author did not write.
+
+### TOOL-29. `fmt` breaks an overflowing member chain before each `.` — spec#188
+*provenance: refines TOOL-2 (a wrapped spelling for every construct that can overflow) beside
+  TOOL-28, and extends TOOL-25 to a member chain, on SYN-12 (`.` is a continuing token) · spec:
+  Tooling §4.3.3, §4.3.4 · settled under the standing delegation for formatter-layout gaps (owner,
+  2026-11-08), spec#188*
+
+**Question.** Tooling §4.3.3 gave a wrapping rule for lists, binary-operator chains, `match` arm
+lists, `comptime for` templates and value-`if`, but none for a chain of member accesses and calls,
+`recv.a().b(x).c()`. When such a chain overflowed and its argument lists were empty, or wrapping them
+did not make the line fit, two `fmt` implementations could break before a `.`, break inside an
+argument list, or leave the line long: no single canonical output (TOOL-2, FND-3). The outermost-
+construct rule did not settle it either: the outermost node of `a.b(x).c(y)` is the last call, so the
+rule would wrap `(y)` before any `.`.
+
+**Options.**
+- **1.** Break before each `.` of the chain at one further level, the receiver on the first line.
+- **2.** Never break a member chain; only its argument lists wrap, and the line may overflow.
+- **3.** Break after each `.`, as TOOL-28 breaks after each binary operator.
+
+**Decision (standing delegation, layout).** Option **1**. A member chain is a postfix expression
+whose own postfix sequence has two or more `.` postfixes; its receiver is the primary with the
+postfixes before the first `.`, and each link is one `.` postfix with the call, index and `?`
+postfixes up to the next `.`. An overflowing member chain breaks before each `.`: the receiver stays
+on the opening line, and each link begins a continuation line one level deeper, `.` first. The chain
+is one construct that encloses its receiver and its links' argument lists and index expressions, so
+a construct around it wraps first, then the chain, then such an argument list only if its line still
+overflows. A postfix expression with a single `.` is not a chain, and its `.` is never broken. A
+chain with an always multi-line receiver or link breaks the same way (TOOL-25).
+
+```alatyr
+total := orders
+  .filter(paid)
+  .map(amount)
+  .sum()
+```
+
+**Why.** One canonical shape per construct, decided by content and width alone. The break is safe
+for the same reason TOOL-28's is: `.` cannot begin a statement, so a line beginning with it continues
+the previous one (Grammar §2.6, SYN-12, whose Rejected paragraph already names `.` beginning a line
+in a call chain), and the break never ends a statement. Every `.` postfix counts as a link, field,
+UFCS call and variant constructor alike, because which one a `.` is depends on semantic
+classification (Grammar §3.4) and `fmt` lays out what it parses. A single `.` is left whole because
+breaking it moves only the receiver off the line (`Option` then `.Some(v)`) while its argument list
+is the natural break.
+
+**Rejected.** *2. Never break a member chain* — a chain whose argument lists are empty could not be
+brought within the width at all, though a safe break exists at every `.`. *3. Break after each `.`*
+— the member name would be split from the `.` that selects it, and a line ending in `.` hides from a
+reader scanning the left edge that the next line is a link; TOOL-28 breaks after an operator because
+a line beginning with `-` begins a fresh statement, and no such hazard exists for `.`.

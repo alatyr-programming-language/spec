@@ -176,7 +176,8 @@ function of width and content, never of the input's line breaks (Tooling §4.3.3
 general argument, and a list of continuing tokens is needed anyway (`.` beginning a line in
 a call chain, or `else` after a `}`). `fmt` relies on one: the `|` an overflowing
 OR-pattern begins its line with (Tooling §4.3.3); a binary-operator chain breaks after each
-operator, so no chain operator begins a line (TOOL-28).
+operator, so no chain operator begins a line (TOOL-28); and an overflowing member chain
+begins each link's line with `.` (TOOL-29).
 
 ---
 
