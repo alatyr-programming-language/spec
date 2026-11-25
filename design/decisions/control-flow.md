@@ -171,7 +171,7 @@ privileges one of two equal tryables (against the single-constructor canon `Opti
 removes the types-vs-values comptime ambiguity (TYP-1).
 
 ### CF-10. `Tryable` gains `from_failure` — `?` can *rebuild* a user tryable's failure
-*spec: Control Flow §8.2, Stdlib §2.2*
+*spec: Control Flow §8.2, Stdlib appendix §2.2*
 
 **Why.** The `Tryable` protocol was originally **decomposition-only**
 (`is_success`/`success_value`/`failure_value`) — enough to *inspect* a tryable, but `?`

@@ -116,7 +116,7 @@ exactly its block; the interpretation adds no representation.
 
 **How an operator lowers to its intrinsic (the prelude mechanism).** A native
 operator is an ordinary **library function** (§4.5) whose body uses the
-**instruction intrinsic as a statement** (Assembly §80): it materializes a result
+**instruction intrinsic as a statement** (Assembly §2): it materializes a result
 local, applies the **destination-first** instruction to it (which *mutates* it —
 the instruction does not return a value), and returns the local — e.g.
 `@inline + := fn(in a : u64, in b : u64) -> u64 { mut out : u64 = a; add(out, b); return
@@ -555,7 +555,7 @@ padding — so the choice of form does not move a byte. `typeinfo` reports this 
 
 An enum with **zero variants** is **ill-formed**: it is uninhabited (no tag value, so no
 value can ever be constructed), and the language's single uninhabited type is the named
-bottom type **`Never`** (§3.7 / Stdlib §3.7) — a second one by an empty `enum {}` would be
+bottom type **`Never`** (§3.7 / Stdlib appendix §3.7) — a second one by an empty `enum {}` would be
 a redundant entity (OP-1). This also closes a latent edge: a `comptime for` over
 `typeinfo(T).variants` of a zero-variant `T` would unroll to **no** `match` arms, leaving a
 non-exhaustive `match` (Control Flow §5.4); since such a `T` cannot exist, the situation

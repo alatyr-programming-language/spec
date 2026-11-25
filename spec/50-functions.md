@@ -84,12 +84,12 @@ Each overload lowers to a **distinct symbol** — its name **mangled by the para
 signature** — transparently (I1/I3), like a monomorphized generic instance (Comptime §3);
 there is **no runtime dispatch** (I2). Overloading exists for **distinct concrete
 functions that share a role**: the Iterator protocol's per-type `iter` / `next`
-(Stdlib §2.4), a type's own structural `eq` / `hash`.
+(Stdlib appendix §2.4), a type's own structural `eq` / `hash`.
 
 A name MAY combine **one generic definition** with concrete overloads — the
 **generic-default + concrete-override** pattern the structural derives rely on (`eq` / `lt` /
 `hash`: a single generic structural default `fn(T : type, in a : T, in b : T)`, plus a type's
-own concrete `eq(in a : K, in b : K)`; Stdlib §2.6). Resolution prefers the **more specific**
+own concrete `eq(in a : K, in b : K)`; Stdlib appendix §2.6). Resolution prefers the **more specific**
 definition: a call whose arguments are **exactly accepted by a concrete overload** resolves to
 that concrete symbol; **only when no concrete overload matches** does the **generic** apply
 (monomorphized at the inferred type). The generic is thus the **fallback default**, a concrete

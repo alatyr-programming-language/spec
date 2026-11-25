@@ -448,7 +448,7 @@ Canonical terms, so that terminology doesn't drift between chapters. Expanded as
   A `Never` result is a **flow terminator** (code after it is unreachable; Control Flow §9). It is
   a named type, not a keyword/symbol (CF-7/STD-1 — clarity over terseness).
 
-- **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib §3.6): a
+- **`str` / `String`** — `str` is a **slice of UTF-8 bytes** (`[u8]`, Types §7 / Stdlib appendix §3.6): a
   `{ptr, byte-length}` view; its byte length is **not** its code-point count, and indexing is by
   byte (the built-in slice read plus the code-point-boundary check, a read-only place, OP-9; an
   out-of-range or mid-code-point index fails through `trap()` like an array index, CG-13);

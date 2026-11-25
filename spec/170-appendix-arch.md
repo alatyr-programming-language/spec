@@ -275,7 +275,7 @@ or `win64` (PE) — ABI appendix §4.1/§4.2.
 | `add` / `sub` | reg/mem, reg/mem/imm | `add`/`sub` | overflow set (Concurrency §6) on the checked op |
 | `imul` / `mul` | reg/mem (, reg, imm) | `imul`/`mul` | overflow |
 | `idiv` / `div` | reg/mem | `idiv`/`div` | **division by zero** (and `MIN/-1`) → the inserted guard traps *before* the instruction (§2) |
-| `iremq`/`remq` · `imulhiq`/`mulhiq` (**synthetic**, §80 §4.1) | reg/mem (divisor / multiplier) | `idiv`/`div` capturing `rdx`; `imul`/`mul` capturing high `rdx` | div-by-zero (remainder; `MIN % -1` → `0` without the `idiv`, §2) / overflow (high-multiply) |
+| `iremq`/`remq` · `imulhiq`/`mulhiq` (**synthetic**, Assembly §4.1) | reg/mem (divisor / multiplier) | `idiv`/`div` capturing `rdx`; `imul`/`mul` capturing high `rdx` | div-by-zero (remainder; `MIN % -1` → `0` without the `idiv`, §2) / overflow (high-multiply) |
 | `andq`/`andl`/`andw`/`andb` · `orq`/`orl`/… · `xor` | reg/mem, reg/mem/imm | `and`/`or`/`xor` | — (binary bitwise; keyword-collision rule §3.2) |
 | `notq`/`notl`/… · `neg` | reg/mem | `not`/`neg` | — (unary; `neg` overflow) |
 | `shl` / `shr` / `sar` | reg/mem, `cl`/imm | `shl`/`shr`/`sar` | **over-width shift** → trap (Concurrency §6) |
@@ -292,7 +292,7 @@ or `win64` (PE) — ABI appendix §4.1/§4.2.
 | `nop` | — | `nop` | — |
 | FP arith (SSE2) `addps`/`subps`/`mulps`/`divps`/`minps`/`maxps`/`sqrtps`; `addpd`/`subpd`/`mulpd`/`divpd`/`sqrtpd`; scalar `addss`/`addsd`/`mulss`/`mulsd` | SIMD reg/mem | same | — (lane-decorated, §3.5) |
 | FP move/compare/shuffle `movaps`/`movups`/`movss`/`movsd` · `cmpps`/`cmppd` · `shufps`/`pshufd` | SIMD reg/mem, imm | same | — |
-| `fltsd`/`fltss` · `feqsd`/`feqss` (**synthetic** fused float compare → `bool`, §80 §4.1) | byte dst, two FP operands | `ucomisd`/`ucomiss` + `seta` (ordered `<`) / `sete`+`setnp`+`andb` (ordered `==`) + zero-extend | — (NaN unordered → `false`, §110 §7.5; FP counterpart of `setb`/`sete`) |
+| `fltsd`/`fltss` · `feqsd`/`feqss` (**synthetic** fused float compare → `bool`, Assembly §4.1) | byte dst, two FP operands | `ucomisd`/`ucomiss` + `seta` (ordered `<`) / `sete`+`setnp`+`andb` (ordered `==`) + zero-extend | — (NaN unordered → `false`, Concurrency §7.5; FP counterpart of `setb`/`sete`) |
 | int packed `paddb`/`paddw`/`paddd`/`paddq` · `psubd` · `pand`/`por`/`pxor` | SIMD reg/mem | same | — |
 | convert `cvtps2dq`/`cvtdq2ps`/`cvtss2sd`/`cvtsd2ss`/`cvttps2dq` | SIMD reg/mem | same | — |
 | FMA `vfmadd213ps`/`vfmadd213pd` (**`fma`** feature) | SIMD reg | same | — (further vector ops — AVX-512 masked/broadcast, gather, crypto — via `asm()`, §intro/CG-3) |
