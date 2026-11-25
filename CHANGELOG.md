@@ -68,6 +68,15 @@ and a comment on its line does not keep it on one line (§4.3.4). A line beginni
 (Grammar §2.6, SYN-12), so the break never ends a statement. Rejected: never breaking a chain;
 breaking after each `.`. Settled under the standing delegation for formatter-layout gaps. (spec#188.)
 
+**Normative — a scanned file or directory stem is an identifier (Modules §1, §11; Tooling §5; MOD-17,
+MOD-1, MOD-12).** Modules §1 maps a file's path to a module path but never said what a stem may contain. A
+source file or directory that the scan maps to a module path segment must have a stem that is an
+identifier and is not a keyword or a reserved word (Grammar §2.3). `a-b.al`, `2d.al`, `fn.al` or a
+directory `my-lib/` makes the package ill-formed, with a diagnostic located by the path. The rule does not
+apply to the manifest file `package.al`, which lies outside `source_dir`, nor to the root file of a
+manifest-less invocation, which is excluded from the scan. Rejected: a `-` → `_` mapping (one more
+implicit rule); a root-only module (a second kind of module). (spec#192.)
+
 ## 1.12.0 — 2026-11-25
 
 **Normative — `fmt` breaks an overflowing binary-operator chain after each operator (Tooling §4.3.3;
