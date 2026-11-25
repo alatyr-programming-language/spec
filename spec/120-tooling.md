@@ -643,6 +643,31 @@ and of the construct's content (never of the input's original line breaks):
   ```
 
   and never as `x := aaaa` followed by a line `- bbbb`, which is two statements.
+- A **member chain** is a postfix expression (Grammar §3.4) whose own postfix sequence has
+  **two or more** `.` postfixes. Its **receiver** is the primary with the postfixes before the
+  first `.`; each **link** is one `.` postfix with the call, index and `?` postfixes that
+  follow it up to the next `.`. Every `.` postfix counts, whether the link is a field, a tuple
+  index, a comptime projection `.(f)`, a UFCS call or a variant constructor: the layout does
+  not depend on that semantic classification (Grammar §3.4). A member chain that overflows
+  breaks **before** each `.` (TOOL-29): the receiver stays on the opening line, and each link
+  begins its own continuation line at the continuation indent (one level), the `.` first. A
+  line beginning with `.` continues the previous one (Grammar §2.6, SYN-12), so the break
+  never ends a statement. The chain encloses its receiver and its links' argument lists and
+  index expressions: a construct around the chain wraps before it, and such an argument list
+  wraps, by the list rule above, only if its line still overflows. A postfix expression with a
+  **single** `.` is not a member chain, and its `.` is never broken. So a
+  `total := orders.filter(paid).map(amount).sum()` too wide for one line is laid out
+
+  ```alatyr
+  total := orders
+    .filter(paid)
+    .map(amount)
+    .sum()
+  ```
+- A **range** (`lo..hi`, `lo..=hi`, Grammar §3.4) is **not** a binary-operator chain, and
+  `fmt` **never** breaks a line at `..` or `..=` (TOOL-30). A range that overflows is laid
+  out by wrapping a construct around it or a construct inside one of its bounds, each by its
+  own rule; a line that still overflows stays over the width.
 - A **`match` arm list** is **always** wrapped, whether or not it would fit on one line: **each
   arm on its own line**, indented one level beyond the `match` line, the closing `}` at the
   `match`'s indent. There is **no** one-line canonical `match` (TOOL-23): a source `match`
@@ -679,8 +704,9 @@ and of the construct's content (never of the input's original line breaks):
   it overflowed (TOOL-25): the multi-line element opens on its own line at the element indent
   and continues by its own construct's rule, and the closing `)` / `]` stands on its own line
   after it. A **binary-operator chain** with an always multi-line operand likewise breaks after
-  each operator. Such a list or chain is itself always multi-line, so the rule applies again to
-  the list or chain around it.
+  each operator, and a **member chain** with an always multi-line receiver or link breaks
+  before each `.` (TOOL-29). Such a list or chain is itself always multi-line, so the rule
+  applies again to the list or chain around it.
 - Wrapping is applied at the **outermost** construct that makes the line fit; an inner
   construct wraps only if it still overflows once the outer one has. A construct is never
   wrapped if it fits; an always multi-line construct, above, never fits.
@@ -697,12 +723,12 @@ rules) so a deliberately-laid-out, commented line is not reflowed. A comment doe
 on one line a construct that is always multi-line (§4.3.3): a `match` arm list or a `comptime
 for` arm template (whether the line holds the whole list or only some of its arms, those are
 always wrapped one arm per line with no `;` between arms, TOOL-23), a value-`if` (TOOL-24), a
-non-empty block, and a list or operator chain holding any of these (TOOL-25); the
-suppression still applies to every construct on the line that is not always multi-line. When
-`fmt` so lays out one commented source line as several output lines, the comment **trails the
-first** of them, separated by one space (TOOL-26): `y := match x { A => 1; B => 2 }  # why`
-becomes `y := match x { # why` followed by the arms, and a line holding only some arms
-(`A => 1; B => 2  # why`) keeps the comment on the line of its first arm.
+non-empty block, and a list, operator chain or member chain holding any of these (TOOL-25,
+TOOL-29); the suppression still applies to every construct on the line that is not always
+multi-line. When `fmt` so lays out one commented source line as several output lines, the
+comment **trails the first** of them, separated by one space (TOOL-26):
+`y := match x { A => 1; B => 2 }  # why` becomes `y := match x { # why` followed by the arms, and a
+line holding only some arms (`A => 1; B => 2  # why`) keeps the comment on the line of its first arm.
 
 ---
 
