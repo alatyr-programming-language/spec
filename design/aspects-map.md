@@ -145,7 +145,7 @@ and **deferred (additive) growth**.
   list or operator chain holding an always multi-line element is wrapped one element per line
   (TOOL-25); an overflowing binary-operator chain breaks after each operator, the operator ending the
   line (TOOL-28); an overflowing member chain breaks before each `.`, the receiver on the first line
-  (TOOL-29); a trailing comment on a line
+  (TOOL-29), and a range is never broken at `..` or `..=` (TOOL-30); a trailing comment on a line
   `fmt` expands trails the first output line (TOOL-26); and on a directly driven non-ISA backend
   `target.os`/`target.env` match no variant, like `target.arch` (TOOL-27).
 - `[x]` **14. Lexis and grammar.** Lexis (SYN-1), separators (SYN-4; `match` arms by newline or `;`

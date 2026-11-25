@@ -49,6 +49,14 @@ several at once (see `CONTRIBUTING.md`).
 
 ## Unreleased
 
+**Normative — `fmt` never breaks a line at a range's `..` or `..=` (Tooling §4.3.3; TOOL-30, TOOL-28,
+TOOL-2).** §4.3.3 did not say whether a range `lo..hi` / `lo..=hi` is a binary-operator chain that
+TOOL-28 breaks after its operator. It is not: `fmt` never breaks a line at `..` or `..=`, and an
+overflowing range is laid out by wrapping a construct around it or inside one of its bounds. Rejected:
+treating the range as a chain, which would end a line in `..` and depend on whether such a line
+continues (Grammar §2.6, still open in spec#179). Settled under the standing delegation for
+formatter-layout gaps. (spec#187.)
+
 **Normative — `fmt` breaks an overflowing member chain before each `.` (Tooling §4.3.3, §4.3.4;
 TOOL-29, TOOL-25, TOOL-2, SYN-12).** §4.3.3 had no wrapping rule for a chain of member accesses and
 calls (`recv.a().b(x).c()`), so two `fmt` implementations could lay out an overflowing one

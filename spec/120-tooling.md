@@ -664,6 +664,10 @@ and of the construct's content (never of the input's original line breaks):
     .map(amount)
     .sum()
   ```
+- A **range** (`lo..hi`, `lo..=hi`, Grammar §3.4) is **not** a binary-operator chain, and
+  `fmt` **never** breaks a line at `..` or `..=` (TOOL-30). A range that overflows is laid
+  out by wrapping a construct around it or a construct inside one of its bounds, each by its
+  own rule; a line that still overflows stays over the width.
 - A **`match` arm list** is **always** wrapped, whether or not it would fit on one line: **each
   arm on its own line**, indented one level beyond the `match` line, the closing `}` at the
   `match`'s indent. There is **no** one-line canonical `match` (TOOL-23): a source `match`

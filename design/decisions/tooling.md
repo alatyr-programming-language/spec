@@ -57,9 +57,10 @@ first gave contradicted the grammar); a `match` is always wrapped, with no one-l
 an OR-pattern breaks before each `|`; the template stays a block even when it would fit, because a
 template and a plain arm mean different things; and an expression `if` reuses the statement `if`
 layout, always, with no one-line form (TOOL-24), so no construct has two shapes; a list or
-operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25); and an
+operator chain holding an element that is always multi-line is itself always wrapped (TOOL-25); an
 overflowing binary-operator chain breaks after each operator, never before it (TOOL-28); an overflowing
-member chain breaks before each `.` (TOOL-29).)*
+member chain breaks before each `.` (TOOL-29); and a line is never broken at a range's `..` or
+`..=` (TOOL-30).)*
 
 **Why.** Formatting style is a perennial source of churn and per-project divergence.
 Following the gofmt model, `fmt` rewrites source to **one** canonical form with **no style
@@ -1086,7 +1087,8 @@ against §4.3 (semantics-preserving) and I1.
 **Decision (owner, 2026-11-22).** Option **A**. An overflowing binary-operator chain breaks after
 each operator, whichever the operator: the operator ends the line, and the next operand begins the
 continuation line at the continuation indent (one level). A chain with an always multi-line operand
-(TOOL-25) breaks the same way.
+(TOOL-25) breaks the same way. A range is not such a chain; no line breaks at `..` or `..=`
+(TOOL-30).
 
 ```alatyr
 x := aaaa -
@@ -1152,3 +1154,40 @@ brought within the width at all, though a safe break exists at every `.`. *3. Br
 — the member name would be split from the `.` that selects it, and a line ending in `.` hides from a
 reader scanning the left edge that the next line is a link; TOOL-28 breaks after an operator because
 a line beginning with `-` begins a fresh statement, and no such hazard exists for `.`.
+
+### TOOL-30. `fmt` never breaks a line at a range's `..` or `..=` — spec#187
+*provenance: refines TOOL-28 (which binary-operator chains break) and TOOL-2 · spec: Tooling §4.3.3 ·
+  settled under the standing delegation for formatter-layout gaps (owner, 2026-11-08), spec#187 (its
+  layout half; whether a line ending in `..` continues is Grammar §2.6 meaning, carried by spec#179)*
+
+**Question.** Tooling §4.3.3 breaks an overflowing binary-operator chain after each operator
+(TOOL-28). It did not say whether a range `lo..hi` / `lo..=hi` is such a chain. Grammar §4 lists the
+range in its precedence table (level 11, non-associative), but Grammar §2.6 names the inclusive
+range `..=` apart from "the binary operators", and Tooling §4.3.2 spaces `..` apart from them (no
+surrounding space). Breaking a range would end a line in `..` or `..=`, and whether such a line
+continues outside brackets is not settled by Grammar §2.6: `lo..` is itself a construct, the
+slice-to-end form.
+
+**Options.**
+- **1.** A range is not a binary-operator chain; `fmt` wraps the line at a construct around the
+  range or inside its bounds, never at `..` / `..=`.
+- **2.** A range is a chain; `fmt` breaks after `..` / `..=`, which needs Grammar §2.6 to say a line
+  ending in them continues.
+
+**Decision (standing delegation, layout).** Option **1**. `fmt` never breaks a line at `..` or `..=`.
+An overflowing range is laid out by wrapping a construct around it or a construct inside one of its
+bounds (a bound's own binary-operator chain, say), each by its own rule; a line that still overflows
+stays over the width.
+
+**Why.** A non-associative range has one operator and two operands, so a break at `..` gains little
+over breaking inside a bound, and the layout already treats `..` apart from the binary operators
+(§4.3.2). Option 1 is layout alone: `fmt` output never depends on the open grammar question of a
+line ending in `..`, so this settlement changes no program's meaning and leaves that question to the
+owner (spec#179). Option 2 would make `fmt` rely on a continuation the grammar does not yet give,
+and could not be settled as layout. Breaking before `..=` would be safe (a continuing token, Grammar
+§2.6) but not before `..` (`..hi` begins a statement), so it would give the two range forms two
+shapes.
+
+**Rejected.** *2. A range is a chain* — it depends on a meaning decision (Grammar §2.6) outside the
+delegation, and the break buys little width. TOOL-28's Rejected option B named `..` among the
+operators it would break after; with this entry no layout breaks there.
